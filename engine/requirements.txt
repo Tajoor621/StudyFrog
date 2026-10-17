@@ -1,0 +1,2 @@
+Pillow==11.1.0
+# Optional model runtime is separate; diagram/video use only Pillow + FFmpeg.

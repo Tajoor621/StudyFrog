@@ -1,0 +1,19 @@
+.gradle/
+local.properties
+**/build/
+.cxx/
+*.jks
+*.keystore
+*.apks
+apks/
+__pycache__/
+.venv/
+engine/data/
+models/
+.env
+
+# Optional telemetry and signing material
+app/google-services.json
+signing-secrets/
+split-inspection/
+*.b64

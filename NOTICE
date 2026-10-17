@@ -1,0 +1,6 @@
+StudyForge original source, 2026.
+The included gradle-wrapper.jar and standard gradlew.bat are from the Gradle
+8.9.0 project, https://github.com/gradle/gradle, licensed Apache-2.0.
+The POSIX gradlew here is a minimal original launcher.
+Android, Kotlin, Python packages, FFmpeg and optional model weights retain
+their respective licenses. No AI model weights are redistributed.

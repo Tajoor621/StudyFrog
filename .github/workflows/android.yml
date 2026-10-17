@@ -1,0 +1,141 @@
+name: StudyForge build and verification
+permissions:
+  contents: read
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+    - uses: android-actions/setup-android@v3
+    - uses: gradle/actions/setup-gradle@v4
+    - name: Install existing native build toolchain
+      run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+    - name: Lint, JVM tests, unsigned release assembly
+      run: 'chmod +x gradlew
+
+        ./gradlew --no-daemon lintDebug testDebugUnitTest assembleRelease bundleRelease -PfirebaseEnabled=false'
+    - name: Obtain pinned bundletool
+      run: curl -fL --retry 3 https://github.com/google/bundletool/releases/download/1.18.2/bundletool-all-1.18.2.jar -o "$RUNNER_TEMP/bundletool.jar"
+    - name: Create ephemeral packaging-test key
+      run: keytool -genkeypair -keystore "$RUNNER_TEMP/test.jks" -alias studyforge -storepass android -keypass android -dname
+        "CN=StudyForge Local Test" -keyalg RSA -keysize 2048 -validity 30
+    - name: Verify AAB density splits and native extraction
+      env:
+        BUNDLETOOL_JAR: ${{ runner.temp }}/bundletool.jar
+        STUDYFORGE_KEYSTORE: ${{ runner.temp }}/test.jks
+        STUDYFORGE_KEY_ALIAS: studyforge
+        STUDYFORGE_STORE_PASSWORD: android
+        STUDYFORGE_KEY_PASSWORD: android
+      run: bash scripts/build-apks.sh
+    - uses: actions/upload-artifact@v4
+      with:
+        name: studyforge-packaging-test
+        retention-days: 7
+        path: 'app.apks
+
+          app/build/outputs/bundle/release/*.aab
+
+          apks/*manifest.txt
+
+          app/schemas/'
+        if-no-files-found: error
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: validation-reports
+        path: 'app/build/reports/
+
+          app/build/test-results/
+
+          '
+        if-no-files-found: ignore
+  signed-release:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.signedRelease
+    needs:
+    - checks
+    - engine-tests
+    environment: android-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      SF_STORE_PASSWORD: ${{ secrets.SF_STORE_PASSWORD }}
+      SF_KEY_PASSWORD: ${{ secrets.SF_KEY_PASSWORD }}
+      SF_KEY_ALIAS: ${{ secrets.SF_KEY_ALIAS }}
+      FIREBASE_ENABLED: ${{ inputs.firebaseEnabled }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+    - uses: android-actions/setup-android@v3
+    - uses: gradle/actions/setup-gradle@v4
+    - name: Install existing native build toolchain
+      run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+    - name: Restore signing and optional Firebase configuration
+      env:
+        KEYSTORE_B64: ${{ secrets.SF_KEYSTORE_B64 }}
+        GOOGLE_SERVICES_B64: ${{ secrets.GOOGLE_SERVICES_B64 }}
+      run: "set -euo pipefail\ntest -n \"$KEYSTORE_B64\"\numask 077\nprintf '%s' \"$KEYSTORE_B64\" | base64 --decode > \"\
+        $RUNNER_TEMP/studyforge-release.jks\"\necho \"SF_KEYSTORE_PATH=$RUNNER_TEMP/studyforge-release.jks\" >> \"$GITHUB_ENV\"\
+        \nif [ \"$FIREBASE_ENABLED\" = true ]; then\n  test -n \"$GOOGLE_SERVICES_B64\"\n  printf '%s' \"$GOOGLE_SERVICES_B64\"\
+        \ | base64 --decode > app/google-services.json\nfi\n"
+    - name: Build signed APK and AAB
+      run: ./gradlew --no-daemon lintRelease testReleaseUnitTest assembleRelease bundleRelease -PrequireReleaseSigning=true
+        -PfirebaseEnabled="$FIREBASE_ENABLED"
+    - uses: actions/upload-artifact@v4
+      with:
+        name: studyforge-signed-release
+        retention-days: 7
+        path: 'app/build/outputs/apk/release/*.apk
+
+          app/build/outputs/bundle/release/*.aab
+
+          '
+    - name: Remove sensitive files
+      if: always()
+      run: 'rm -f "$RUNNER_TEMP/studyforge-release.jks"
+
+        rm -f app/google-services.json
+
+        '
+  engine-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Install free local video encoder
+      run: 'sudo apt-get update
+
+        sudo apt-get install -y ffmpeg'
+    - name: Install engine dependency
+      run: python -m pip install -r engine/requirements.txt
+    - name: Run local engine tests
+      working-directory: engine
+      run: python -m unittest -v
+'on':
+  pull_request: null
+  push:
+    branches:
+    - main
+  workflow_dispatch:
+    inputs:
+      signedRelease:
+        description: Build a signed release using protected secrets
+        type: boolean
+        default: false
+      firebaseEnabled:
+        description: Include configured opt-in Firebase reporting
+        type: boolean
+        default: false
