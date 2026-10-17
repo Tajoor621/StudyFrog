@@ -314,7 +314,7 @@ class MainActivity : ComponentActivity() {
                 if(data.getStringExtra("study-action")=="diagram") { canvas.restore(catalog.snapshot(id,data.getBooleanExtra("study-labels",true)));say("Offline study diagram opened; its labels are editable on the Study labels layer") }
                 else say("Study path added to the prompt. Choose on-device or computer generation.")
             }
-            if(dirty && canvas.image!=null) AlertDialog.Builder(this).setTitle("Replace the current study view?").setMessage("Save the current project first if you want to keep its unsaved edits and prompt.").setPositiveButton("Continue") { _,_ -> apply() }.setNegativeButton("Cancel",null).show() else apply()
+            if(canvas.image!=null) AlertDialog.Builder(this).setTitle("Replace the current study view?").setMessage("Save the current project first if you want to keep its unsaved edits and prompt.").setPositiveButton("Continue") { _,_ -> apply() }.setNegativeButton("Cancel",null).show() else apply()
             return
         }
         val uri=data?.data ?: return
