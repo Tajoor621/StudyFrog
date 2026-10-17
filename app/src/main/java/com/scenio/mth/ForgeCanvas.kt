@@ -15,9 +15,11 @@ class ForgeCanvas(context: Context) : View(context) {
     data class Snapshot(val base: Bitmap?, val strokes: List<Stroke>)
     private val strokes = mutableListOf<Stroke>()
     private val undone = mutableListOf<Stroke>()
+    private val viewport=RectF()
+    private var previewState=Snapshot(null,strokes)
     var onEdited: (() -> Unit)? = null
     var image: Bitmap? = null
-        set(value) { field=value;strokes.clear();undone.clear();invalidate();onEdited?.invoke() }
+        set(value) { field=value;strokes.clear();undone.clear();previewState=Snapshot(value,strokes);updateBounds();invalidate();onEdited?.invoke() }
     var inkColor = Color.rgb(94,234,212)
     var inkSize = .004f
     var drawing = false
@@ -29,12 +31,20 @@ class ForgeCanvas(context: Context) : View(context) {
         strokes.addAll(snapshot.strokes.map { it.copy(points=it.points.toMutableList()) })
         invalidate()
     }
+    private fun updateBounds() {
+        val base=image ?: return
+        if(width<=0 || height<=0) return
+        val bounds=fitImage(width.toFloat(),height.toFloat(),base.width,base.height)
+        viewport.set(bounds.left,bounds.top,bounds.left+bounds.width,bounds.top+bounds.height)
+    }
+    override fun onSizeChanged(w:Int,h:Int,oldw:Int,oldh:Int) {
+        super.onSizeChanged(w,h,oldw,oldh);updateBounds()
+    }
     override fun onDraw(canvas: Canvas) {
         if(width<=0 || height<=0) return
         canvas.drawColor(Color.rgb(15,23,42))
-        val base=image ?: return
-        val bounds=fitImage(width.toFloat(),height.toFloat(),base.width,base.height)
-        drawSnapshot(canvas,Snapshot(image,strokes),RectF(bounds.left,bounds.top,bounds.left+bounds.width,bounds.top+bounds.height),paint)
+        if(image==null) return
+        drawSnapshot(canvas,previewState,viewport,paint)
     }
     override fun onTouchEvent(e: MotionEvent): Boolean {
         val base=image ?: return false

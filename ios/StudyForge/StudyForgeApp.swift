@@ -62,7 +62,7 @@ struct ForgeView: View {
     private func refresh() { projects = ((try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []).filter { $0.pathExtension == "png" }.sorted { $0.lastPathComponent > $1.lastPathComponent } }
     private func save() {
         guard let data = image?.pngData() else { return }
-        let url = directory.appendingPathComponent("Project-\(Int(Date().timeIntervalSince1970))-(UUID().uuidString.prefix(4)).png")
+        let url = directory.appendingPathComponent("Project-\(Int(Date().timeIntervalSince1970))-\(UUID().uuidString.prefix(4)).png")
         do { try data.write(to: url, options: .atomic); try prompt.write(to: url.deletingPathExtension().appendingPathExtension("txt"), atomically: true, encoding: .utf8); refresh();message = "Image and prompt saved on device." }
         catch { message = error.localizedDescription }
     }

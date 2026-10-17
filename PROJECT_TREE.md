@@ -16,6 +16,7 @@ app/src/androidTest/java/com/scenio/mth/features/OnboardingTest.kt
 app/src/androidTest/java/com/scenio/mth/features/ProgressDatabaseTest.kt
 app/src/androidTest/java/com/scenio/mth/features/ProjectBackupTest.kt
 app/src/androidTest/java/com/scenio/mth/features/ReminderWorkerTest.kt
+app/src/androidTest/java/com/scenio/mth/features/StudioStateTest.kt
 app/src/main/AndroidManifest.xml
 app/src/main/cpp/CMakeLists.txt
 app/src/main/cpp/native-lib.cpp
@@ -116,6 +117,8 @@ ios/StudyForge/StudyForgeApp.swift
 scripts/build-apks.sh
 scripts/check_repository.py
 scripts/generate_branding.py
+scripts/manifest_attributes.py
+scripts/test_manifest_attributes.py
 scripts/verify-release.sh
 scripts/verify_splits.py
 settings.gradle.kts

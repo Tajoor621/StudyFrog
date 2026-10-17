@@ -25,6 +25,9 @@ is not a substitute for device, model-quality or accessibility evaluation.
 | Medium | Engine had no job lifecycle controls | Authenticated history, cancellation checkpoints and deletion of finished results |
 | Medium | Engine model initialization could leave a failed cached pipeline | Assign pipeline only after successful device transfer |
 | Medium | Native editor ignored saved appearance | Observe DataStore appearance and dynamic accent preferences |
+| Medium | Manifest verifier assumed one namespace and boolean rendering format | Parse actual attribute values, including URI prefixes and literal/typed booleans; add regression tests |
+| Medium | Canvas allocated geometry every redraw | Cache viewport geometry when size/image changes |
+| Medium | iOS starter generated a literal UUID filename suffix | Correct UUID interpolation to avoid rapid-save collisions |
 | Medium | Brand artwork was not packaged | Android adaptive/round/density icons, in-app artwork, notification avatar, iOS icon set |
 
 ## Added regression coverage

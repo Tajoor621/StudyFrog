@@ -80,7 +80,7 @@ class MainActivity : ComponentActivity() {
             } else view.setPadding(insets.systemWindowInsetLeft,insets.systemWindowInsetTop,insets.systemWindowInsetRight,insets.systemWindowInsetBottom)
             insets
         }
-        root.addView(ImageView(this).apply { setImageResource(R.drawable.sf_brand_banner);contentDescription="StudyFrog brand artwork";adjustViewBounds=true },LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT))
+        root.addView(ImageView(this).apply { setImageResource(R.drawable.ic_xxhdpi);contentDescription="StudyFrog app icon";scaleType=ImageView.ScaleType.FIT_CENTER },LinearLayout.LayoutParams((64*resources.displayMetrics.density).toInt(),(64*resources.displayMetrics.density).toInt()))
         root.addView(text("StudyForge  /  create • learn • refine").apply { textSize=25f })
         root.addView(text(nativeStatus()))
         mode=choices(listOf("Free Generate","Science Lab","Art Studio","Medical Explorer","Photo Converter","Video Creator"));root.addView(mode)

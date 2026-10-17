@@ -81,7 +81,7 @@ For the usual output filenames, the working inspection commands are:
   apks/splits/base-master.apk --file AndroidManifest.xml
 ```
 
-Look for these logical values (aapt2 prints booleans as typed hexadecimal):
+Look for these logical values (aapt2 prints booleans as literals or typed hexadecimal):
 
 | Location | Attribute | Required value |
 | --- | --- | --- |
