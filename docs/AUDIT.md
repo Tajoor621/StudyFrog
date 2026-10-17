@@ -20,6 +20,7 @@ is not a substitute for device, model-quality or accessibility evaluation.
 | High | Image compression and project I/O blocked the UI | Move rendering, encoding, storage and result transfer to worker threads |
 | High | Video download/export retained entire files in RAM | Stream bounded results and export cache files through the document picker |
 | High | Encoder setup failures could leak resources | Clean up codec, surface, muxer and EGL on every exit |
+| High | Editing while a project save completed could clear the newer dirty state | Clear dirty state only when the saved edit revision still matches |
 | Medium | Rotation lost editing state | ViewModel session; app-private draft recovery on backgrounding |
 | Medium | No editable backup or library management | Bounded ZIP import/export, search, rename and confirmed deletion |
 | Medium | Engine had no job lifecycle controls | Authenticated history, cancellation checkpoints and deletion of finished results |

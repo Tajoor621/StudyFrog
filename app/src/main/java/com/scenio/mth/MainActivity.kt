@@ -41,6 +41,7 @@ class MainActivity : ComponentActivity() {
     private val projects by lazy { ProjectStore(applicationContext) }
     private var pendingExport: File? = null
     private var dirty = false
+    private var editRevision = 0L
     private var darkPalette = true
     private lateinit var canvas: ForgeCanvas
     private lateinit var prompt: EditText
@@ -91,7 +92,7 @@ class MainActivity : ComponentActivity() {
         strength=SeekBar(this).apply { max=90;progress=55;contentDescription="Photo transformation strength from 10 to 100 percent" };root.addView(strength)
         level=choices(listOf("Whole body","System","Organ","Tissue","Cellular"));root.addView(level)
         root.addView(text("Model inference steps (10–40)"));steps=SeekBar(this).apply { max=30;progress=session.steps };root.addView(steps)
-        canvas=ForgeCanvas(this).apply { onEdited={ dirty=true } };root.addView(canvas,LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,(260*resources.displayMetrics.density).toInt()))
+        canvas=ForgeCanvas(this).apply { onEdited={ markEdited() } };root.addView(canvas,LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,(260*resources.displayMetrics.density).toInt()))
         session.snapshot?.let { canvas.restore(it);dirty=false }
         mode.setSelection(session.mode);level.setSelection(session.level)
         root.addView(button("Create offline schematic") { canvas.image=canvas.diagram(prompt.text.toString(),level.selectedItem.toString());say("Template generated on this device. This is not AI inference.") })
@@ -125,7 +126,7 @@ class MainActivity : ComponentActivity() {
         } })
         root.addView(text("Video exports a progressive reveal; subject-motion generation is not implemented. Downloaded models run on your own computer. No phone-local diffusion runtime is bundled."))
         status=text("Ready • all projects stay local").apply { accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE };root.addView(status)
-        prompt.addTextChangedListener { dirty=true };negative.addTextChangedListener { dirty=true }
+        prompt.addTextChangedListener { markEdited() };negative.addTextChangedListener { markEdited() };seed.addTextChangedListener { markEdited() }
         lifecycleScope.launch { FeatureRuntime.graph(this@MainActivity).settings.data.collect { settings ->
             darkPalette=when(settings.theme) { ThemeMode.DARK -> true;ThemeMode.LIGHT -> false;ThemeMode.SYSTEM -> resources.configuration.uiMode and 0x30 == 0x20 }
             val bg=if(darkPalette) 0xff0f172a.toInt() else 0xfff7f8fc.toInt()
@@ -157,10 +158,11 @@ class MainActivity : ComponentActivity() {
     private fun metadata() = JSONObject().put("prompt",prompt.text.toString()).put("negative",negative.text.toString())
         .put("seed",seed.text.toString()).put("strength",strength.progress+10).put("mode",mode.selectedItem.toString()).put("level",level.selectedItem.toString()).put("steps",steps.progress+10)
     private fun ui(block:()->Unit) { runOnUiThread { if(!isFinishing && !isDestroyed) block() } }
+    private fun markEdited() { dirty=true;editRevision++ }
     private fun saveProject() {
         if(canvas.image==null) { say("Import or generate an image first");return }
-        val snapshot=canvas.snapshot();val meta=metadata()
-        background { val id=projects.save(snapshot,meta);ui { progress("project:$id",1,1);dirty=false;say("Saved editable image, ink layer and prompt") } }
+        val snapshot=canvas.snapshot();val meta=metadata();val savedRevision=editRevision
+        background { val id=projects.save(snapshot,meta);ui { progress("project:$id",1,1);if(editRevision==savedRevision) dirty=false;say("Saved editable image, ink layer and prompt") } }
     }
     private fun applyProject(loaded:com.scenio.mth.editor.LoadedProject) {
         canvas.restore(loaded.snapshot);val meta=loaded.info.meta
