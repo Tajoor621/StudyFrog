@@ -170,6 +170,7 @@ jobs:
       working-directory: engine
       run: |
         python ../scripts/check_repository.py
+        python ../scripts/audit_repository.py
         python -m unittest discover -s ../scripts -p 'test_*.py' -v
         python -m unittest -v
 'on':
