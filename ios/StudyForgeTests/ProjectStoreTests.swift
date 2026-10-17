@@ -8,7 +8,8 @@ final class ProjectStoreTests: XCTestCase {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString,isDirectory: true)
         defer { try? FileManager.default.removeItem(at: root) }
         let store = try IOSProjectStore(root: root)
-        let image = UIGraphicsImageRenderer(size: CGSize(width: 64,height: 128)).image { ctx in UIColor.green.setFill();ctx.fill(CGRect(x: 0,y: 0,width: 64,height: 128)) }
+        let format = UIGraphicsImageRendererFormat();format.scale = 1
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 64,height: 128),format: format).image { ctx in UIColor.green.setFill();ctx.fill(CGRect(x: 0,y: 0,width: 64,height: 128)) }
         let saved = try store.save(title: "Botany",prompt: "Plant",negative: "blur",image: image,drawings: [PKDrawing()],names: ["Labels"])
         let reopened = try IOSProjectStore(root: root)
         XCTAssertEqual(try reopened.list().first?.id,saved.id)

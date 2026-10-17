@@ -1,5 +1,6 @@
 """StudyForge local-only engine. No remote inference, implicit downloads or paid APIs."""
 from __future__ import annotations
+import ipaddress
 import base64, binascii, hmac, io, json, os, queue, re, secrets, shutil, subprocess, threading, uuid, time, tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -296,6 +297,9 @@ def main():
     threading.Thread(target=work,daemon=True).start()
     print("StudyForge local engine http://127.0.0.1:8765",flush=True)
     print("Session token:",TOKEN,flush=True)
-    Server(("127.0.0.1",8765),Handler).serve_forever()
+    bind=os.environ.get("STUDYFORGE_BIND","127.0.0.1")
+    address=ipaddress.ip_address(bind)
+    if address.is_unspecified or address.is_multicast or not (address.is_loopback or address.is_private): raise ValueError("Bind only to loopback or your explicit private LAN address")
+    Server((bind,8765),Handler).serve_forever()
 
 if __name__=="__main__": main()

@@ -65,6 +65,7 @@ class MainActivity : ComponentActivity() {
     private val prefs by lazy { getSharedPreferences("forge",MODE_PRIVATE) }
     private var latestJob: String? = null
     private var busy = false
+    private var localDialog:AlertDialog? = null
     private var localActive = false
     private var loadedLocalResult:String? = null
     private fun text(s:String) = TextView(this).apply { text=s;setTextColor(Color.WHITE);textSize=16f;setPadding(8,12,8,8) }
@@ -94,6 +95,7 @@ class MainActivity : ComponentActivity() {
         root.addView(ImageView(this).apply { setImageResource(R.drawable.ic_xxhdpi);contentDescription="StudyFrog app icon";scaleType=ImageView.ScaleType.FIT_CENTER },LinearLayout.LayoutParams((64*resources.displayMetrics.density).toInt(),(64*resources.displayMetrics.density).toInt()))
         root.addView(text("StudyForge  /  create • learn • refine").apply { textSize=25f })
         root.addView(text(nativeStatus()))
+        root.addView(button("Open-source licenses") { val license=resources.openRawResource(R.raw.third_party_licenses).bufferedReader().use { it.readText() };AlertDialog.Builder(this).setTitle("Open-source licenses").setMessage(license).setPositiveButton("Close",null).show() })
         mode=choices(listOf("Free Generate","Science Lab","Art Studio","Medical Explorer","Photo Converter","Video Creator"));root.addView(mode)
         prompt=EditText(this).apply { hint="Describe your idea or photo transformation…";minLines=3;setText(session.prompt.ifBlank { prefs.getString("prompt","Show mitosis step by step") });setTextColor(Color.WHITE) };root.addView(prompt)
         negative=EditText(this).apply { hint="Negative prompt";setText(session.negative);setTextColor(Color.WHITE) };root.addView(negative)
@@ -111,6 +113,10 @@ class MainActivity : ComponentActivity() {
         root.addView(button("On-device model information / remove") {
             AlertDialog.Builder(this).setTitle("Offline SD 1.x model").setMessage(ModelStore(applicationContext).description()+"\nImport a complete SD 1.x GGUF. Keep its license. Models are not bundled and may require several GB of memory.")
                 .setPositiveButton("Close",null).setNegativeButton("Remove model") { _,_ -> if(localActive) say("Cancel generation first") else background { ModelStore(applicationContext).remove();ui { say("Local model removed") } } }.show()
+        })
+        root.addView(button("Export device generation benchmark") {
+            val report=File(filesDir,"generated/benchmark-latest.json")
+            if(!report.isFile) say("Generate on this device once to record a real benchmark") else background { val copy=File(cacheDir,"studyforge-benchmark.json");report.copyTo(copy,overwrite=true);ui { export(copy,"application/json","studyforge-benchmark.json") } }
         })
         root.addView(button("Generate on this device") { localGenerate() })
         root.addView(button("Cancel on-device generation") { NativeEngine.cancel();WorkManager.getInstance(this).cancelUniqueWork(LocalGenerationWorker.NAME) })
@@ -150,6 +156,11 @@ class MainActivity : ComponentActivity() {
         root.addView(button("Generate with local model") { submit("image") })
         root.addView(button("Generate 30-second AI motion video (local computer)") { submit("motion") })
         root.addView(button("30-second 1080p reveal video") { submit("video") })
+        root.addView(button("Refine to 4K / 8K on local computer") { AlertDialog.Builder(this).setTitle("Tiled model refinement · may take a long time").setItems(arrayOf("4K · 3840×2160","8K · 7680×4320")) { _,choice -> if(choice==0) submit("refine",3840,2160) else submit("refine",7680,4320) }.show() })
+        root.addView(button("Export last unmodified generation at full resolution") {
+            val name=prefs.getString("original-result",null);val source=name?.let { File(filesDir,"generated/$it") }
+            if(source?.isFile!=true) say("Download or generate a result first") else background { val copy=File(cacheDir,"original-${UUID.randomUUID()}.png");source.copyTo(copy,overwrite=true);ui { export(copy,"image/png","studyforge-original.png") } }
+        })
         root.addView(button("Check current engine job / download result") { poll() })
         root.addView(button("Manage engine jobs") { engineHistory() })
         root.addView(button("Check engine connection") { val auth=token.text.toString();background {
@@ -177,11 +188,15 @@ class MainActivity : ComponentActivity() {
             WorkManager.getInstance(this@MainActivity).getWorkInfosForUniqueWorkFlow(LocalGenerationWorker.NAME).collect { jobs ->
                 val job=jobs.firstOrNull() ?: return@collect
                 localActive=!job.state.isFinished
+                if(localActive && localDialog==null) localDialog=AlertDialog.Builder(this@MainActivity).setTitle("Generating on this device").setMessage("Loading your model…").setCancelable(false).setNegativeButton("Cancel") { _,_ -> NativeEngine.cancel();WorkManager.getInstance(this@MainActivity).cancelUniqueWork(LocalGenerationWorker.NAME) }.show()
+                if(localActive) localDialog?.setMessage("${job.progress.getInt("percent",0)}% · You can leave the app; Android manages this local job.")
+                else { localDialog?.dismiss();localDialog=null }
                 if(localActive) say("On-device generation: ${job.progress.getInt("percent",0)}% · loading the model can take time")
                 else if(job.state==WorkInfo.State.SUCCEEDED) {
                     val path=job.outputData.getString("path")
-                    if(path!=null && path!=loadedLocalResult) { loadedLocalResult=path
-                        background { val image=PhotoDecoder.read(contentResolver,android.net.Uri.fromFile(File(path)));ui { canvas.image=image;say("Generated on this device · result saved privately") } }
+                    if(path!=null && path!=loadedLocalResult) {
+                        while(busy || pendingExport!=null) kotlinx.coroutines.delay(100)
+                        background { val image=PhotoDecoder.read(contentResolver,android.net.Uri.fromFile(File(path)));ui { loadedLocalResult=path;prefs.edit().putString("original-result",File(path).name).apply();canvas.image=image;say("Generated on this device · result saved privately") } }
                     }
                 } else if(job.state==WorkInfo.State.FAILED) say(job.outputData.getString("error") ?: "Local generation failed")
             }
@@ -302,16 +317,17 @@ class MainActivity : ComponentActivity() {
         if(text.isBlank() || text.length>2000 || excluded.length>2000) { say("Enter a prompt of 1–2000 characters");return }
         val number=if(seed.text.isBlank()) java.security.SecureRandom().nextInt(Int.MAX_VALUE).toLong() else seed.text.toString().toLongOrNull()
         if(number==null || number !in 0L..2147483647L) { say("Invalid seed");return }
-        val id=UUID.randomUUID();val input=androidx.work.Data.Builder().putString("prompt",text).putString("negative",excluded).putInt("size",256).putInt("steps",steps.progress+10).putLong("seed",number).putFloat("strength",(strength.progress+10)/100f)
+        val id=UUID.randomUUID();val input=JSONObject().put("prompt",text).put("negative",excluded).put("size",256).put("steps",steps.progress+10).put("seed",number).put("strength",(strength.progress+10)/100.0)
         val snapshot=if(mode.selectedItem.toString()=="Photo Converter") canvas.snapshot() else null
         if(snapshot!=null && snapshot.base==null) { say("Import a photo first");return }
         background {
             if(snapshot!=null) {
                 val bitmap=ForgeCanvas.render(snapshot);val file=File(cacheDir,"$id-input.png")
                 try { file.outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.PNG,100,it)) } } finally { bitmap.recycle() }
-                input.putString("initial",file.name)
+                input.put("initial",file.name)
             }
-            val request=OneTimeWorkRequestBuilder<LocalGenerationWorker>().setId(id).setInputData(input.build()).build()
+            val requestFile=File(noBackupFilesDir,"local-jobs/$id.json").apply { parentFile?.mkdirs();writeText(input.toString()) }
+            val request=OneTimeWorkRequestBuilder<LocalGenerationWorker>().setId(id).build()
             WorkManager.getInstance(applicationContext).enqueueUniqueWork(LocalGenerationWorker.NAME,ExistingWorkPolicy.KEEP,request)
             ui { localActive=true;say("Queued local generation · seed $number · 256 px memory-saving preview") }
         }
@@ -360,14 +376,14 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-    private fun submit(kind:String) {
+    private fun submit(kind:String,width:Int=768,height:Int=432) {
         val auth=token.text.toString();if(auth.isBlank()) { say("Start the local engine and enter its token first");return }
         val value=if(seed.text.isBlank()) java.security.SecureRandom().nextInt(Int.MAX_VALUE) else seed.text.toString().toIntOrNull()
         if(value==null || value<0) { say("Seed must be between 0 and 2147483647");return }
         if(prompt.text.isBlank() || prompt.length()>2000 || negative.length()>2000) { say("Write a prompt of 1–2000 characters; negative prompt maximum 2000");return }
         val body=JSONObject().put("kind",kind).put("prompt",prompt.text.toString()).put("negative",negative.text.toString())
-            .put("steps",steps.progress+10).put("seed",value).put("strength",(strength.progress+10)/100.0).put("width",768).put("height",432)
-        val photo=kind in listOf("video","motion") || mode.selectedItem.toString()=="Photo Converter"
+            .put("steps",steps.progress+10).put("seed",value).put("strength",(strength.progress+10)/100.0).put("width",width).put("height",height)
+        val photo=kind in listOf("video","motion","refine") || mode.selectedItem.toString()=="Photo Converter"
         val snapshot=if(photo) canvas.snapshot() else null
         if(photo && snapshot?.base==null) { say("Import or generate an image first");return }
         say("Submitting to your local engine…")
@@ -387,15 +403,17 @@ class MainActivity : ComponentActivity() {
     }
     private fun poll() {
         val id=latestJob ?: run { say("Submit a job first");return };val auth=token.text.toString()
+        if(!id.matches(Regex("[0-9a-f]{32}"))) { say("Invalid engine job identifier");return }
         background {
             val job=JSONObject(String(api("/jobs/$id",auth)))
             if(job.getString("status")=="done") {
                 val video=job.getString("kind") in listOf("video","motion")
-                val file=File(cacheDir,"result-$id.${if(video) "mp4" else "png"}")
+                val file=if(video) File(cacheDir,"result-$id.mp4") else File(filesDir,"generated/result-$id.png").apply { parentFile?.mkdirs() }
                 download("/results/$id",auth,file)
                 if(video) ui { progress("generation:$id",2,2);export(file,"video/mp4","studyforge-30s.mp4") }
                 else {
-                    val bitmap=try { PhotoDecoder.read(contentResolver,android.net.Uri.fromFile(file)) } finally { file.delete() }
+                    val bitmap=PhotoDecoder.read(contentResolver,android.net.Uri.fromFile(file))
+                    prefs.edit().putString("original-result",file.name).apply()
                     ui { progress("generation:$id",2,2);canvas.image=bitmap;say("Generation complete • review before academic use") }
                 }
             } else ui { say(job.optString("error",job.getString("status"))) }
@@ -426,5 +444,5 @@ class MainActivity : ComponentActivity() {
         if(dirty && canvas.image!=null) { projects.autosave(canvas.snapshot(),metadata());dirty=false }
         super.onStop()
     }
-    override fun onDestroy() { worker.shutdownNow();super.onDestroy() }
+    override fun onDestroy() { localDialog?.dismiss();worker.shutdownNow();super.onDestroy() }
 }

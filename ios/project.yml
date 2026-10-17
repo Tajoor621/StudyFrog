@@ -25,6 +25,18 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.scenio.mth
+        GENERATE_INFOPLIST_FILE: NO
+    info:
+      path: StudyForge/Info.plist
+      properties:
+        UILaunchScreen: {}
+        NSLocalNetworkUsageDescription: Connect to your own computer engine only when you request local motion-video generation.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
     dependencies:
       - framework: NativeBuild/sf_engine.framework
         embed: true

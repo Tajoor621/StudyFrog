@@ -56,6 +56,8 @@ struct DrawingCanvas: UIViewRepresentable {
     @Published var videoURL: URL?
     @Published var seed: Int64 = 42
     var job: Task<Void,Never>?
+    var videoTask: Task<Void,Error>?
+    var computerJob: (ComputerEngine,String)?
     func refresh() { do { records = try IOSProjectStore().list() } catch { message = error.localizedDescription } }
     func resetLayers() { drawings = [PKDrawing()];layerNames = ["Ink"];visible = [true];opacity = [1];blends = ["normal"];selected = 0 }
     func addLayer() { guard drawings.count < 16 else { message = "Maximum 16 layers";return };drawings.append(PKDrawing());layerNames.append("Layer \(drawings.count)");visible.append(true);opacity.append(1);blends.append("normal");selected = drawings.count-1 }
@@ -108,12 +110,32 @@ struct DrawingCanvas: UIViewRepresentable {
         job = Task {
             defer { working = false;UIApplication.shared.isIdleTimerDisabled = false }
             do {
-                try await Task.detached { try RevealEncoder.encode(image: source,output: output) { value in Task { @MainActor in self.percent = value } } }.value
+                videoTask = Task.detached { try RevealEncoder.encode(image: source,output: output) { value in Task { @MainActor in self.percent = value } } }
+                try await videoTask!.value
                 videoURL = output;message = "30-second 1080p reveal exported. This is not AI subject motion."
             } catch { message = error.localizedDescription }
         }
     }
-    func cancel() { sf_cancel();job?.cancel();message = "Cancellation requested" }
+    func motion(host: String,token: String) {
+        guard !working,let image = composite() else { return }
+        let engine = ComputerEngine(host: host,token: token),text = prompt,excluded = negative,number = seed
+        working = true;percent = 0;UIApplication.shared.isIdleTimerDisabled = true
+        job = Task {
+            defer { working = false;computerJob = nil;UIApplication.shared.isIdleTimerDisabled = false }
+            do {
+                let id = try await engine.submit(image: image,prompt: text,negative: excluded,seed: number,kind: "motion")
+                computerJob = (engine,id)
+                while true {
+                    try Task.checkCancellation();let state = try await engine.status(id)
+                    percent = state["progress"] as? Int ?? 0
+                    if state["status"] as? String == "done" { videoURL = try await engine.result(id);message = "AI motion video downloaded from your local computer";break }
+                    if ["failed","cancelled"].contains(state["status"] as? String ?? "") { throw LocalFailure(message: state["error"] as? String ?? "Job cancelled") }
+                    try await Task.sleep(nanoseconds: 5_000_000_000)
+                }
+            } catch { message = error.localizedDescription }
+        }
+    }
+    func cancel() { sf_cancel();videoTask?.cancel();if let (engine,id) = computerJob { Task { try? await engine.cancel(id) } };job?.cancel();message = "Cancellation requested" }
 }
 struct ForgeView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -131,6 +153,9 @@ struct ForgeView: View {
     @State private var erasing = false
     @State private var color = Color.mint
     @State private var query = ""
+    @AppStorage("computerHost") private var computerHost = ""
+    @State private var computerToken = ""
+    @State private var motionConsent = false
     @State private var deleteRecord: ProjectRecord?
     private func ink(_ i: Int) -> Binding<PKDrawing> { Binding(get: { i < store.drawings.count ? store.drawings[i] : PKDrawing() },set: { if i < store.drawings.count { store.drawings[i] = $0 } }) }
     var body: some View {
@@ -173,6 +198,7 @@ struct ForgeView: View {
                     PhotosPicker("Import photo",selection: $photo,matching: .images).disabled(store.working)
                     HStack { Button("Save project") { store.save() };Button("Export PNG") { exportData = store.composite()?.pngData() ?? Data();showExport = true } }.disabled(store.image == nil || store.working)
                     Button("Create 30-second reveal video") { store.video() }.disabled(store.image == nil || store.working)
+                    Button("Generate AI motion video on local computer") { motionConsent = true }.disabled(store.image == nil || store.working)
                     if let video = store.videoURL { ShareLink("Share video",item: video) }
                     if store.working { ProgressView(value: Double(store.percent),total: 100);Button("Cancel") { store.cancel() } }
                     Text(store.message).font(.footnote).accessibilityAddTraits(.updatesFrequently)
@@ -189,6 +215,10 @@ struct ForgeView: View {
             do { guard let data = try await item?.loadTransferable(type: Data.self), data.count <= 32_000_000, let image = UIImage(data: data), image.size.width*image.size.height <= 40_000_000 else { throw LocalFailure(message: "Unsupported or oversized photo") };store.image = image;store.resetLayers();store.message = "Photo imported locally" }
             catch { store.message = error.localizedDescription }
         } }
+        .alert("Send photo to your local computer?",isPresented: $motionConsent) {
+            Button("Generate") { store.motion(host: computerHost,token: computerToken) }
+            Button("Cancel",role: .cancel) {}
+        } message: { Text("This sends your prompt and image over your local network to the engine configured in Settings. Use your own computer and a trusted network. It requires a local LTX model and CUDA GPU; no cloud or paid API is used.") }
         .fileImporter(isPresented: $showModelPicker,allowedContentTypes: [.data]) { result in do { store.install(try result.get()) } catch { store.message = error.localizedDescription } }
         .fileExporter(isPresented: $showExport,document: ExportDocument(data: exportData),contentType: .png,defaultFilename: "StudyForge") { result in if case .failure(let error) = result { store.message = error.localizedDescription } }
         .sheet(isPresented: $showSettings) { NavigationStack { Form {
@@ -202,6 +232,10 @@ struct ForgeView: View {
                     else { Task { @MainActor in reminders = false } }
                 } }
             }
+            TextField("Computer hostname, e.g. my-mac.local",text: $computerHost).textInputAutocapitalization(.never).autocorrectionDisabled()
+            SecureField("Local engine token (memory only)",text: $computerToken)
+            Text("Computer motion generation is optional. On the computer, bind the engine to its private LAN address and set STUDYFORGE_VIDEO_MODEL. The token is never saved.")
+            NavigationLink("Open-source licenses") { ScrollView { Text((Bundle.main.url(forResource: "third-party-licenses",withExtension: "txt").flatMap { try? String(contentsOf: $0,encoding: .utf8) }) ?? "Source licenses are included in the repository.").font(.footnote).padding() } }
             Text("No cloud analytics SDK is included in this iOS build. Projects and models are excluded from automatic backups; export important results yourself.")
         }.navigationTitle("Settings").toolbar { Button("Done") { showSettings = false } } } }
         .sheet(isPresented: $showLibrary) { NavigationStack {

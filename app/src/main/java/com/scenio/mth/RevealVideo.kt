@@ -104,6 +104,8 @@ object RevealVideo {
             codec.signalEndOfInputStream();drain(true)
             GLES20.glDeleteTextures(1,textures,0);GLES20.glDeleteProgram(program);GLES20.glDeleteShader(vs);GLES20.glDeleteShader(fs)
         }
+        if(muxing) { muxer.stop();muxing=false }
+        muxer.release();releaseMuxer=null
         completed=true
         onProgress(100)
         } finally {
