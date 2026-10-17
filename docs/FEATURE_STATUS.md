@@ -2,7 +2,7 @@
 
 | Requirement | Current delivery |
 | --- | --- |
-| Prompt-first Android interface | Implemented source; Android compile pending |
+| Prompt-first Android interface | Built and tested in CI; physical-device UX checks pending |
 | Six modes | UI choices; most share the same underlying generation pipeline |
 | Text-to-image | Computer-local SD 1.x adapter, requires separately downloaded model; not runtime-tested |
 | Photo-to-image | Computer-local img2img adapter; not model-tested |
@@ -14,17 +14,17 @@
 | Hierarchical science visuals | Selector and illustrative template only; semantic zoom chains pending |
 | Medical images / CT / MRI overlays | Not implemented; no diagnostic functionality |
 | Scientific correctness | Human review required; no validator or accuracy slider |
-| Drawing layers | Base image + editable ink; undo/redo, pressure, color, size, ZIP backup |
+| Drawing layers | Base image + editable ink; undo/redo, pressure, color, size, ZIP backup; emulator round trip verified |
 | Full layers, masks, blend modes, tilt | Pending |
 | Vectors / typography / booleans / print management | Pending |
-| Video 30 sec, 1080p, 24 fps | Verified FFmpeg reveal on computer; Android hardware encoder implementation supplied, device verification pending |
+| Video 30 sec, 1080p, 24 fps | Verified FFmpeg reveal on computer; Android encoder compiles; physical encoder verification pending |
 | Ultra-realistic subject motion / camera instructions | Pending, not implemented |
 | AnimateDiff / video-model integration | Pending |
 | Local history / projects | Editable base/ink/prompt library, search/rename/delete, backups and draft recovery; folders pending |
 | Adult Mode / age gate / parental PIN | Not implemented; unrestricted explicit-sexual generation excluded |
 | Certified child-safe mode | Not claimed; robust safety system pending |
 | iOS | Source starter: photos, schematics, saving and PNG export; no Xcode project or build |
-| AAB + density + JNI | Source, wrapper, CI and verification delivered; actual Android build pending |
+| AAB + density + JNI | Release build and generated-manifest verification pass; JNI loads in emulator |
 | 16 KB native compatibility | NDK flexible page-size flag; device testing pending |
 | Zero paid services | No paid APIs, in-app payments, ads or Play Console integration |
 
@@ -43,17 +43,17 @@
 
 Do not advertise this foundation as the complete master specification or a 10/10 product.
 
-## Integrated Android foundations (0.2.0)
+## Integrated Android foundations (0.3.0)
 
 Room/DataStore progress, onboarding, Material 3 appearance, settings, local
 reminders, opt-in telemetry, accessibility semantics, test sources, CI and
 environment-based release signing are now wired into the Android app.
-Package: com.scenio.mth. Build/device verification is still required.
+Package: com.scenio.mth. Build, packaging and API 35 emulator tests pass; physical-device checks remain.
 The new feature screens use Compose; the studio retains its original native
 view implementation. Project schema 2 preserves the base and independent ink; legacy flattened projects can still be opened.
 
 ## Audit update (0.3.0)
 
 Supplied icon integrated across platforms. See [AUDIT.md](AUDIT.md).
-Source changes require CI and hardware checks; status above does not establish
+CI verification is recorded in [VALIDATION.md](../VALIDATION.md). These results do not establish
 model quality or complete original-specification delivery.

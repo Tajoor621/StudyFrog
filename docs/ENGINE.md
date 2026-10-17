@@ -2,7 +2,7 @@
 
 The phone application includes source for templates, photo annotation, project
 saving, PNG export and a phone-local MediaCodec/EGL reveal video encoder.
-Android compilation and hardware encoder verification are still pending. AI generation in this build
+Android compilation is verified in CI; physical hardware encoding remains unverified. AI generation in this build
 runs on YOUR computer, not on the phone. A USB cable plus adb reverse works
 without an internet connection after dependencies/models are prepared.
 
@@ -107,6 +107,20 @@ The output image is allocated on your computer, not the phone.
 The separate “Create 30-second video on this phone” action uses Android
 MediaCodec, EGL and OpenGL ES 2.0 to draw 720 frames onto an encoder surface
 and mux H.264 MP4. It does not use FFmpeg or a server. Keep the app open;
-this is not a background service. It is implemented source but has not yet
-been compiled or tested on hardware. Devices may reject the 1080p encoder
+this is not a background service. It compiles in CI but has not been encoder-tested on physical hardware. Devices may reject the 1080p encoder
 configuration; errors are reported rather than claiming success.
+
+## Job management
+
+The Android studio includes engine history and confirmed cancellation/deletion.
+All routes require the same bearer token:
+
+- `GET /jobs`: latest 50 job summaries.
+- `POST /jobs/<id>/cancel`: request cancellation at the next safe step.
+- `DELETE /jobs/<id>`: delete a finished job and its stored result.
+
+Active jobs must be cancelled before deletion. Diffusion checks cancellation
+between denoising steps; tiled refinement checks between patches. Video encoding
+terminates its FFmpeg subprocess on cancellation. No phone project is deleted
+by a computer-engine job deletion. Strength and guidance values are bounded;
+the Android photo workflow exposes transformation strength and seed control.
