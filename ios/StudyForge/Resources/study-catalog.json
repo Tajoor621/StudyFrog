@@ -1,0 +1,1454 @@
+{
+  "version": 1,
+  "notice": "Original simplified schematics, not to scale. Educational reference only; not diagnostic imaging. Model-generated refinements require independent review.",
+  "roots": [
+    "human-body",
+    "prophase"
+  ],
+  "sources": [
+    {
+      "id": "organization",
+      "title": "OpenStax Anatomy and Physiology 2e, 1.2",
+      "url": "https://openstax.org/books/anatomy-and-physiology-2e/pages/1-2-structural-organization-of-the-human-body"
+    },
+    {
+      "id": "heart",
+      "title": "OpenStax Anatomy and Physiology 2e, 19.1",
+      "url": "https://openstax.org/books/anatomy-and-physiology-2e/pages/19-1-heart-anatomy"
+    },
+    {
+      "id": "muscle",
+      "title": "OpenStax Anatomy and Physiology 2e, 10.1",
+      "url": "https://openstax.org/books/anatomy-and-physiology-2e/pages/10-1-overview-of-muscle-tissues"
+    },
+    {
+      "id": "mitosis",
+      "title": "OpenStax Biology 2e, 10.2",
+      "url": "https://openstax.org/books/biology-2e/pages/10-2-the-cell-cycle"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "human-body",
+      "title": "Human body",
+      "level": "Organism",
+      "summary": "Cells form tissues; tissues contribute to organs, and organs work together in systems.",
+      "prompt": "Show the body organization hierarchy; emphasize the cardiovascular system.",
+      "alt": "Human body. Cells form tissues; tissues contribute to organs, and organs work together in systems. Labels: Organism, Heart location, Schematic body. Simplified schematic, not to scale.",
+      "sourceIds": [
+        "organization"
+      ],
+      "children": [
+        "cardiovascular"
+      ],
+      "parent": null,
+      "next": null,
+      "shapes": [
+        {
+          "kind": "ellipse",
+          "points": [
+            0.44,
+            0.16,
+            0.56,
+            0.29000000000000004
+          ],
+          "color": "#0F766E",
+          "fill": false
+        },
+        {
+          "kind": "rect",
+          "points": [
+            0.36,
+            0.32,
+            0.64,
+            0.61
+          ],
+          "color": "#0F766E",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.36,
+            0.36,
+            0.21,
+            0.57
+          ],
+          "color": "#0F766E",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.64,
+            0.36,
+            0.79,
+            0.57
+          ],
+          "color": "#0F766E",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.44,
+            0.61,
+            0.38,
+            0.83
+          ],
+          "color": "#0F766E",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.56,
+            0.61,
+            0.62,
+            0.83
+          ],
+          "color": "#0F766E",
+          "fill": false
+        },
+        {
+          "kind": "ellipse",
+          "points": [
+            0.49,
+            0.39,
+            0.56,
+            0.47000000000000003
+          ],
+          "color": "#BE123C",
+          "fill": false
+        }
+      ],
+      "labels": [
+        {
+          "text": "Organism",
+          "x": 0.08,
+          "y": 0.23
+        },
+        {
+          "text": "Heart location",
+          "x": 0.68,
+          "y": 0.43
+        },
+        {
+          "text": "Schematic body",
+          "x": 0.35,
+          "y": 0.91
+        }
+      ]
+    },
+    {
+      "id": "cardiovascular",
+      "title": "Cardiovascular system",
+      "level": "System",
+      "summary": "The pulmonary circuit links heart and lungs. The systemic circuit links heart and other body tissues.",
+      "prompt": "Show the two circulation circuits with labeled arrows, including lung and systemic capillaries.",
+      "alt": "Cardiovascular system. The pulmonary circuit links heart and lungs. The systemic circuit links heart and other body tissues. Labels: Lung capillaries, Heart, Body capillaries, Lower O2, Higher O2. Simplified schematic, not to scale.",
+      "sourceIds": [
+        "heart"
+      ],
+      "children": [
+        "heart"
+      ],
+      "parent": "human-body",
+      "next": null,
+      "shapes": [
+        {
+          "kind": "rect",
+          "points": [
+            0.36,
+            0.14,
+            0.64,
+            0.28
+          ],
+          "color": "#0F766E",
+          "fill": false
+        },
+        {
+          "kind": "rect",
+          "points": [
+            0.36,
+            0.43,
+            0.64,
+            0.58
+          ],
+          "color": "#0F766E",
+          "fill": false
+        },
+        {
+          "kind": "rect",
+          "points": [
+            0.36,
+            0.75,
+            0.64,
+            0.89
+          ],
+          "color": "#0F766E",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.36,
+            0.2,
+            0.18,
+            0.2,
+            0.18,
+            0.5,
+            0.36,
+            0.5
+          ],
+          "color": "#2563EB",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.64,
+            0.5,
+            0.82,
+            0.5,
+            0.82,
+            0.2,
+            0.64,
+            0.2
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.64,
+            0.54,
+            0.88,
+            0.54,
+            0.88,
+            0.82,
+            0.64,
+            0.82
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.36,
+            0.82,
+            0.12,
+            0.82,
+            0.12,
+            0.54,
+            0.36,
+            0.54
+          ],
+          "color": "#2563EB",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.18,
+            0.34,
+            0.16,
+            0.37,
+            0.18,
+            0.34,
+            0.2,
+            0.37
+          ],
+          "color": "#2563EB",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.82,
+            0.35,
+            0.8,
+            0.32,
+            0.82,
+            0.35,
+            0.84,
+            0.32
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.88,
+            0.69,
+            0.86,
+            0.66,
+            0.88,
+            0.69,
+            0.9,
+            0.66
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.12,
+            0.68,
+            0.1,
+            0.71,
+            0.12,
+            0.68,
+            0.14,
+            0.71
+          ],
+          "color": "#2563EB",
+          "fill": false
+        }
+      ],
+      "labels": [
+        {
+          "text": "Lung capillaries",
+          "x": 0.38,
+          "y": 0.23
+        },
+        {
+          "text": "Heart",
+          "x": 0.45,
+          "y": 0.53
+        },
+        {
+          "text": "Body capillaries",
+          "x": 0.38,
+          "y": 0.84
+        },
+        {
+          "text": "Lower O2",
+          "x": 0.02,
+          "y": 0.46
+        },
+        {
+          "text": "Higher O2",
+          "x": 0.73,
+          "y": 0.45
+        }
+      ]
+    },
+    {
+      "id": "heart",
+      "title": "Heart: chamber flow",
+      "level": "Organ",
+      "summary": "Atria receive blood and ventricles pump it onward. Arrows show the chamber sequence; valves and vessels are omitted.",
+      "prompt": "Show labeled right atrium, right ventricle, left atrium and left ventricle; trace pulmonary and systemic blood flow.",
+      "alt": "Heart: chamber flow. Atria receive blood and ventricles pump it onward. Arrows show the chamber sequence; valves and vessels are omitted. Labels: Right atrium, Right ventricle, Left atrium, Left ventricle, Via lungs, Via body. Simplified schematic, not to scale.",
+      "sourceIds": [
+        "heart"
+      ],
+      "children": [
+        "cardiac-tissue"
+      ],
+      "parent": "cardiovascular",
+      "next": null,
+      "shapes": [
+        {
+          "kind": "rect",
+          "points": [
+            0.1,
+            0.23,
+            0.42000000000000004,
+            0.45
+          ],
+          "color": "#2563EB",
+          "fill": false
+        },
+        {
+          "kind": "rect",
+          "points": [
+            0.1,
+            0.61,
+            0.42000000000000004,
+            0.83
+          ],
+          "color": "#2563EB",
+          "fill": false
+        },
+        {
+          "kind": "rect",
+          "points": [
+            0.59,
+            0.23,
+            0.9099999999999999,
+            0.45
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "rect",
+          "points": [
+            0.59,
+            0.61,
+            0.9099999999999999,
+            0.83
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.26,
+            0.45,
+            0.26,
+            0.61
+          ],
+          "color": "#2563EB",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.75,
+            0.45,
+            0.75,
+            0.61
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.26,
+            0.83,
+            0.26,
+            0.93,
+            0.97,
+            0.93,
+            0.97,
+            0.12,
+            0.75,
+            0.12,
+            0.75,
+            0.23
+          ],
+          "color": "#2563EB",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.75,
+            0.83,
+            0.75,
+            0.88,
+            0.03,
+            0.88,
+            0.03,
+            0.12,
+            0.26,
+            0.12,
+            0.26,
+            0.23
+          ],
+          "color": "#BE123C",
+          "fill": false
+        }
+      ],
+      "labels": [
+        {
+          "text": "Right atrium",
+          "x": 0.14,
+          "y": 0.35
+        },
+        {
+          "text": "Right ventricle",
+          "x": 0.12,
+          "y": 0.74
+        },
+        {
+          "text": "Left atrium",
+          "x": 0.64,
+          "y": 0.35
+        },
+        {
+          "text": "Left ventricle",
+          "x": 0.62,
+          "y": 0.74
+        },
+        {
+          "text": "Via lungs",
+          "x": 0.74,
+          "y": 0.08
+        },
+        {
+          "text": "Via body",
+          "x": 0.04,
+          "y": 0.08
+        }
+      ]
+    },
+    {
+      "id": "cardiac-tissue",
+      "title": "Cardiac muscle tissue",
+      "level": "Tissue",
+      "summary": "Cardiac muscle is striated and involuntary. Connected cells help coordinate contraction.",
+      "prompt": "Show a simplified group of cardiac muscle cells with striations and cell connections.",
+      "alt": "Cardiac muscle tissue. Cardiac muscle is striated and involuntary. Connected cells help coordinate contraction. Labels: Striations, Cell junction, Nucleus. Simplified schematic, not to scale.",
+      "sourceIds": [
+        "muscle"
+      ],
+      "children": [
+        "cardiomyocyte"
+      ],
+      "parent": "heart",
+      "next": null,
+      "shapes": [
+        {
+          "kind": "rect",
+          "points": [
+            0.12,
+            0.27,
+            0.84,
+            0.45
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "rect",
+          "points": [
+            0.12,
+            0.58,
+            0.84,
+            0.76
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.2,
+            0.28,
+            0.2,
+            0.44
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.28,
+            0.28,
+            0.28,
+            0.44
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.36,
+            0.28,
+            0.36,
+            0.44
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.44,
+            0.28,
+            0.44,
+            0.44
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.52,
+            0.28,
+            0.52,
+            0.44
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.6,
+            0.28,
+            0.6,
+            0.44
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.68,
+            0.28,
+            0.68,
+            0.44
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.76,
+            0.28,
+            0.76,
+            0.44
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.2,
+            0.59,
+            0.2,
+            0.75
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.28,
+            0.59,
+            0.28,
+            0.75
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.36,
+            0.59,
+            0.36,
+            0.75
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.44,
+            0.59,
+            0.44,
+            0.75
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.52,
+            0.59,
+            0.52,
+            0.75
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.6,
+            0.59,
+            0.6,
+            0.75
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.68,
+            0.59,
+            0.68,
+            0.75
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.76,
+            0.59,
+            0.76,
+            0.75
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "ellipse",
+          "points": [
+            0.38,
+            0.32,
+            0.46,
+            0.39
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "ellipse",
+          "points": [
+            0.56,
+            0.63,
+            0.64,
+            0.7
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.48,
+            0.27,
+            0.48,
+            0.45
+          ],
+          "color": "#16324F",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.42,
+            0.58,
+            0.42,
+            0.76
+          ],
+          "color": "#16324F",
+          "fill": false
+        }
+      ],
+      "labels": [
+        {
+          "text": "Striations",
+          "x": 0.15,
+          "y": 0.17
+        },
+        {
+          "text": "Cell junction",
+          "x": 0.51,
+          "y": 0.51
+        },
+        {
+          "text": "Nucleus",
+          "x": 0.55,
+          "y": 0.85
+        }
+      ]
+    },
+    {
+      "id": "cardiomyocyte",
+      "title": "Cardiac muscle cell",
+      "level": "Cellular",
+      "summary": "A cardiac muscle cell contains a nucleus and contractile machinery. This drawing omits most organelles.",
+      "prompt": "Show one cardiac muscle cell, labeling its nucleus, membrane and contractile striations.",
+      "alt": "Cardiac muscle cell. A cardiac muscle cell contains a nucleus and contractile machinery. This drawing omits most organelles. Labels: Cell boundary, Nucleus, Striations. Simplified schematic, not to scale.",
+      "sourceIds": [
+        "muscle"
+      ],
+      "children": [],
+      "parent": "cardiac-tissue",
+      "next": null,
+      "shapes": [
+        {
+          "kind": "ellipse",
+          "points": [
+            0.13,
+            0.28,
+            0.86,
+            0.7
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "ellipse",
+          "points": [
+            0.43,
+            0.42,
+            0.55,
+            0.54
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.25,
+            0.36,
+            0.25,
+            0.63
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.32,
+            0.36,
+            0.32,
+            0.63
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.61,
+            0.36,
+            0.61,
+            0.63
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.68,
+            0.36,
+            0.68,
+            0.63
+          ],
+          "color": "#BE123C",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.75,
+            0.36,
+            0.75,
+            0.63
+          ],
+          "color": "#BE123C",
+          "fill": false
+        }
+      ],
+      "labels": [
+        {
+          "text": "Cell boundary",
+          "x": 0.13,
+          "y": 0.22
+        },
+        {
+          "text": "Nucleus",
+          "x": 0.45,
+          "y": 0.55
+        },
+        {
+          "text": "Striations",
+          "x": 0.64,
+          "y": 0.81
+        }
+      ]
+    },
+    {
+      "id": "prophase",
+      "title": "Prophase",
+      "level": "Mitosis phase",
+      "summary": "Replicated chromosomes condense as the mitotic spindle begins to form.",
+      "prompt": "Illustrate prophase in a simplified animal-cell mitosis sequence; label condensed chromosomes.",
+      "alt": "Prophase. Replicated chromosomes condense as the mitotic spindle begins to form. Labels: Condensed chromosomes. Simplified schematic, not to scale.",
+      "sourceIds": [
+        "mitosis"
+      ],
+      "children": [],
+      "parent": null,
+      "next": "prometaphase",
+      "shapes": [
+        {
+          "kind": "ellipse",
+          "points": [
+            0.12,
+            0.18,
+            0.88,
+            0.8200000000000001
+          ],
+          "color": "#0F766E",
+          "fill": false
+        },
+        {
+          "kind": "ellipse",
+          "points": [
+            0.3,
+            0.3,
+            0.6799999999999999,
+            0.7
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.385,
+            0.4,
+            0.45499999999999996,
+            0.52
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.45499999999999996,
+            0.4,
+            0.385,
+            0.52
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.5349999999999999,
+            0.48000000000000004,
+            0.605,
+            0.6000000000000001
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.605,
+            0.48000000000000004,
+            0.5349999999999999,
+            0.6000000000000001
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        }
+      ],
+      "labels": [
+        {
+          "text": "Condensed chromosomes",
+          "x": 0.24,
+          "y": 0.91
+        }
+      ]
+    },
+    {
+      "id": "prometaphase",
+      "title": "Prometaphase",
+      "level": "Mitosis phase",
+      "summary": "Nuclear-envelope breakdown permits spindle attachment at chromosome kinetochores.",
+      "prompt": "Illustrate prometaphase in a simplified animal-cell mitosis sequence; label spindle attachment.",
+      "alt": "Prometaphase. Nuclear-envelope breakdown permits spindle attachment at chromosome kinetochores. Labels: Spindle attachment. Simplified schematic, not to scale.",
+      "sourceIds": [
+        "mitosis"
+      ],
+      "children": [],
+      "parent": null,
+      "next": "metaphase",
+      "shapes": [
+        {
+          "kind": "ellipse",
+          "points": [
+            0.12,
+            0.18,
+            0.88,
+            0.8200000000000001
+          ],
+          "color": "#0F766E",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.385,
+            0.4,
+            0.45499999999999996,
+            0.52
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.45499999999999996,
+            0.4,
+            0.385,
+            0.52
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.5349999999999999,
+            0.48000000000000004,
+            0.605,
+            0.6000000000000001
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.605,
+            0.48000000000000004,
+            0.5349999999999999,
+            0.6000000000000001
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.17,
+            0.5,
+            0.42,
+            0.46
+          ],
+          "color": "#2563EB",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.83,
+            0.5,
+            0.42,
+            0.46
+          ],
+          "color": "#2563EB",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.17,
+            0.5,
+            0.57,
+            0.54
+          ],
+          "color": "#2563EB",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.83,
+            0.5,
+            0.57,
+            0.54
+          ],
+          "color": "#2563EB",
+          "fill": false
+        }
+      ],
+      "labels": [
+        {
+          "text": "Spindle attachment",
+          "x": 0.24,
+          "y": 0.91
+        }
+      ]
+    },
+    {
+      "id": "metaphase",
+      "title": "Metaphase",
+      "level": "Mitosis phase",
+      "summary": "Replicated chromosomes align at the cell equator while sister chromatids remain joined.",
+      "prompt": "Illustrate metaphase in a simplified animal-cell mitosis sequence; label cell equator.",
+      "alt": "Metaphase. Replicated chromosomes align at the cell equator while sister chromatids remain joined. Labels: Cell equator. Simplified schematic, not to scale.",
+      "sourceIds": [
+        "mitosis"
+      ],
+      "children": [],
+      "parent": null,
+      "next": "anaphase",
+      "shapes": [
+        {
+          "kind": "ellipse",
+          "points": [
+            0.12,
+            0.18,
+            0.88,
+            0.8200000000000001
+          ],
+          "color": "#0F766E",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.46499999999999997,
+            0.34,
+            0.535,
+            0.46
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.535,
+            0.34,
+            0.46499999999999997,
+            0.46
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.46499999999999997,
+            0.56,
+            0.535,
+            0.6799999999999999
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.535,
+            0.56,
+            0.46499999999999997,
+            0.6799999999999999
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.17,
+            0.5,
+            0.5,
+            0.4
+          ],
+          "color": "#2563EB",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.83,
+            0.5,
+            0.5,
+            0.4
+          ],
+          "color": "#2563EB",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.17,
+            0.5,
+            0.5,
+            0.62
+          ],
+          "color": "#2563EB",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.83,
+            0.5,
+            0.5,
+            0.62
+          ],
+          "color": "#2563EB",
+          "fill": false
+        }
+      ],
+      "labels": [
+        {
+          "text": "Cell equator",
+          "x": 0.24,
+          "y": 0.91
+        }
+      ]
+    },
+    {
+      "id": "anaphase",
+      "title": "Anaphase",
+      "level": "Mitosis phase",
+      "summary": "Sister chromatids separate and move toward opposite poles; each is now a chromosome.",
+      "prompt": "Illustrate anaphase in a simplified animal-cell mitosis sequence; label separated chromosomes.",
+      "alt": "Anaphase. Sister chromatids separate and move toward opposite poles; each is now a chromosome. Labels: Separated chromosomes. Simplified schematic, not to scale.",
+      "sourceIds": [
+        "mitosis"
+      ],
+      "children": [],
+      "parent": null,
+      "next": "telophase",
+      "shapes": [
+        {
+          "kind": "ellipse",
+          "points": [
+            0.12,
+            0.18,
+            0.88,
+            0.8200000000000001
+          ],
+          "color": "#0F766E",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.35,
+            0.405,
+            0.29000000000000004,
+            0.44,
+            0.35,
+            0.475
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.35,
+            0.5449999999999999,
+            0.29000000000000004,
+            0.58,
+            0.35,
+            0.615
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.64,
+            0.405,
+            0.7000000000000001,
+            0.44,
+            0.64,
+            0.475
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.64,
+            0.5449999999999999,
+            0.7000000000000001,
+            0.58,
+            0.64,
+            0.615
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.17,
+            0.5,
+            0.32,
+            0.44
+          ],
+          "color": "#2563EB",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.17,
+            0.5,
+            0.32,
+            0.58
+          ],
+          "color": "#2563EB",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.83,
+            0.5,
+            0.67,
+            0.44
+          ],
+          "color": "#2563EB",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.83,
+            0.5,
+            0.67,
+            0.58
+          ],
+          "color": "#2563EB",
+          "fill": false
+        }
+      ],
+      "labels": [
+        {
+          "text": "Separated chromosomes",
+          "x": 0.24,
+          "y": 0.91
+        }
+      ]
+    },
+    {
+      "id": "telophase",
+      "title": "Telophase",
+      "level": "Mitosis phase",
+      "summary": "Nuclear envelopes re-form around each chromosome set. Cytokinesis divides the cytoplasm as a separate process.",
+      "prompt": "Illustrate telophase in a simplified animal-cell mitosis sequence; label new nuclei.",
+      "alt": "Telophase. Nuclear envelopes re-form around each chromosome set. Cytokinesis divides the cytoplasm as a separate process. Labels: New nuclei. Simplified schematic, not to scale.",
+      "sourceIds": [
+        "mitosis"
+      ],
+      "children": [],
+      "parent": null,
+      "next": null,
+      "shapes": [
+        {
+          "kind": "ellipse",
+          "points": [
+            0.12,
+            0.18,
+            0.88,
+            0.8200000000000001
+          ],
+          "color": "#0F766E",
+          "fill": false
+        },
+        {
+          "kind": "ellipse",
+          "points": [
+            0.22,
+            0.3,
+            0.47,
+            0.7
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "ellipse",
+          "points": [
+            0.57,
+            0.3,
+            0.82,
+            0.7
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.35,
+            0.405,
+            0.29000000000000004,
+            0.44,
+            0.35,
+            0.475
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.35,
+            0.5449999999999999,
+            0.29000000000000004,
+            0.58,
+            0.35,
+            0.615
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.64,
+            0.405,
+            0.7000000000000001,
+            0.44,
+            0.64,
+            0.475
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        },
+        {
+          "kind": "line",
+          "points": [
+            0.64,
+            0.5449999999999999,
+            0.7000000000000001,
+            0.58,
+            0.64,
+            0.615
+          ],
+          "color": "#7C3AED",
+          "fill": false
+        }
+      ],
+      "labels": [
+        {
+          "text": "New nuclei",
+          "x": 0.24,
+          "y": 0.91
+        }
+      ]
+    }
+  ]
+}

@@ -27,6 +27,11 @@ class ForgeCanvas(context: Context) : View(context) {
     fun moveLayer(id:String,delta:Int) { val i=layers.indexOfFirst { it.id==id };val to=(i+delta).coerceIn(0,layers.lastIndex);if(i>=0 && i!=to) { val layer=layers.removeAt(i);layers.add(to,layer);changed() } }
     fun deleteLayer(id:String) { require(layers.size>1);layers.removeAll { it.id==id };strokes.removeAll { it.layerId==id };undone.clear();activeLayer=layers.last().id;changed() }
     fun label(text:String) { require(text.isNotBlank() && text.length<=200);require(strokes.size<512);strokes.add(Stroke(mutableListOf(Point(.1f,.15f)),inkColor,inkSize,activeLayer,"text",text));changed() }
+    fun textLabels():List<Pair<Int,Stroke>> = strokes.mapIndexedNotNull { i,stroke -> if(stroke.kind=="text") i to stroke.copy(points=stroke.points.toMutableList()) else null }
+    fun updateTextLabel(index:Int,text:String,x:Float,y:Float) {
+        require(index in strokes.indices && strokes[index].kind=="text");require(text.isNotBlank() && text.length<=200 && x in 0f..1f && y in 0f..1f)
+        strokes[index]=strokes[index].copy(text=text,points=mutableListOf(Point(x,y)));undone.clear();changed()
+    }
     private fun changed() { previewState=Snapshot(image,strokes,layers,activeLayer);invalidate();onEdited?.invoke() }
     private val viewport=RectF()
     private var previewState=Snapshot(null,strokes)

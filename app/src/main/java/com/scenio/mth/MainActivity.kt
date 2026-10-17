@@ -122,6 +122,7 @@ class MainActivity : ComponentActivity() {
         nativeResolution=choices(listOf("256px preview · 6 GB RAM","512px standard · 8 GB RAM"));root.addView(nativeResolution)
         root.addView(button("Generate on this device") { localGenerate() })
         root.addView(button("Cancel on-device generation") { NativeEngine.cancel();WorkManager.getInstance(this).cancelUniqueWork(LocalGenerationWorker.NAME) })
+        root.addView(button("Explore science · linked levels and labeled diagrams") { if(!localActive && !busy) startActivityForResult(Intent(this,com.scenio.mth.science.StudyExplorerActivity::class.java),14) else say("Wait for generation to finish") })
         root.addView(button("Create offline schematic") { canvas.image=canvas.diagram(prompt.text.toString(),level.selectedItem.toString());say("Template generated on this device. This is not AI inference.") })
         root.addView(button("Import photo") { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type="image/*";addCategory(Intent.CATEGORY_OPENABLE) },10) })
         root.addView(Switch(this).apply { text="Draw / annotate on ink layer";setTextColor(Color.WHITE);setOnCheckedChangeListener { _,on -> canvas.drawing=on } })
@@ -139,6 +140,7 @@ class MainActivity : ComponentActivity() {
             override fun onNothingSelected(parent:AdapterView<*>?) {}
         }
         root.addView(button("Layers · visibility, opacity, blend and order") { layerControls() })
+        root.addView(button("Edit text labels / positions") { editLabels() })
         root.addView(button("Add editable text label") { val field=EditText(this).apply { hint="Label text" };AlertDialog.Builder(this).setTitle("Text label").setView(field).setPositiveButton("Add") { _,_ -> runCatching { canvas.label(field.text.toString()) }.onFailure { say(it.message ?: "Cannot add label") } }.setNegativeButton("Cancel",null).show() })
         root.addView(button("Ink color") { AlertDialog.Builder(this).setTitle("Ink color").setItems(arrayOf("Mint","White","Gold","Blue","Red","Black")) { _,index ->
             canvas.inkColor=intArrayOf(0xff5eead4.toInt(),Color.WHITE,0xffffcc55.toInt(),0xff55aaff.toInt(),0xffff5555.toInt(),Color.BLACK)[index]
@@ -251,6 +253,18 @@ class MainActivity : ComponentActivity() {
             }.show()
         }.setNegativeButton("Close",null).show()
     }
+    private fun editLabels() {
+        val labels=canvas.textLabels()
+        if(labels.isEmpty()) { say("Add a label or open a labeled study diagram first");return }
+        AlertDialog.Builder(this).setTitle("Edit labels").setItems(labels.map { it.second.text }.toTypedArray()) { _,which ->
+            val (index,stroke)=labels[which];val point=stroke.points.first()
+            val form=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL;setPadding(24,8,24,8) }
+            val value=EditText(this).apply { setText(stroke.text);hint="Label text";filters=arrayOf(android.text.InputFilter.LengthFilter(200)) };form.addView(value)
+            form.addView(text("Horizontal position"));val x=SeekBar(this).apply { max=100;progress=(point.x*100).toInt();contentDescription="Label horizontal position, percent of image width" };form.addView(x)
+            form.addView(text("Vertical position"));val y=SeekBar(this).apply { max=100;progress=(point.y*100).toInt();contentDescription="Label vertical position, percent of image height" };form.addView(y)
+            AlertDialog.Builder(this).setTitle("Label and position").setView(form).setPositiveButton("Apply") { _,_ -> runCatching { canvas.updateTextLabel(index,value.text.toString(),x.progress/100f,y.progress/100f) }.onFailure { say("Enter a nonempty label of up to 200 characters") } }.setNegativeButton("Cancel",null).show()
+        }.setNegativeButton("Close",null).show()
+    }
     private fun library() { background {
         val items=projects.list();ui {
             if(items.isEmpty()) { say("No saved projects yet");return@ui }
@@ -291,6 +305,18 @@ class MainActivity : ComponentActivity() {
     override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?) {
         super.onActivityResult(requestCode,resultCode,data)
         if(resultCode!=RESULT_OK) { if(requestCode==11) { pendingExport?.delete();pendingExport=null };return }
+        if(requestCode==14) {
+            val id=data?.getStringExtra("study-id") ?: return
+            val catalog=com.scenio.mth.science.StudyCatalog(this)
+            val apply={
+                val extra=data.getStringExtra("study-notes").orEmpty().take(500)
+                prompt.setText(catalog.generationPrompt(id)+(if(extra.isBlank()) "" else " Additional instructions: $extra"))
+                if(data.getStringExtra("study-action")=="diagram") { canvas.restore(catalog.snapshot(id,data.getBooleanExtra("study-labels",true)));say("Offline study diagram opened; its labels are editable on the Study labels layer") }
+                else say("Study path added to the prompt. Choose on-device or computer generation.")
+            }
+            if(dirty && canvas.image!=null) AlertDialog.Builder(this).setTitle("Replace the current study view?").setMessage("Save the current project first if you want to keep its unsaved edits and prompt.").setPositiveButton("Continue") { _,_ -> apply() }.setNegativeButton("Cancel",null).show() else apply()
+            return
+        }
         val uri=data?.data ?: return
         when(requestCode) {
             10 -> background { val bitmap=PhotoDecoder.read(contentResolver,uri);ui { canvas.image=bitmap;say("Photo imported with its original orientation and aspect ratio") } }

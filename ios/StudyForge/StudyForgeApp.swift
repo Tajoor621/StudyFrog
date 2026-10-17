@@ -151,6 +151,7 @@ struct ForgeView: View {
     @State private var exportData = Data()
     @State private var showSettings = false
     @State private var showLibrary = false
+    @State private var showScience = false
     @State private var erasing = false
     @State private var color = Color.mint
     @State private var query = ""
@@ -197,6 +198,7 @@ struct ForgeView: View {
                         Picker("Blend",selection: $store.blends[store.selected]) { Text("Normal").tag("normal");Text("Multiply").tag("multiply");Text("Screen").tag("screen") }
                         Button("Delete selected ink layer",role: .destructive) { if store.drawings.count > 1 { let index = store.selected;store.selected = 0;store.drawings.remove(at: index);store.layerNames.remove(at: index);store.visible.remove(at: index);store.opacity.remove(at: index);store.blends.remove(at: index) } }.disabled(store.drawings.count <= 1)
                     }
+                    Button("Explore science · linked levels and labeled diagrams") { showScience = true }.disabled(store.working)
                     PhotosPicker("Import photo",selection: $photo,matching: .images).disabled(store.working)
                     HStack { Button("Save project") { store.save() };Button("Export PNG") { exportData = store.composite()?.pngData() ?? Data();showExport = true } }.disabled(store.image == nil || store.working)
                     Button("Create 30-second reveal video") { store.video() }.disabled(store.image == nil || store.working)
@@ -223,6 +225,7 @@ struct ForgeView: View {
         } message: { Text("This sends your prompt and image over your local network to the engine configured in Settings. Use your own computer and a trusted network. It requires a local LTX model and CUDA GPU; no cloud or paid API is used.") }
         .fileImporter(isPresented: $showModelPicker,allowedContentTypes: [.data]) { result in do { store.install(try result.get()) } catch { store.message = error.localizedDescription } }
         .fileExporter(isPresented: $showExport,document: ExportDocument(data: exportData),contentType: .png,defaultFilename: "StudyForge") { result in if case .failure(let error) = result { store.message = error.localizedDescription } }
+        .sheet(isPresented: $showScience) { StudyExplorerView(hasExistingImage: store.image != nil) { image,prompt in store.prompt = prompt;if let image { store.image = image;store.resetLayers() };store.message = "Study view selected; model-generated refinements require review" } }
         .sheet(isPresented: $showSettings) { NavigationStack { Form {
             Picker("Appearance",selection: $appearance) { Text("System").tag("system");Text("Light").tag("light");Text("Dark").tag("dark") }
             Button("Import local GGUF model") { showSettings = false;showModelPicker = true }.disabled(store.working)
