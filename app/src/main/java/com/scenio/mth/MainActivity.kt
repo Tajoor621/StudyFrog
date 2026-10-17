@@ -1,5 +1,13 @@
 package com.scenio.mth
 
+import androidx.work.WorkManager
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.workDataOf
+import androidx.work.WorkInfo
+import androidx.work.ExistingWorkPolicy
+import com.scenio.mth.inference.ModelStore
+import com.scenio.mth.inference.NativeEngine
+import com.scenio.mth.inference.LocalGenerationWorker
 import android.app.Activity
 import androidx.activity.ComponentActivity
 import androidx.activity.viewModels
@@ -57,6 +65,8 @@ class MainActivity : ComponentActivity() {
     private val prefs by lazy { getSharedPreferences("forge",MODE_PRIVATE) }
     private var latestJob: String? = null
     private var busy = false
+    private var localActive = false
+    private var loadedLocalResult:String? = null
     private fun text(s:String) = TextView(this).apply { text=s;setTextColor(Color.WHITE);textSize=16f;setPadding(8,12,8,8) }
     private fun button(s:String, block:()->Unit) = Button(this).apply { text=s;setOnClickListener { block() } }
     private fun choices(items:List<String>) = Spinner(this).apply {
@@ -95,6 +105,15 @@ class MainActivity : ComponentActivity() {
         canvas=ForgeCanvas(this).apply { onEdited={ markEdited() } };root.addView(canvas,LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,(260*resources.displayMetrics.density).toInt()))
         session.snapshot?.let { canvas.restore(it);dirty=false }
         mode.setSelection(session.mode);level.setSelection(session.level)
+        root.addView(button("Import on-device image model (GGUF)") {
+            if(localActive) say("Cancel local generation before changing the model") else startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type="*/*";addCategory(Intent.CATEGORY_OPENABLE) },13)
+        })
+        root.addView(button("On-device model information / remove") {
+            AlertDialog.Builder(this).setTitle("Offline SD 1.x model").setMessage(ModelStore(applicationContext).description()+"\nImport a complete SD 1.x GGUF. Keep its license. Models are not bundled and may require several GB of memory.")
+                .setPositiveButton("Close",null).setNegativeButton("Remove model") { _,_ -> if(localActive) say("Cancel generation first") else background { ModelStore(applicationContext).remove();ui { say("Local model removed") } } }.show()
+        })
+        root.addView(button("Generate on this device") { localGenerate() })
+        root.addView(button("Cancel on-device generation") { NativeEngine.cancel();WorkManager.getInstance(this).cancelUniqueWork(LocalGenerationWorker.NAME) })
         root.addView(button("Create offline schematic") { canvas.image=canvas.diagram(prompt.text.toString(),level.selectedItem.toString());say("Template generated on this device. This is not AI inference.") })
         root.addView(button("Import photo") { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type="image/*";addCategory(Intent.CATEGORY_OPENABLE) },10) })
         root.addView(Switch(this).apply { text="Draw / annotate on ink layer";setTextColor(Color.WHITE);setOnCheckedChangeListener { _,on -> canvas.drawing=on } })
@@ -117,6 +136,7 @@ class MainActivity : ComponentActivity() {
         root.addView(text("Optional local computer engine • USB connection • no cloud"))
         token=EditText(this).apply { hint="Engine token (kept in memory only)";inputType=129;setTextColor(Color.WHITE) };root.addView(token)
         root.addView(button("Generate with local model") { submit("image") })
+        root.addView(button("Generate 30-second AI motion video (local computer)") { submit("motion") })
         root.addView(button("30-second 1080p reveal video") { submit("video") })
         root.addView(button("Check current engine job / download result") { poll() })
         root.addView(button("Manage engine jobs") { engineHistory() })
@@ -124,7 +144,7 @@ class MainActivity : ComponentActivity() {
             val health=JSONObject(String(api("/health",auth)))
             ui { say(if(health.optBoolean("model_configured")) "Connected • local model folder configured" else "Connected • no local AI model configured") }
         } })
-        root.addView(text("Video exports a progressive reveal; subject-motion generation is not implemented. Downloaded models run on your own computer. No phone-local diffusion runtime is bundled."))
+        root.addView(text("On-device image generation uses an imported SD 1.x GGUF. Still-reveal video runs on this phone; AI motion video uses the optional local computer engine."))
         status=text("Ready • all projects stay local").apply { accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE };root.addView(status)
         prompt.addTextChangedListener { markEdited() };negative.addTextChangedListener { markEdited() };seed.addTextChangedListener { markEdited() }
         lifecycleScope.launch { FeatureRuntime.graph(this@MainActivity).settings.data.collect { settings ->
@@ -141,6 +161,19 @@ class MainActivity : ComponentActivity() {
             }
             recolor(root)
         } }
+        lifecycleScope.launch {
+            WorkManager.getInstance(this@MainActivity).getWorkInfosForUniqueWorkFlow(LocalGenerationWorker.NAME).collect { jobs ->
+                val job=jobs.firstOrNull() ?: return@collect
+                localActive=!job.state.isFinished
+                if(localActive) say("On-device generation: ${job.progress.getInt("percent",0)}% · loading the model can take time")
+                else if(job.state==WorkInfo.State.SUCCEEDED) {
+                    val path=job.outputData.getString("path")
+                    if(path!=null && path!=loadedLocalResult) { loadedLocalResult=path
+                        background { val image=PhotoDecoder.read(contentResolver,android.net.Uri.fromFile(File(path)));ui { canvas.image=image;say("Generated on this device · result saved privately") } }
+                    }
+                } else if(job.state==WorkInfo.State.FAILED) say(job.outputData.getString("error") ?: "Local generation failed")
+            }
+        }
         if(session.snapshot==null) background {
             val draft=projects.loadDraft()
             if(draft!=null) ui { if(canvas.image==null) { applyProject(draft);say("Recovered editable draft from this device") } }
@@ -221,9 +254,36 @@ class MainActivity : ComponentActivity() {
                     ui { say("Export saved") }
                 } finally { file.delete() } }
             }
+            13 -> background { val description=ModelStore(applicationContext).import(uri);ui { say("Model imported: $description") } }
             12 -> background { val id=contentResolver.openInputStream(uri)?.use { projects.importArchive(it) } ?: throw IOException("Cannot open backup")
                 val loaded=projects.load(id);ui { applyProject(loaded);say("Editable backup imported") }
             }
+        }
+    }
+    private fun localGenerate() {
+        if(localActive || busy) { say("Wait for the current request or cancel generation");return }
+        if(!NativeEngine.available()) { say("This build was compiled without local inference");return }
+        val model=ModelStore(applicationContext).model
+        if(!model.isFile) { say("Import an SD 1.x GGUF model first");return }
+        val memory=android.app.ActivityManager.MemoryInfo()
+        (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager).getMemoryInfo(memory)
+        if(memory.totalMem<5_500_000_000L || memory.availMem<2_000_000_000L || memory.lowMemory) { say("Local inference needs a device with at least 6 GB RAM and 2 GB currently available. Close other apps or use your local computer engine.");return }
+        val text=prompt.text.toString();val excluded=negative.text.toString()
+        if(text.isBlank() || text.length>2000 || excluded.length>2000) { say("Enter a prompt of 1–2000 characters");return }
+        val number=if(seed.text.isBlank()) java.security.SecureRandom().nextInt(Int.MAX_VALUE).toLong() else seed.text.toString().toLongOrNull()
+        if(number==null || number !in 0L..2147483647L) { say("Invalid seed");return }
+        val id=UUID.randomUUID();val input=androidx.work.Data.Builder().putString("prompt",text).putString("negative",excluded).putInt("size",256).putInt("steps",steps.progress+10).putLong("seed",number).putFloat("strength",(strength.progress+10)/100f)
+        val snapshot=if(mode.selectedItem.toString()=="Photo Converter") canvas.snapshot() else null
+        if(snapshot!=null && snapshot.base==null) { say("Import a photo first");return }
+        background {
+            if(snapshot!=null) {
+                val bitmap=ForgeCanvas.render(snapshot);val file=File(cacheDir,"$id-input.png")
+                try { file.outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.PNG,100,it)) } } finally { bitmap.recycle() }
+                input.putString("initial",file.name)
+            }
+            val request=OneTimeWorkRequestBuilder<LocalGenerationWorker>().setId(id).setInputData(input.build()).build()
+            WorkManager.getInstance(applicationContext).enqueueUniqueWork(LocalGenerationWorker.NAME,ExistingWorkPolicy.KEEP,request)
+            ui { localActive=true;say("Queued local generation · seed $number · 256 px memory-saving preview") }
         }
     }
     private fun localVideo() {
@@ -277,7 +337,7 @@ class MainActivity : ComponentActivity() {
         if(prompt.text.isBlank() || prompt.length()>2000 || negative.length()>2000) { say("Write a prompt of 1–2000 characters; negative prompt maximum 2000");return }
         val body=JSONObject().put("kind",kind).put("prompt",prompt.text.toString()).put("negative",negative.text.toString())
             .put("steps",steps.progress+10).put("seed",value).put("strength",(strength.progress+10)/100.0).put("width",768).put("height",432)
-        val photo=kind=="video" || mode.selectedItem.toString()=="Photo Converter"
+        val photo=kind in listOf("video","motion") || mode.selectedItem.toString()=="Photo Converter"
         val snapshot=if(photo) canvas.snapshot() else null
         if(photo && snapshot?.base==null) { say("Import or generate an image first");return }
         say("Submitting to your local engine…")
@@ -300,7 +360,7 @@ class MainActivity : ComponentActivity() {
         background {
             val job=JSONObject(String(api("/jobs/$id",auth)))
             if(job.getString("status")=="done") {
-                val video=job.getString("kind")=="video"
+                val video=job.getString("kind") in listOf("video","motion")
                 val file=File(cacheDir,"result-$id.${if(video) "mp4" else "png"}")
                 download("/results/$id",auth,file)
                 if(video) ui { progress("generation:$id",2,2);export(file,"video/mp4","studyforge-30s.mp4") }

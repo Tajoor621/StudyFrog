@@ -4,3 +4,5 @@ diffusers==0.32.2
 transformers==4.49.0
 accelerate==1.4.0
 safetensors==0.5.3
+sentencepiece==0.2.0
+protobuf==5.29.3

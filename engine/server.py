@@ -55,7 +55,7 @@ def read(job_id):
 def validate(body):
     if not isinstance(body, dict): raise ValueError("Expected JSON object")
     kind = body.get("kind", "image")
-    if kind not in ("image", "diagram", "video", "refine"): raise ValueError("Unknown kind")
+    if kind not in ("image", "diagram", "video", "motion", "refine"): raise ValueError("Unknown kind")
     prompt = body.get("prompt", "")
     if not isinstance(prompt,str) or not 1 <= len(prompt.strip()) <= 2000: raise ValueError("Prompt length must be 1–2000")
     negative=body.get("negative", "")
@@ -78,7 +78,7 @@ def validate(body):
     if picture is not None:
         if not isinstance(picture,str) or len(picture)>12_000_000: raise ValueError("Image too large")
         decode_image(picture)  # Reject corrupt input before queueing it.
-    if kind in ("video","refine") and not picture: raise ValueError("Video/refine requires an image")
+    if kind in ("video","motion","refine") and not picture: raise ValueError("Video/refine requires an image")
     return dict(kind=kind,prompt=prompt,negative=negative,image=picture,**values)
 
 def decode_image(encoded):
@@ -191,8 +191,12 @@ def process(job):
     output=None
     try:
         checkpoint(job)
-        output=ROOT/(job["id"]+(".mp4" if job["kind"]=="video" else ".png"))
-        if job["kind"]=="video": reveal_video(decode_image(job["image"]),output,cancel=lambda: checkpoint(job))
+        output=ROOT/(job["id"]+(".mp4" if job["kind"] in ("video","motion") else ".png"))
+        if job["kind"]=="motion":
+            from motion_video import render
+            def update(value): job["progress"]=value;save(job)
+            render(decode_image(job["image"]),output,job["prompt"],job["negative"],job["seed"],job["steps"],lambda: checkpoint(job),update)
+        elif job["kind"]=="video": reveal_video(decode_image(job["image"]),output,cancel=lambda: checkpoint(job))
         elif job["kind"]=="refine": tiled_refine(job).save(output)
         elif job["kind"]=="diagram": schematic(job["prompt"],job["width"],job["height"]).save(output)
         else: diffusion(job).save(output)
@@ -257,14 +261,14 @@ class Handler(BaseHTTPRequestHandler):
                     except (OSError,ValueError): continue
                 self.reply(200,{"jobs":items});return
             if self.path=="/health":
-                self.reply(200,{"local_only":True,"model_configured":Path(os.environ.get("STUDYFORGE_MODEL","/__unconfigured__")).is_dir(),"video":"30-second reveal, not subject motion"});return
+                self.reply(200,{"local_only":True,"model_configured":Path(os.environ.get("STUDYFORGE_MODEL","/__unconfigured__")).is_dir(),"video":"30-second reveal; optional LTX motion model", "motion_configured":Path(os.environ.get("STUDYFORGE_VIDEO_MODEL","/__unconfigured__")).is_dir()});return
             prefix,job_id=self.path.strip("/").split("/",1)
             if prefix not in ("jobs","results"): raise ValueError("Unknown route")
             job=read(job_id)
             if prefix=="jobs": self.reply(200,{k:v for k,v in job.items() if k!="image"});return
             if job["status"]!="done": self.reply(409,{"error":"Result not ready"});return
-            result=ROOT/(job_id+(".mp4" if job["kind"]=="video" else ".png"))
-            self.send_response(200);self.send_header("Content-Type","video/mp4" if job["kind"]=="video" else "image/png");self.send_header("Content-Length",str(result.stat().st_size));self.send_header("Cache-Control","no-store");self.end_headers()
+            result=ROOT/(job_id+(".mp4" if job["kind"] in ("video","motion") else ".png"))
+            self.send_response(200);self.send_header("Content-Type","video/mp4" if job["kind"] in ("video","motion") else "image/png");self.send_header("Content-Length",str(result.stat().st_size));self.send_header("Cache-Control","no-store");self.end_headers()
             with result.open("rb") as source: shutil.copyfileobj(source,self.wfile)
         except (ValueError,FileNotFoundError): self.reply(404,{"error":"Not found"})
 
