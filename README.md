@@ -19,10 +19,17 @@ Android application ID is `com.scenio.mth`.
   saving, search/rename/delete, ZIP backups and aspect-preserving PNG export.
 - EXIF-aware photo import, rotation state retention and background draft recovery.
 - Authenticated local engine job history, cancellation and result deletion.
-- Phone-local 30-second 1080p still-reveal video encoder implementation.
-- Optional computer-local SD 1.x text-to-image/img2img engine and API-only tiled
+- Native CPU SD 1.x GGUF inference on Android/iOS, manual model import,
+  256/512px resolution controls, Android foreground jobs and benchmark export.
+- Multiple editable ink layers, opacity/blending/visibility, layer erasing,
+  shape/text annotations, SVG export and backward-compatible schema 3 projects.
+- Phone-local 30-second 1080p still-reveal video encoder implementations.
+- Optional computer-local SD 1.x text-to-image/img2img engine and tiled
   refinement, requiring separately downloaded model files.
-- FFmpeg 30-second 1080p still-reveal video exporter on the local computer.
+- Optional computer-local LTX image-to-video integration, with five-segment
+  chaining into a 30-second 1080p delivery file; separate FFmpeg still reveal.
+- Buildable SwiftUI/PencilKit iOS app, shared native runtime, projects/drafts,
+  photo/PNG export, local reminders, appearance and video implementations.
 - CMake JNI library, density-only xxhdpi fixture, AAB ABI/density splits and
   scripts that inspect the actual generated binary manifests.
 - JUnit5/Turbine, Room, WorkManager and Compose test sources, plus GitHub Actions
@@ -71,9 +78,10 @@ billing-dependent services. Core features work without this configuration.
 ## Local engine and privacy
 
 See [engine setup](docs/ENGINE.md). Initial dependency/model downloads require
-internet. After preparation, model inference is local to your own computer;
-it is not a bundled phone-local diffusion runtime. A USB adb-reverse connection
-can connect the Android app to that engine without cloud inference.
+internet. After preparation, compatible imported GGUF files run on the phone.
+Optional larger models run on your own computer. See
+[model setup and testing](docs/LOCAL_MODELS.md). Android can connect to the
+computer through USB adb-reverse without cloud inference.
 
 Projects and progress stay in private app storage. App backups are disabled.
 No storage-wide access is requested. Photos are opened using Android's document
@@ -83,14 +91,19 @@ app/device/crash information; review the in-app disclosure before enabling them.
 
 ## Implementation limits
 
-This is an MVP with integrated Android foundations, not the complete original
-product specification. Still-reveal video is implemented; realistic generated
-subject motion is not. Phone-local diffusion, full editable layer persistence,
-advanced vector tools and validated medical/scientific diagrams remain unfinished.
-Tiled refinement can allocate an 8K output on suitable computer hardware but has
-not been validated with real models or hardware, and is not native full-frame
-8K denoising. There is no unrestricted Adult Mode or certified child-safe mode.
-The iOS directory is a source starter without Android feature parity.
+Version 0.4.0 implements these software paths; real model outputs and device
+latency/thermals are unverified. CPU image generation offers 256px previews or
+512px outputs with conservative RAM guards. Fast mid-range-phone generation
+and native full-frame 8K denoising are not promised. Computer tiled refinement
+can produce an 8K-sized result; Android retains its original file for export.
+
+LTX motion requires a compatible CUDA computer and complete local weights. It
+denoises at 768×448 before scaling to 1080p; model quality, transitions and
+ultra-realism remain unevaluated. Still reveal is a separate animation of an image.
+
+Full raster/mask/boolean/typography tools, reviewed medical/scientific content,
+parental safety controls and complete iOS parity remain unfinished. There is no
+unrestricted Adult Mode or certified child-safe mode. See the audit for blockers.
 
 ## Documentation and validation
 
@@ -100,9 +113,9 @@ The iOS directory is a source starter without Android feature parity.
 - [Validation boundary](VALIDATION.md)
 - [Primary sources](docs/android-features/SOURCES.md)
 
-Eight Python engine tests passed locally during preparation. Android compilation,
-JUnit/UI tests, native encoding and generated split attributes require the
-actual CI/device results; the presence of source is not proof of a passing build.
+See [VALIDATION.md](VALIDATION.md) for exact CI evidence and the distinction
+between automated tests and real-model/device evaluation. The manual physical
+workflow requires a connected phone and imported weights; normal CI skips it.
 
 Source is Apache-2.0. Third-party tools and model weights retain their own licenses.
 There are no paid APIs, ads, mandatory subscriptions or paid distribution tools.

@@ -1,7 +1,7 @@
 # Repository audit — 2026-10-17
 
 Scope: Android, JNI/AAB packaging, local Python engine, project storage, privacy,
-CI, iOS starter, branding and the original product requirements. Static review
+CI, iOS app, branding and the original product requirements. Static review
 is not a substitute for device, model-quality or accessibility evaluation.
 
 ## Defects corrected
@@ -40,36 +40,36 @@ frames. Instrumentation sources check editable backup round trips and traversal
 rejection. Repository integrity checks guard required source files and manifests.
 CI remains configured to fail on lint errors, rather than suppressing findings.
 
+## Subsequent corrections — 0.4.0
+
+- Integrated pinned CPU inference on Android/iOS, private GGUF import, native
+  bounds checks, RAM/resolution guards and request-scoped Android cancellation.
+- Persisted requests outside WorkManager's small Data limit, recovered results,
+  and preserved full-resolution computer output for export.
+- Added schema 3 independent ink layers, opacity/blend/visibility, layer erasing,
+  geometry/text and SVG, with legacy project reads.
+- Added local LTX still-conditioned motion chaining and explicit missing-model
+  failure; no automatic still-reveal substitution.
+- Added a generated Xcode project/native framework, simulator tests, PencilKit
+  layers, editable projects/drafts and video implementations. Bounded photo
+  decoding and propagated video cancellation; deferred composite export until needed.
+- Added private benchmark export and a manual real-device inference workflow.
+
 ## Remaining release blockers
 
-- No phone-local diffusion runtime or downloaded-model manager. Current AI
-  inference runs on a separately configured local computer.
-- No realistic subject-motion video model. The implemented 30-second video is a
-  still-image reveal. Device encoder behavior requires physical-device testing.
-- No complete layer/mask/blend/vector/text system; one base plus editable ink.
-- No reviewed medical atlas, CT/MRI simulation or scientific accuracy validator.
-- No evaluated parental safety system; no child-safe guarantee or Adult Mode.
-- iOS remains a SwiftUI starter and assets, without an Xcode project or parity.
-- Real models, 8K quality, thermals, latency and memory have not been benchmarked.
-- Device accessibility, large text, TalkBack drawing alternatives, process death,
-  storage exhaustion and low-memory behavior need release testing.
-- Signing continuity requires the existing app's actual signing key. CI test
-  keys are disposable; signing secrets must never be committed.
+- Real SD/LTX inference, quality, latency, memory, thermal/battery and GPU behavior
+  need target hardware/model tests. Native compilation is not a benchmark.
+- Physical encoders, 16 KB page-size devices, interrupted imports, process death,
+  low storage and actual TalkBack/VoiceOver remain unverified.
+- Full arbitrary raster/mask, boolean vector, typography/print tools remain
+  incomplete beyond the current ink/vector layer features.
+- Reviewed medical/science data, semantic zoom chains, CT/MRI and evaluated
+  parental controls are missing. No diagnostic or child-safe guarantee.
+- iOS still needs complete Android parity and a demonstrated physical release.
+- Durable Android updates require the owner's original key. Ephemeral CI
+  packaging keys cannot update a differently signed installation.
 
 These gaps prevent an honest “10/10” or complete-master-specification claim.
-All implementation changes use local or free/open tooling and no paid API.
-
-Platform backup behavior was checked against the [Android backup guide](https://developer.android.com/identity/data/autobackup). Room schema configuration follows the [Room migration guide](https://developer.android.com/training/data-storage/room/migrating-db-versions). Dependencies remain pinned; Dependabot opens reviewable updates.
-
-## Verification result
-
-[Workflow 39045549980](https://github.com/Tajoor621/StudyFrog/actions/runs/39045549980) passes for source `c5d24edb32c3c778da6609638b58f96de84156e2`:
-Android lint, release APK/AAB assembly, split/native packaging verification,
-seven JVM tests, fifteen Python tests and eight API 35 emulator tests. All
-**30 automated tests pass**. The traversal test accepts either Android's ZIP
-path guard or the app's validator and verifies that no file escapes the project
-folder; the production path checks remain strict.
-
-See [VALIDATION.md](../VALIDATION.md) for evidence, artifact/signing details and
-untested hardware/model behavior. These results validate the implemented
-foundation and do not remove the product gaps listed above.
+No paid API/distribution console was added. The supplied icon remains integrated.
+See [VALIDATION.md](../VALIDATION.md) and [LOCAL_MODELS.md](LOCAL_MODELS.md) for
+exact evidence, testing commands and explicit hardware/model limitations.

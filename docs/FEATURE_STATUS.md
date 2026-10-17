@@ -1,59 +1,36 @@
-# Honest implementation status
+# Feature status — 0.4.0
 
-| Requirement | Current delivery |
+Evidence: [VALIDATION.md](../VALIDATION.md). Implementation and real-model quality
+validation are separate stages.
+
+| Requirement | Implemented / remaining boundary |
 | --- | --- |
-| Prompt-first Android interface | Built and tested in CI; physical-device UX checks pending |
-| Six modes | UI choices; most share the same underlying generation pipeline |
-| Text-to-image | Computer-local SD 1.x adapter, requires separately downloaded model; not runtime-tested |
-| Photo-to-image | Computer-local img2img adapter; not model-tested |
-| Offline generation on phone | Geometric schematics only; no mobile diffusion runtime |
-| Local model inference | Runs on your computer after download, no paid endpoint |
-| Native 8K generation | Pending; no 8K claim is made |
-| Tiled 8K img2img refinement | API-only implementation; model/hardware testing pending; not native 8K denoising |
-| VAE tiling | Enabled in SD adapter; not equivalent to native 8K diffusion |
-| Hierarchical science visuals | Selector and illustrative template only; semantic zoom chains pending |
-| Medical images / CT / MRI overlays | Not implemented; no diagnostic functionality |
-| Scientific correctness | Human review required; no validator or accuracy slider |
-| Drawing layers | Base image + editable ink; undo/redo, pressure, color, size, ZIP backup; emulator round trip verified |
-| Full layers, masks, blend modes, tilt | Pending |
-| Vectors / typography / booleans / print management | Pending |
-| Video 30 sec, 1080p, 24 fps | Verified FFmpeg reveal on computer; Android encoder compiles; physical encoder verification pending |
-| Ultra-realistic subject motion / camera instructions | Pending, not implemented |
-| AnimateDiff / video-model integration | Pending |
-| Local history / projects | Editable base/ink/prompt library, search/rename/delete, backups and draft recovery; folders pending |
-| Adult Mode / age gate / parental PIN | Not implemented; unrestricted explicit-sexual generation excluded |
-| Certified child-safe mode | Not claimed; robust safety system pending |
-| iOS | Source starter: photos, schematics, saving and PNG export; no Xcode project or build |
-| AAB + density + JNI | Release build and generated-manifest verification pass; JNI loads in emulator |
-| 16 KB native compatibility | NDK flexible page-size flag; device testing pending |
-| Zero paid services | No paid APIs, in-app payments, ads or Play Console integration |
+| Prompt-first Android | Studio and six mode choices; modes share pipelines |
+| Phone-local images | Pinned native CPU SD 1.x runtime, GGUF import, img2img, negative prompt/seed, 256/512px; actual weights not tested |
+| Background generation | Android foreground WorkManager, progress, scoped cancellation, persistent requests and result recovery; iOS keeps app open |
+| Computer image engine | Local SD 1.x Diffusers text-to-image/img2img, requires separately prepared weights |
+| 8K | Android exposes computer tiled 4K/8K refinement and original-file export; model quality/seams untested; no native 8K denoising |
+| Editing | Android base plus up to 16 ink layers, normal/multiply/screen, opacity/visibility, erasing, pressure ink, shapes/text and SVG |
+| Professional graphics | Arbitrary raster layers/full masks, booleans, advanced typography/print tools and tilt stabilization incomplete |
+| Projects | Android schema 3, legacy reads, ZIP backups, search/rename/delete/drafts; iOS private editable store/drafts; folders/cross-platform interchange incomplete |
+| Still-reveal video | Android MediaCodec, iOS AVAssetWriter and computer FFmpeg implementations; physical encoders untested |
+| Subject motion | Optional computer LTX integration, five chained segments, 720 frames/24fps/30sec; CUDA and complete model required, real inference untested |
+| Motion resolution | Model denoising 768×448 then 1920×1080 delivery; no native 1080p detail or ultra-realism claim |
+| Science/medical | Illustrative templates and hierarchy selector; semantic atlas, reviewed labels, CT/MRI and scientific accuracy validation missing |
+| Safety | No unrestricted explicit-sexual Adult Mode or evaluated parental controls; no child-safe certification |
+| iOS | XcodeGen project/shared native runtime, SwiftUI/PencilKit layers, projects/drafts, photo/PNG export, appearance/reminders, reveal and computer motion client; full Android parity incomplete |
+| Foundations | Room/DataStore, onboarding, Material 3, reminders, optional opt-in Firebase, accessibility semantics, tests, CI/signing config |
+| AAB/native | Density/ABI splits, extractNativeLibs=true and actual binary-manifest verification |
+| Benchmarks | Private timing/model-hash/sampled-native-heap export; manual physical-device workflow supplied, not executed |
+| Cost/privacy | No paid API/backend or distribution console; local storage/inference and explicit optional computer transfer |
 
-## Priorities before a production release
+## Release work still required
 
-1. Run the supplied Android workflow and physical-device packaging tests.
-2. Integrate and benchmark a supported phone-local inference runtime with
-   licensed models; choose realistic RAM, speed, battery and thermal limits.
-3. Implement persistent editable layers and lifecycle-aware background jobs.
-4. Integrate a still-conditioned open video model, evaluate temporal consistency,
-   memory needs and segment transitions before promising thirty seconds of motion.
-5. Implement reviewed scientific diagram templates, labels and provenance.
-6. Build iOS inference parity and establish a feasible distribution route.
-7. Replace simple content checks with evaluated input/output controls before
-   offering any child-oriented mode.
+Run real SD/LTX models on target hardware; evaluate speed, memory, battery,
+thermals, cancellation and temporal quality. Test physical encoders, process
+termination, interrupted import, low storage and actual TalkBack/VoiceOver.
+Add reviewed science/medical content, remaining professional tools and evaluated
+parental controls before claiming the complete specification. Preserve the
+owner's signing identity and establish a feasible physical iOS release route.
 
-Do not advertise this foundation as the complete master specification or a 10/10 product.
-
-## Integrated Android foundations (0.3.0)
-
-Room/DataStore progress, onboarding, Material 3 appearance, settings, local
-reminders, opt-in telemetry, accessibility semantics, test sources, CI and
-environment-based release signing are now wired into the Android app.
-Package: com.scenio.mth. Build, packaging and API 35 emulator tests pass; physical-device checks remain.
-The new feature screens use Compose; the studio retains its original native
-view implementation. Project schema 2 preserves the base and independent ink; legacy flattened projects can still be opened.
-
-## Audit update (0.3.0)
-
-Supplied icon integrated across platforms. See [AUDIT.md](AUDIT.md).
-CI verification is recorded in [VALIDATION.md](../VALIDATION.md). These results do not establish
-model quality or complete original-specification delivery.
+Passing builds cannot establish a “10/10” product or hardware-dependent quality.

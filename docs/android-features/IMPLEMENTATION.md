@@ -1,3 +1,5 @@
+> Version 0.4.0: this archived guide is supplementary. Live build/source files are authoritative. See [current status](../FEATURE_STATUS.md), [model setup](../LOCAL_MODELS.md) and [validation](../../VALIDATION.md) for subsequent integration.
+
 > Integrated build update: Room is pinned to 2.7.2 with KSP2. The obsolete android.bundle.enableUncompressedNativeLibs property is omitted. Use root app/build.gradle.kts and gradle.properties as authoritative. The full original guide below is retained as a workflow reference.
 
 > Reference document from the feature integration package. Its source additions are applied in this repository; the root README and build files describe the integrated app.
