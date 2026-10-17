@@ -7,11 +7,18 @@ set -euo pipefail
 : "${STUDYFORGE_STORE_PASSWORD:?Set STUDYFORGE_STORE_PASSWORD}"
 : "${STUDYFORGE_KEY_PASSWORD:?Set STUDYFORGE_KEY_PASSWORD}"
 ./gradlew --no-daemon :app:bundleRelease
+# bundletool supports pass: and file: (not apksigner's env: syntax).
+# Restrict permissions and avoid placing passwords in process arguments.
+umask 077
+password_dir=$(mktemp -d)
+trap 'rm -rf "$password_dir"' EXIT
+printf '%s' "$STUDYFORGE_STORE_PASSWORD" > "$password_dir/store"
+printf '%s' "$STUDYFORGE_KEY_PASSWORD" > "$password_dir/key"
 java -jar "$BUNDLETOOL_JAR" build-apks \
   --bundle=app/build/outputs/bundle/release/app-release.aab \
   --output=app.apks --mode=default --overwrite \
   --ks="$STUDYFORGE_KEYSTORE" --ks-key-alias="$STUDYFORGE_KEY_ALIAS" \
-  --ks-pass=env:STUDYFORGE_STORE_PASSWORD --key-pass=env:STUDYFORGE_KEY_PASSWORD
+  --ks-pass="file:$password_dir/store" --key-pass="file:$password_dir/key"
 rm -rf apks
 unzip -q app.apks -d apks
 python3 scripts/verify_splits.py apks --aapt2 "$ANDROID_HOME/build-tools/35.0.0/aapt2"

@@ -45,7 +45,7 @@ class ForgeCanvas(context: Context) : View(context) {
         val point=Point(((e.x-bounds.left)/bounds.width).coerceIn(0f,1f),((e.y-bounds.top)/bounds.height).coerceIn(0f,1f),pressure)
         when(e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                if(strokes.size>=512) return false
+                if(strokes.size>=512 || strokes.sumOf { it.points.size }>=100_000) return false
                 parent.requestDisallowInterceptTouchEvent(true);undone.clear()
                 strokes.add(Stroke(mutableListOf(point),inkColor,inkSize.coerceIn(.001f,.05f)))
             }
@@ -56,7 +56,7 @@ class ForgeCanvas(context: Context) : View(context) {
                 }
             }
             MotionEvent.ACTION_UP -> { parent.requestDisallowInterceptTouchEvent(false);performClick();onEdited?.invoke() }
-            MotionEvent.ACTION_CANCEL -> parent.requestDisallowInterceptTouchEvent(false)
+            MotionEvent.ACTION_CANCEL -> { parent.requestDisallowInterceptTouchEvent(false);onEdited?.invoke() }
         }
         invalidate();return true
     }

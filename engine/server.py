@@ -228,7 +228,7 @@ class Handler(BaseHTTPRequestHandler):
         return True
     def do_POST(self):
         if not self.authorized(): return
-        if self.path.startswith("/jobs/") and self.path.endswith("/cancel"):
+        if re.fullmatch(r"/jobs/[0-9a-f]{32}/cancel",self.path):
             try: self.reply(200,cancel_job(self.path.split("/")[2]))
             except (ValueError,FileNotFoundError): self.reply(404,{"error":"Not found"})
             return

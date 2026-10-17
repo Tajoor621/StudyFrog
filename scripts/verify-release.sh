@@ -6,7 +6,14 @@ set -euo pipefail
 : "${SF_KEY_ALIAS:?Set SF_KEY_ALIAS}"
 : "${SF_STORE_PASSWORD:?Set SF_STORE_PASSWORD}"
 : "${SF_KEY_PASSWORD:?Set SF_KEY_PASSWORD}"
-java -jar "$BUNDLETOOL_JAR" build-apks   --bundle=app/build/outputs/bundle/release/app-release.aab   --output=studyforge.apks --mode=default --overwrite   --ks="$SF_KEYSTORE_PATH" --ks-key-alias="$SF_KEY_ALIAS"   --ks-pass=env:SF_STORE_PASSWORD --key-pass=env:SF_KEY_PASSWORD
+# bundletool supports pass: and file: (not apksigner's env: syntax).
+# Restrict permissions and avoid placing passwords in process arguments.
+umask 077
+password_dir=$(mktemp -d)
+trap 'rm -rf "$password_dir"' EXIT
+printf '%s' "$SF_STORE_PASSWORD" > "$password_dir/store"
+printf '%s' "$SF_KEY_PASSWORD" > "$password_dir/key"
+java -jar "$BUNDLETOOL_JAR" build-apks   --bundle=app/build/outputs/bundle/release/app-release.aab   --output=studyforge.apks --mode=default --overwrite   --ks="$SF_KEYSTORE_PATH" --ks-key-alias="$SF_KEY_ALIAS"   --ks-pass="file:$password_dir/store" --key-pass="file:$password_dir/key"
 unzip -q -o studyforge.apks -d split-inspection
 find split-inspection -name '*.apk' -print
 "$ANDROID_HOME/build-tools/35.0.0/aapt2" dump xmltree   split-inspection/splits/base-master.apk --file AndroidManifest.xml

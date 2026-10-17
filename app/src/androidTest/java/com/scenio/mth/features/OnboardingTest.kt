@@ -18,7 +18,7 @@ class OnboardingTest {
                     compose.onAllNodesWithText("Open studio").fetchSemanticsNodes().isNotEmpty()
             }
             if (compose.onAllNodesWithText("Get started").fetchSemanticsNodes().isNotEmpty())
-                compose.onNodeWithText("Get started").performClick()
+                compose.onNodeWithText("Get started").performScrollTo().performClick()
             compose.waitUntil(timeoutMillis = 10000) {
                 compose.onAllNodesWithText("Open studio").fetchSemanticsNodes().isNotEmpty()
             }

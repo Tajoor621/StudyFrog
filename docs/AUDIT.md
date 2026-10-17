@@ -11,6 +11,7 @@ is not a substitute for device, model-quality or accessibility evaluation.
 | Critical | CI SDK setup requested the removed `tools` package | Request platform-tools explicitly |
 | Critical | Initial export omitted Android data-layer files | Restore Room/DataStore sources; add integrity check |
 | High | Network-security XML omitted mandatory lint attributes | Explicitly disable subdomains for loopback hosts |
+| High | bundletool rejected apksigner-style `env:` passwords | Use restricted temporary password files with cleanup |
 | High | Portrait photos were stretched to a landscape viewport/output | Aspect-fit geometry shared by canvas and video; source-sized PNG export |
 | High | Imported EXIF orientation was ignored | Bounded decoding and all EXIF transforms |
 | High | Project saves flattened annotations irreversibly | Schema 2 stores base, independent ink, preview and metadata; legacy reads supported |
