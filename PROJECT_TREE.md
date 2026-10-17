@@ -1,6 +1,7 @@
 # Project files
 
 ```text
+.github/dependabot.yml
 .github/workflows/android.yml
 .gitignore
 LICENSE
@@ -114,6 +115,7 @@ ios/StudyForge/Assets.xcassets/StudyFrogBrand.imageset/studyfrog.png
 ios/StudyForge/StudyForgeApp.swift
 scripts/build-apks.sh
 scripts/check_repository.py
+scripts/generate_branding.py
 scripts/verify-release.sh
 scripts/verify_splits.py
 settings.gradle.kts

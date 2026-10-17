@@ -43,6 +43,17 @@ class EngineTests(unittest.TestCase):
             job=server.JOBS.get_nowait();server.process(job);server.JOBS.task_done()
             req=urllib.request.Request(url+"/results/"+response["id"],headers={"Authorization":"Bearer test-only-token"})
             self.assertTrue(urllib.request.urlopen(req).read().startswith(b"\x89PNG"))
+            req=urllib.request.Request(url+"/jobs",headers={"Authorization":"Bearer test-only-token"})
+            self.assertTrue(any(item["id"]==response["id"] for item in json.load(urllib.request.urlopen(req))["jobs"]))
+            req=urllib.request.Request(url+"/jobs/"+response["id"],method="DELETE",headers={"Authorization":"Bearer test-only-token"})
+            self.assertEqual(json.load(urllib.request.urlopen(req))["status"],"deleted")
+            req=urllib.request.Request(url+"/jobs",data=json.dumps({"prompt":"Cancel HTTP","kind":"diagram"}).encode(),headers={"Authorization":"Bearer test-only-token","Content-Type":"application/json"})
+            queued=json.load(urllib.request.urlopen(req))
+            req=urllib.request.Request(url+"/jobs/"+queued["id"]+"/cancel",method="POST",data=b"{}",headers={"Authorization":"Bearer test-only-token"})
+            self.assertEqual(json.load(urllib.request.urlopen(req))["status"],"cancelling")
+            job=server.JOBS.get_nowait();server.process(job);server.JOBS.task_done()
+            self.assertEqual(server.read(queued["id"])["status"],"cancelled")
+
         finally: http.shutdown();http.server_close();thread.join()
     def test_tiled_refine_preserves_dimensions_and_overlap(self):
         job=server.validate({"prompt":"Refine plant study","kind":"refine","image":self.image,"width":1536,"height":864})

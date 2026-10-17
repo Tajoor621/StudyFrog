@@ -20,6 +20,8 @@ for apk in apks:
             if name.startswith("lib/") and name.endswith("/libnative-lib.so"): native=True
 if not density: raise SystemExit("FAIL: config.xxhdpi manifest not found")
 if not base: raise SystemExit("FAIL: base manifest not found")
+(args.directory/"density-manifest.txt").write_text(density[1]);(args.directory/"base-manifest.txt").write_text(base[1])
+print(density[1],flush=True)
 assert attr(density[1],"splitTypes",'"base__density"'), "Missing base__density"
 assert attr(density[1],"hasCode","0x0") or attr(density[1],"hasCode",'"false"'), "Density split must have hasCode=false"
 assert attr(base[1],"extractNativeLibs","0xffffffff") or attr(base[1],"extractNativeLibs",'"true"'), "Base must have extractNativeLibs=true"
