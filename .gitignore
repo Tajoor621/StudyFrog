@@ -17,3 +17,5 @@ app/google-services.json
 signing-secrets/
 split-inspection/
 *.b64
+ios/NativeBuild/
+ios/*.xcodeproj/

@@ -29,7 +29,7 @@ def render(initial,output,prompt,negative,seed,steps,checkpoint,progress,generat
         import torch
         from diffusers import LTXImageToVideoPipeline
         if not torch.cuda.is_available(): raise RuntimeError("This motion-video adapter requires a CUDA GPU; no remote or reveal fallback is used")
-        pipeline=LTXImageToVideoPipeline.from_pretrained(str(model),local_files_only=True,use_safetensors=True,torch_dtype=torch.bfloat16)
+        pipeline=LTXImageToVideoPipeline.from_pretrained(str(model),local_files_only=True,use_safetensors=True,torch_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16)
         pipeline.enable_model_cpu_offload();pipeline.vae.enable_tiling()
         def generate(image,segment):
             checkpoint()

@@ -125,12 +125,24 @@ class MainActivity : ComponentActivity() {
             override fun onStartTrackingTouch(bar:SeekBar?) {}
             override fun onStopTrackingTouch(bar:SeekBar?) {}
         }) })
+        val tools=choices(listOf("Brush","Erase mask","Line","Rectangle","Ellipse"));root.addView(tools)
+        tools.onItemSelectedListener=object:AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent:AdapterView<*>?,view:View?,position:Int,id:Long) { canvas.tool=listOf("brush","erase","line","rectangle","ellipse")[position] }
+            override fun onNothingSelected(parent:AdapterView<*>?) {}
+        }
+        root.addView(button("Layers · visibility, opacity, blend and order") { layerControls() })
+        root.addView(button("Add editable text label") { val field=EditText(this).apply { hint="Label text" };AlertDialog.Builder(this).setTitle("Text label").setView(field).setPositiveButton("Add") { _,_ -> runCatching { canvas.label(field.text.toString()) }.onFailure { say(it.message ?: "Cannot add label") } }.setNegativeButton("Cancel",null).show() })
         root.addView(button("Ink color") { AlertDialog.Builder(this).setTitle("Ink color").setItems(arrayOf("Mint","White","Gold","Blue","Red","Black")) { _,index ->
             canvas.inkColor=intArrayOf(0xff5eead4.toInt(),Color.WHITE,0xffffcc55.toInt(),0xff55aaff.toInt(),0xffff5555.toInt(),Color.BLACK)[index]
         }.show() })
         root.addView(button("Save project locally") { saveProject() })
         root.addView(button("Open local library") { library() })
         root.addView(button("Create 30-second video on this phone") { localVideo() })
+        root.addView(button("Export SVG · editable shapes and text") {
+            if(canvas.image==null) say("Import or generate an image first") else {
+                val snapshot=canvas.snapshot();background { val file=File(cacheDir,"vector-${UUID.randomUUID()}.svg");file.writeText(com.scenio.mth.editor.VectorExporter.svg(snapshot));ui { export(file,"image/svg+xml","studyforge.svg") } }
+            }
+        })
         root.addView(button("Export PNG") { exportPng() })
         root.addView(button("Import project backup") { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type="application/zip";addCategory(Intent.CATEGORY_OPENABLE) },12) })
         root.addView(text("Optional local computer engine • USB connection • no cloud"))
@@ -203,6 +215,24 @@ class MainActivity : ComponentActivity() {
         (0 until mode.adapter.count).firstOrNull { mode.adapter.getItem(it).toString()==meta.optString("mode") }?.let { mode.setSelection(it) }
         (0 until level.adapter.count).firstOrNull { level.adapter.getItem(it).toString()==meta.optString("level") }?.let { level.setSelection(it) }
         steps.progress=(meta.optInt("steps",20)-10).coerceIn(0,30);seed.setText(meta.optString("seed"));strength.progress=(meta.optInt("strength",65)-10).coerceIn(0,90);dirty=false
+    }
+    private fun layerControls() {
+        val layers=canvas.layerList()
+        AlertDialog.Builder(this).setTitle("Layers · top entry is the front layer").setItems((layers.reversed().map { "${if(it.id==canvas.activeLayer) "✓ " else ""}${it.name} · ${if(it.visible) "visible" else "hidden"}" }+"Add layer").toTypedArray()) { _,index ->
+            if(index==layers.size) { runCatching { canvas.addLayer() }.onFailure { say(it.message ?: "Cannot add layer") };return@setItems }
+            val layer=layers.reversed()[index];canvas.selectLayer(layer.id)
+            AlertDialog.Builder(this).setTitle(layer.name).setItems(arrayOf("Select for editing","Rename","Show / hide","Opacity","Blend mode","Move forward","Move backward","Delete layer")) { _,action ->
+                when(action) {
+                    1 -> { val name=EditText(this).apply { setText(layer.name) };AlertDialog.Builder(this).setTitle("Layer name").setView(name).setPositiveButton("Save") { _,_ -> runCatching { canvas.updateLayer(layer.copy(name=name.text.toString())) }.onFailure { say("Use a name of 1–80 characters") } }.setNegativeButton("Cancel",null).show() }
+                    2 -> canvas.updateLayer(layer.copy(visible=!layer.visible))
+                    3 -> { val opacity=SeekBar(this).apply { max=100;progress=(layer.opacity*100).toInt();contentDescription="Layer opacity" };AlertDialog.Builder(this).setTitle("Layer opacity").setView(opacity).setPositiveButton("Apply") { _,_ -> canvas.updateLayer(layer.copy(opacity=opacity.progress/100f)) }.show() }
+                    4 -> AlertDialog.Builder(this).setTitle("Blend mode").setItems(arrayOf("Normal","Multiply","Screen")) { _,choice -> canvas.updateLayer(layer.copy(blend=listOf("normal","multiply","screen")[choice])) }.show()
+                    5 -> canvas.moveLayer(layer.id,1)
+                    6 -> canvas.moveLayer(layer.id,-1)
+                    7 -> AlertDialog.Builder(this).setTitle("Delete this ink layer?").setPositiveButton("Delete") { _,_ -> runCatching { canvas.deleteLayer(layer.id) }.onFailure { say("Keep at least one editable layer") } }.setNegativeButton("Cancel",null).show()
+                }
+            }.show()
+        }.setNegativeButton("Close",null).show()
     }
     private fun library() { background {
         val items=projects.list();ui {

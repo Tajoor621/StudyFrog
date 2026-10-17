@@ -11,25 +11,39 @@ import org.json.JSONObject
 /** Base image + editable pressure-aware ink. Image aspect ratio is never stretched. */
 class ForgeCanvas(context: Context) : View(context) {
     data class Point(val x: Float, val y: Float, val pressure: Float = 1f)
-    data class Stroke(val points: MutableList<Point>, val color: Int, val size: Float)
-    data class Snapshot(val base: Bitmap?, val strokes: List<Stroke>)
+    data class Stroke(val points: MutableList<Point>, val color: Int, val size: Float, val layerId:String="ink", val kind:String="brush", val text:String="")
+    data class InkLayer(val id:String, val name:String, val visible:Boolean=true, val opacity:Float=1f, val blend:String="normal")
+    data class Snapshot(val base: Bitmap?, val strokes: List<Stroke>,val layers:List<InkLayer> = listOf(InkLayer("ink","Ink")),val activeLayer:String="ink")
     private val strokes = mutableListOf<Stroke>()
     private val undone = mutableListOf<Stroke>()
+    private val layers=mutableListOf(InkLayer("ink","Ink"))
+    var activeLayer="ink"
+        private set
+    var tool="brush"
+    fun layerList()=layers.toList()
+    fun selectLayer(id:String) { require(layers.any { it.id==id });activeLayer=id }
+    fun addLayer() { require(layers.size<16) { "Maximum 16 editable layers" };val id=java.util.UUID.randomUUID().toString();layers.add(InkLayer(id,"Layer ${layers.size+1}"));activeLayer=id;changed() }
+    fun updateLayer(value:InkLayer) { require(value.name.isNotBlank() && value.name.length<=80 && value.opacity in 0f..1f && value.blend in listOf("normal","multiply","screen"));val index=layers.indexOfFirst { it.id==value.id };require(index>=0);layers[index]=value;changed() }
+    fun moveLayer(id:String,delta:Int) { val i=layers.indexOfFirst { it.id==id };val to=(i+delta).coerceIn(0,layers.lastIndex);if(i>=0 && i!=to) { val layer=layers.removeAt(i);layers.add(to,layer);changed() } }
+    fun deleteLayer(id:String) { require(layers.size>1);layers.removeAll { it.id==id };strokes.removeAll { it.layerId==id };undone.clear();activeLayer=layers.last().id;changed() }
+    fun label(text:String) { require(text.isNotBlank() && text.length<=200);require(strokes.size<512);strokes.add(Stroke(mutableListOf(Point(.1f,.15f)),inkColor,inkSize,activeLayer,"text",text));changed() }
+    private fun changed() { previewState=Snapshot(image,strokes,layers,activeLayer);invalidate();onEdited?.invoke() }
     private val viewport=RectF()
     private var previewState=Snapshot(null,strokes)
     var onEdited: (() -> Unit)? = null
     var image: Bitmap? = null
-        set(value) { field=value;strokes.clear();undone.clear();previewState=Snapshot(value,strokes);updateBounds();invalidate();onEdited?.invoke() }
+        set(value) { field=value;strokes.clear();undone.clear();layers.clear();layers.add(InkLayer("ink","Ink"));activeLayer="ink";previewState=Snapshot(value,strokes,layers,activeLayer);updateBounds();invalidate();onEdited?.invoke() }
     var inkColor = Color.rgb(94,234,212)
     var inkSize = .004f
     var drawing = false
     private val paint=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     init { contentDescription="Creative canvas. Use the drawing switch to annotate the image." }
-    fun snapshot() = Snapshot(image,strokes.map { it.copy(points=it.points.toMutableList()) })
+    fun snapshot() = Snapshot(image,strokes.map { it.copy(points=it.points.toMutableList()) },layers.toList(),activeLayer)
     fun restore(snapshot: Snapshot) {
         image=snapshot.base
+        layers.clear();layers.addAll(snapshot.layers);activeLayer=snapshot.activeLayer.takeIf { id -> layers.any { it.id==id } } ?: layers.last().id
         strokes.addAll(snapshot.strokes.map { it.copy(points=it.points.toMutableList()) })
-        invalidate()
+        previewState=Snapshot(image,strokes,layers,activeLayer);invalidate()
     }
     private fun updateBounds() {
         val base=image ?: return
@@ -57,7 +71,7 @@ class ForgeCanvas(context: Context) : View(context) {
             MotionEvent.ACTION_DOWN -> {
                 if(strokes.size>=512 || strokes.sumOf { it.points.size }>=100_000) return false
                 parent.requestDisallowInterceptTouchEvent(true);undone.clear()
-                strokes.add(Stroke(mutableListOf(point),inkColor,inkSize.coerceIn(.001f,.05f)))
+                strokes.add(Stroke(mutableListOf(point),inkColor,inkSize.coerceIn(.001f,.05f),activeLayer,tool))
             }
             MotionEvent.ACTION_MOVE -> strokes.lastOrNull()?.let { stroke ->
                 if(stroke.points.size<5000 && strokes.sumOf { it.points.size }<100_000) {
@@ -71,8 +85,8 @@ class ForgeCanvas(context: Context) : View(context) {
         invalidate();return true
     }
     override fun performClick(): Boolean { super.performClick();return true }
-    fun undo() { if(strokes.isNotEmpty()) { undone.add(strokes.removeAt(strokes.lastIndex));invalidate();onEdited?.invoke() } }
-    fun redo() { if(undone.isNotEmpty()) { strokes.add(undone.removeAt(undone.lastIndex));invalidate();onEdited?.invoke() } }
+    fun undo() { val index=strokes.indexOfLast { it.layerId==activeLayer };if(index>=0) { undone.add(strokes.removeAt(index));changed() } }
+    fun redo() { val index=undone.indexOfLast { it.layerId==activeLayer };if(index>=0) { strokes.add(undone.removeAt(index));changed() } }
     fun flatten() = render(snapshot())
     fun diagram(prompt: String, level: String): Bitmap {
         val b=Bitmap.createBitmap(1024,576,Bitmap.Config.ARGB_8888);val c=Canvas(b)
@@ -96,16 +110,26 @@ class ForgeCanvas(context: Context) : View(context) {
             snapshot.base?.let { c.drawBitmap(it,null,bounds,p) }
             p.style=Paint.Style.STROKE;p.strokeCap=Paint.Cap.ROUND;p.strokeJoin=Paint.Join.ROUND
             c.save();c.clipRect(bounds)
-            for(stroke in snapshot.strokes) {
-                p.color=stroke.color
-                stroke.points.forEachIndexed { i,point ->
-                    p.strokeWidth=stroke.size*bounds.width()*point.pressure
-                    val x=bounds.left+point.x*bounds.width();val y=bounds.top+point.y*bounds.height()
-                    if(i==0) c.drawPoint(x,y,p) else {
-                        val before=stroke.points[i-1]
-                        c.drawLine(bounds.left+before.x*bounds.width(),bounds.top+before.y*bounds.height(),x,y,p)
+            for(layer in snapshot.layers.filter { it.visible && it.opacity>0 }) {
+                val layerPaint=Paint().apply { alpha=(layer.opacity*255).toInt();xfermode=PorterDuffXfermode(when(layer.blend) { "multiply" -> PorterDuff.Mode.MULTIPLY;"screen" -> PorterDuff.Mode.SCREEN;else -> PorterDuff.Mode.SRC_OVER }) }
+                val save=c.saveLayer(bounds,layerPaint)
+                for(stroke in snapshot.strokes.filter { it.layerId==layer.id }) {
+                    p.color=stroke.color;p.style=Paint.Style.STROKE;p.strokeWidth=stroke.size*bounds.width()
+                    p.xfermode=if(stroke.kind=="erase") PorterDuffXfermode(PorterDuff.Mode.CLEAR) else null
+                    val first=stroke.points.firstOrNull() ?: continue;val last=stroke.points.last()
+                    fun x(v:Point)=bounds.left+v.x*bounds.width()
+                    fun y(v:Point)=bounds.top+v.y*bounds.height()
+                    when(stroke.kind) {
+                        "text" -> { p.style=Paint.Style.FILL;p.textSize=stroke.size*bounds.width()*8;c.drawText(stroke.text,x(first),y(first),p) }
+                        "line" -> c.drawLine(x(first),y(first),x(last),y(last),p)
+                        "rectangle","ellipse" -> { val box=RectF(minOf(x(first),x(last)),minOf(y(first),y(last)),maxOf(x(first),x(last)),maxOf(y(first),y(last)));if(stroke.kind=="rectangle") c.drawRect(box,p) else c.drawOval(box,p) }
+                        else -> stroke.points.forEachIndexed { i,point ->
+                            p.strokeWidth=stroke.size*bounds.width()*point.pressure
+                            if(i==0) c.drawPoint(x(point),y(point),p) else c.drawLine(x(stroke.points[i-1]),y(stroke.points[i-1]),x(point),y(point),p)
+                        }
                     }
                 }
+                p.xfermode=null;c.restoreToCount(save)
             }
             c.restore();p.style=Paint.Style.FILL
         }
@@ -115,25 +139,41 @@ class ForgeCanvas(context: Context) : View(context) {
             drawSnapshot(Canvas(out),snapshot,RectF(0f,0f,out.width.toFloat(),out.height.toFloat()),Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
             return out
         }
-        fun encodeInk(snapshot: Snapshot): String = JSONArray().apply {
-            snapshot.strokes.forEach { stroke -> put(JSONObject().put("color",stroke.color).put("size",stroke.size).put("points",JSONArray().apply {
+        fun encodeInk(snapshot: Snapshot): String = JSONObject().put("version",3).put("active",snapshot.activeLayer).put("layers",JSONArray().apply {
+            snapshot.layers.forEach { put(JSONObject().put("id",it.id).put("name",it.name).put("visible",it.visible).put("opacity",it.opacity).put("blend",it.blend)) }
+        }).put("strokes",JSONArray().apply {
+            snapshot.strokes.forEach { stroke -> put(JSONObject().put("color",stroke.color).put("size",stroke.size).put("layer",stroke.layerId).put("kind",stroke.kind).put("text",stroke.text).put("points",JSONArray().apply {
                 stroke.points.forEach { point -> put(JSONArray().put(point.x).put(point.y).put(point.pressure)) }
             })) }
-        }.toString()
-        fun decodeInk(json: String): List<Stroke> {
+        }).toString()
+        fun decodeInk(json:String)=decodeDocument(json).strokes
+        fun decodeDocument(json: String): Snapshot {
             require(json.length<=8_000_000) { "Ink file too large" }
-            val items=JSONArray(json);require(items.length()<=512)
+            val document=if(json.trimStart().startsWith("{")) JSONObject(json) else null
+            val layerItems=document?.getJSONArray("layers")
+            val layers=if(layerItems==null) listOf(InkLayer("ink","Ink")) else {
+                require(layerItems.length() in 1..16)
+                (0 until layerItems.length()).map { i -> val l=layerItems.getJSONObject(i)
+                    val id=l.getString("id");val name=l.getString("name");val opacity=l.getDouble("opacity").toFloat();val blend=l.getString("blend")
+                    require(id.length in 1..80 && name.length in 1..80 && opacity.isFinite() && opacity in 0f..1f && blend in listOf("normal","multiply","screen"))
+                    InkLayer(id,name,l.getBoolean("visible"),opacity,blend)
+                }.also { require(it.map { layer -> layer.id }.distinct().size==it.size) }
+            }
+            val items=document?.getJSONArray("strokes") ?: JSONArray(json);require(items.length()<=512)
             var total=0
-            return (0 until items.length()).map { i ->
+            val strokes=(0 until items.length()).map { i ->
                 val item=items.getJSONObject(i);val size=item.getDouble("size").toFloat()
                 require(size.isFinite() && size in .001f.. .05f)
                 val points=item.getJSONArray("points");total+=points.length();require(points.length()<=5000 && total<=100_000)
+                val layer=item.optString("layer","ink");val kind=item.optString("kind","brush");val label=item.optString("text","")
+                require(layers.any { it.id==layer } && kind in listOf("brush","erase","line","rectangle","ellipse","text") && label.length<=200)
                 Stroke((0 until points.length()).map { j ->
                     val p=points.getJSONArray(j);val x=p.getDouble(0).toFloat();val y=p.getDouble(1).toFloat();val pressure=p.optDouble(2,1.0).toFloat()
                     require(x.isFinite() && y.isFinite() && pressure.isFinite() && x in 0f..1f && y in 0f..1f && pressure in .15f..2f)
                     Point(x,y,pressure)
-                }.toMutableList(),item.getInt("color"),size)
+                }.toMutableList(),item.getInt("color"),size,layer,kind,label)
             }
+            return Snapshot(null,strokes,layers,document?.optString("active","ink") ?: "ink")
         }
     }
 }

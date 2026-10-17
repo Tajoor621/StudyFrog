@@ -49,7 +49,7 @@ class ProjectStore(context: Context) {
             try { File(pending,"image.png").outputStream().use { require(preview.compress(Bitmap.CompressFormat.PNG,100,it)) } }
             finally { preview.recycle() }
             File(pending,"ink.json").writeText(ForgeCanvas.encodeInk(snapshot))
-            meta.put("schema",2).put("created",System.currentTimeMillis()).put("flattened",false)
+            meta.put("schema",3).put("created",System.currentTimeMillis()).put("flattened",false)
             File(pending,"project.json").writeText(meta.toString())
             check(pending.renameTo(directory(id))) { "Could not commit project" }
             return id
@@ -63,8 +63,8 @@ class ProjectStore(context: Context) {
         val options=BitmapFactory.Options().apply { inSampleSize=1 }
         while(bounds.outWidth/options.inSampleSize>2048 || bounds.outHeight/options.inSampleSize>2048) options.inSampleSize*=2
         val bitmap=requireNotNull(BitmapFactory.decodeFile(baseFile.path,options)) { "Project image is missing" }
-        val ink=try { File(dir,"ink.json").takeIf { it.isFile }?.let { ForgeCanvas.decodeInk(it.readText()) }.orEmpty() } catch(e:Exception) { bitmap.recycle();throw e }
-        return LoadedProject(ProjectInfo(id,meta.optString("title",meta.optString("prompt","Untitled project")),meta),ForgeCanvas.Snapshot(bitmap,ink))
+        val ink=try { File(dir,"ink.json").takeIf { it.isFile }?.let { ForgeCanvas.decodeDocument(it.readText()) } ?: ForgeCanvas.Snapshot(null,emptyList()) } catch(e:Exception) { bitmap.recycle();throw e }
+        return LoadedProject(ProjectInfo(id,meta.optString("title",meta.optString("prompt","Untitled project")),meta),ink.copy(base=bitmap))
     }
     fun rename(id: String, title: String) {
         require(title.isNotBlank() && title.length<=160)
@@ -101,7 +101,7 @@ class ProjectStore(context: Context) {
             }
             require("project.json" in seen && "image.png" in seen) { "Backup is incomplete" }
             val metadata=JSONObject(File(pending,"project.json").readText())
-            require(metadata.optInt("schema",1) in 1..2) { "Unsupported backup version" }
+            require(metadata.optInt("schema",1) in 1..3) { "Unsupported backup version" }
             metadata.put("created",System.currentTimeMillis()).put("draft",false);File(pending,"project.json").writeText(metadata.toString())
             check(pending.renameTo(directory(id))) { "Could not import backup" }
             try { load(id).snapshot.base?.recycle() } catch(e:Exception) { directory(id).deleteRecursively();throw e }
