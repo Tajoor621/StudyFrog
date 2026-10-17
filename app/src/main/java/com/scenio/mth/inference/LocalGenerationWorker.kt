@@ -21,7 +21,8 @@ import android.os.SystemClock
 class LocalGenerationWorker(context:Context,params:WorkerParameters):CoroutineWorker(context,params) {
     override suspend fun doWork():Result = supervisorScope {
         setForeground(foreground())
-        val model=ModelStore(applicationContext).model
+        val models=ModelStore(applicationContext)
+        val model=models.model
         if(!model.isFile) return@supervisorScope Result.failure(workDataOf("error" to "Import an SD 1.x GGUF model first"))
         val request=File(applicationContext.noBackupFilesDir,"local-jobs/$id.json")
         if(!request.isFile || request.length()>64_000) return@supervisorScope Result.failure(workDataOf("error" to "Local request is missing or invalid"))
@@ -45,19 +46,21 @@ class LocalGenerationWorker(context:Context,params:WorkerParameters):CoroutineWo
             }
             currentCoroutineContext().ensureActive()
             val pixels=NativeEngine.generate(model.path.toByteArray(),prompt.toByteArray(),negative.toByteArray(),size,steps,data.optLong("seed",42),data.optDouble("strength",.65).toFloat(),initial,requestToken)
+            currentCoroutineContext().ensureActive()
             val bitmap=Bitmap.createBitmap(pixels,size,size,Bitmap.Config.ARGB_8888)
             try { output.outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.PNG,100,it)) } } finally { bitmap.recycle() }
         }
         val monitor=launch { while(isActive) { peakNativeBytes=maxOf(peakNativeBytes,android.os.Debug.getNativeHeapAllocatedSize());setProgress(workDataOf("percent" to NativeEngine.progress()));delay(500) } }
         try {
-            task.await()
+            task.awaitGeneration { NativeEngine.cancelRequest(requestToken) }
             val report=JSONObject().put("elapsed_ms",SystemClock.elapsedRealtime()-started).put("sampled_peak_native_heap_bytes",peakNativeBytes)
+                .put("model_sha256",runCatching { JSONObject(models.metadata.readText()).getString("sha256") }.getOrDefault("unknown"))
                 .put("sdk",Build.VERSION.SDK_INT).put("device",Build.MODEL).put("abi",Build.SUPPORTED_ABIS.firstOrNull()).put("size",size).put("steps",steps).put("runtime_commit","f0aac524d3f29140e60ba78f3cfb16d6acea87db")
             File(output.parentFile,"benchmark-latest.json").writeText(report.toString(2))
             File(output.parentFile,"$id.json").writeText(data.toString())
             Result.success(workDataOf("path" to output.path))
         }
-        catch(e:CancellationException) { NativeEngine.cancelRequest(requestToken);output.delete();throw e }
+        catch(e:CancellationException) { output.delete();throw e }
         catch(e:Exception) { output.delete();Result.failure(workDataOf("error" to (e.message ?: "Local inference failed").take(300))) }
         finally { monitor.cancel();File(applicationContext.cacheDir,"$id-input.png").delete() }
     }

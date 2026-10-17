@@ -1,6 +1,8 @@
 """StudyForge local-only engine. No remote inference, implicit downloads or paid APIs."""
 from __future__ import annotations
 import ipaddress
+import gc
+import sys
 import base64, binascii, hmac, io, json, os, queue, re, secrets, shutil, subprocess, threading, uuid, time, tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -104,6 +106,18 @@ def schematic(prompt, width, height):
     draw.text((24,height-28),"Schematic only; not a validated anatomical diagram",fill="white")
     return im
 
+def release_image_pipeline():
+    """Single-worker boundary: free cached SD before/after a motion-model job."""
+    global PIPE
+    PIPE=None
+    gc.collect()
+    torch=sys.modules.get("torch")
+    if torch is not None:
+        try:
+            if torch.cuda.is_available(): torch.cuda.empty_cache()
+        except RuntimeError:
+            pass  # A failed CUDA context must not terminate the job worker during cleanup.
+
 def diffusion(job):
     global PIPE
     checkpoint(job)
@@ -194,6 +208,7 @@ def process(job):
         checkpoint(job)
         output=ROOT/(job["id"]+(".mp4" if job["kind"] in ("video","motion") else ".png"))
         if job["kind"]=="motion":
+            release_image_pipeline()
             from motion_video import render
             def update(value): job["progress"]=value;save(job)
             render(decode_image(job["image"]),output,job["prompt"],job["negative"],job["seed"],job["steps"],lambda: checkpoint(job),update)
@@ -215,6 +230,7 @@ def process(job):
             path=path_for(job["id"]);temp=path.with_suffix(".tmp")
             temp.write_text(json.dumps(job));temp.replace(path)
             CANCELLED.discard(job["id"])
+        if job["kind"]=="motion": release_image_pipeline()
 
 def work():
     while True:

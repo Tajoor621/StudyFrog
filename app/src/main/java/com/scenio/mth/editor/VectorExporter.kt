@@ -16,14 +16,15 @@ object VectorExporter {
         fun shape(stroke:ForgeCanvas.Stroke,mask:Boolean=false):String {
             val first=stroke.points.firstOrNull() ?: return "";val last=stroke.points.last()
             val color=if(mask) "black" else String.format(Locale.ROOT,"#%06x",stroke.color and 0xffffff)
-            val style="opacity=\"${n(if(mask) 1f else android.graphics.Color.alpha(stroke.color)/255f)}\" stroke=\"$color\" stroke-width=\"${n(stroke.size*w)}\" stroke-linecap=\"round\" fill=\"none\""
+            val opacity="opacity=\"${n(if(mask) 1f else android.graphics.Color.alpha(stroke.color)/255f)}\""
+            val style="$opacity stroke=\"$color\" stroke-width=\"${n(stroke.size*w)}\" stroke-linecap=\"round\" fill=\"none\""
             val x=first.x*w;val y=first.y*h;val ex=last.x*w;val ey=last.y*h
             return when(stroke.kind) {
-                "text" -> "<text x=\"${n(x)}\" y=\"${n(y)}\" font-size=\"${n(stroke.size*w*8)}\" font-family=\"sans-serif\" fill=\"$color\">${escape(stroke.text)}</text>"
+                "text" -> "<text x=\"${n(x)}\" y=\"${n(y)}\" font-size=\"${n(stroke.size*w*8)}\" font-family=\"sans-serif\" fill=\"$color\" $opacity>${escape(stroke.text)}</text>"
                 "line" -> "<line x1=\"${n(x)}\" y1=\"${n(y)}\" x2=\"${n(ex)}\" y2=\"${n(ey)}\" $style/>"
                 "rectangle" -> "<rect x=\"${n(minOf(x,ex))}\" y=\"${n(minOf(y,ey))}\" width=\"${n(kotlin.math.abs(ex-x))}\" height=\"${n(kotlin.math.abs(ey-y))}\" $style/>"
                 "ellipse" -> "<ellipse cx=\"${n((x+ex)/2)}\" cy=\"${n((y+ey)/2)}\" rx=\"${n(kotlin.math.abs(ex-x)/2)}\" ry=\"${n(kotlin.math.abs(ey-y)/2)}\" $style/>"
-                else -> if(stroke.points.size==1) "<circle cx=\"${n(x)}\" cy=\"${n(y)}\" r=\"${n(stroke.size*w/2)}\" fill=\"$color\"/>" else stroke.points.zipWithNext().joinToString("") { (a,b) -> "<line x1=\"${n(a.x*w)}\" y1=\"${n(a.y*h)}\" x2=\"${n(b.x*w)}\" y2=\"${n(b.y*h)}\" stroke=\"$color\" stroke-width=\"${n(stroke.size*w*b.pressure)}\" stroke-linecap=\"round\"/>" }
+                else -> if(stroke.points.size==1) "<circle cx=\"${n(x)}\" cy=\"${n(y)}\" r=\"${n(stroke.size*w*first.pressure/2)}\" fill=\"$color\" $opacity/>" else "<circle cx=\"${n(x)}\" cy=\"${n(y)}\" r=\"${n(stroke.size*w*first.pressure/2)}\" fill=\"$color\" $opacity/>"+stroke.points.zipWithNext().joinToString("") { (a,b) -> "<line x1=\"${n(a.x*w)}\" y1=\"${n(a.y*h)}\" x2=\"${n(b.x*w)}\" y2=\"${n(b.y*h)}\" stroke=\"$color\" stroke-width=\"${n(stroke.size*w*b.pressure)}\" stroke-linecap=\"round\" $opacity/>" }
             }
         }
         return buildString {
