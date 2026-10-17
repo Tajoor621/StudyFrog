@@ -6,7 +6,7 @@ def dump(apk):
     return subprocess.check_output([args.aapt2,"dump","xmltree",str(apk),"--file","AndroidManifest.xml"],text=True)
 def attr(text,key,value):
     for line in text.splitlines():
-        if re.search(r"(?:^|\s)(?:android:)?"+re.escape(key)+r"(?:\([^)]*\))?=",line) and value in line: return True
+        if re.search(r"(?:^|\s)(?:[^\s=]+:)?"+re.escape(key)+r"(?:\([^)]*\))?=",line) and value in line: return True
     return False
 apks=list(args.directory.rglob("*.apk"))
 if not apks: raise SystemExit("No APKs found")

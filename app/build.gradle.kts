@@ -5,6 +5,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
+    id("androidx.room")
 }
 
 val firebaseEnabled = providers.gradleProperty("firebaseEnabled")
@@ -77,7 +78,7 @@ android {
     lint { abortOnError = true }
 }
 
-ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+room { schemaDirectory("$projectDir/schemas") }
 tasks.withType<Test>().configureEach { useJUnitPlatform() }
 
 dependencies {

@@ -12,6 +12,8 @@ is not a substitute for device, model-quality or accessibility evaluation.
 | Critical | Initial export omitted Android data-layer files | Restore Room/DataStore sources; add integrity check |
 | High | Network-security XML omitted mandatory lint attributes | Explicitly disable subdomains for loopback hosts |
 | High | bundletool rejected apksigner-style `env:` passwords | Use restricted temporary password files with cleanup |
+| High | Backup rules excluded settings but left photos/prompts eligible for some device transfers | Exclude every storage domain from cloud and device transfer; explicit editable backups remain user controlled |
+| High | Concurrent Room schema export could produce an empty JSON file | Use the Room Gradle plugin to manage schema outputs |
 | High | Portrait photos were stretched to a landscape viewport/output | Aspect-fit geometry shared by canvas and video; source-sized PNG export |
 | High | Imported EXIF orientation was ignored | Bounded decoding and all EXIF transforms |
 | High | Project saves flattened annotations irreversibly | Schema 2 stores base, independent ink, preview and metadata; legacy reads supported |
@@ -52,3 +54,5 @@ CI remains configured to fail on lint errors, rather than suppressing findings.
 
 These gaps prevent an honest “10/10” or complete-master-specification claim.
 All implementation changes use local or free/open tooling and no paid API.
+
+Platform backup behavior was checked against the [Android backup guide](https://developer.android.com/identity/data/autobackup). Room schema configuration follows the [Room migration guide](https://developer.android.com/training/data-storage/room/migrating-db-versions). Dependencies remain pinned; Dependabot opens reviewable updates.
