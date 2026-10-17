@@ -16,7 +16,7 @@ object VectorExporter {
         fun shape(stroke:ForgeCanvas.Stroke,mask:Boolean=false):String {
             val first=stroke.points.firstOrNull() ?: return "";val last=stroke.points.last()
             val color=if(mask) "black" else String.format(Locale.ROOT,"#%06x",stroke.color and 0xffffff)
-            val style="stroke=\"$color\" stroke-width=\"${n(stroke.size*w)}\" stroke-linecap=\"round\" fill=\"none\""
+            val style="opacity=\"${n(if(mask) 1f else android.graphics.Color.alpha(stroke.color)/255f)}\" stroke=\"$color\" stroke-width=\"${n(stroke.size*w)}\" stroke-linecap=\"round\" fill=\"none\""
             val x=first.x*w;val y=first.y*h;val ex=last.x*w;val ey=last.y*h
             return when(stroke.kind) {
                 "text" -> "<text x=\"${n(x)}\" y=\"${n(y)}\" font-size=\"${n(stroke.size*w*8)}\" font-family=\"sans-serif\" fill=\"$color\">${escape(stroke.text)}</text>"

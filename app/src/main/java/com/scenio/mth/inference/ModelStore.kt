@@ -17,7 +17,7 @@ class ModelStore(private val context:Context) {
         val temporary=File(root,"import.part");val digest=MessageDigest.getInstance("SHA-256");var total=0L
         try {
             context.contentResolver.openInputStream(uri)?.use { input ->
-                val magic=ByteArray(4);require(input.read(magic)==4 && String(magic,Charsets.US_ASCII)=="GGUF") { "Choose a complete SD 1.x GGUF model" }
+                val magic=ByteArray(4);java.io.DataInputStream(input).readFully(magic);require(String(magic,Charsets.US_ASCII)=="GGUF") { "Choose a complete SD 1.x GGUF model" }
                 temporary.outputStream().use { out ->
                     out.write(magic);digest.update(magic);total=4
                     val buffer=ByteArray(1_048_576)

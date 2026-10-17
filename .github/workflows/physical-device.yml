@@ -1,0 +1,41 @@
+name: StudyForge physical Android validation
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  device:
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, studyforge-device]
+    environment: physical-device
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Require an explicitly connected device
+        run: |
+          adb get-state
+          adb shell getprop ro.product.model
+          adb shell getprop ro.build.version.sdk
+          adb shell getprop ro.kernel.qemu | python3 -c 'import sys; assert sys.stdin.read().strip() != "1", "Use a physical phone, not an emulator"'
+      - name: Build and install debug app without removing existing user data
+        run: |
+          ./gradlew --no-daemon assembleDebug -PfirebaseEnabled=false
+          adb install -r app/build/outputs/apk/debug/app-debug.apk
+      - name: Run real-model inference and persistence tests
+        run: |
+          adb shell run-as com.scenio.mth test -f no_backup/models/image.gguf
+          ./gradlew --no-daemon connectedDebugAndroidTest -PfirebaseEnabled=false -Pandroid.testInstrumentationRunnerArguments.runRealInference=true
+          mkdir -p device-evidence
+          adb exec-out run-as com.scenio.mth cat files/device-test/report.json > device-evidence/report.json
+          adb exec-out run-as com.scenio.mth cat files/device-test/image.png > device-evidence/image.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: physical-device-evidence
+          retention-days: 7
+          path: |
+            device-evidence/
+            app/build/reports/androidTests/
+          if-no-files-found: ignore
