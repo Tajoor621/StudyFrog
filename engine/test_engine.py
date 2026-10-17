@@ -55,6 +55,21 @@ class EngineTests(unittest.TestCase):
         self.assertTrue(all(w<=768 and h<=768 for w,h in seen))
         self.assertEqual(result.getpixel((0,0)),(255,0,0))
         self.assertEqual(result.getpixel((1535,863)),(255,0,0))
+    def test_cancelled_job_produces_no_result_and_can_be_deleted(self):
+        job=server.validate({"prompt":"Cancel study","kind":"diagram"});job.update(id="c"*32,status="queued")
+        server.save(job)
+        self.assertEqual(server.cancel_job(job["id"])["status"],"cancelling")
+        server.process(job)
+        self.assertEqual(server.read(job["id"])["status"],"cancelled")
+        self.assertFalse((server.ROOT/(job["id"]+".png")).exists())
+        server.delete_job(job["id"])
+        with self.assertRaises(FileNotFoundError): server.read(job["id"])
+    def test_active_job_cannot_be_deleted(self):
+        job=server.validate({"prompt":"Keep study","kind":"diagram"});job.update(id="d"*32,status="queued");server.save(job)
+        with self.assertRaises(RuntimeError): server.delete_job(job["id"])
+    def test_invalid_strength_and_guidance_are_rejected(self):
+        for key,value in (("strength",0),("strength",True),("strength",1.1),("guidance",float("nan")),("guidance",16)):
+            with self.assertRaises(ValueError): server.validate({"prompt":"Study",key:value})
     def test_video_has_real_frames(self):
         import shutil
         if not shutil.which("ffmpeg"): self.skipTest("FFmpeg unavailable")

@@ -25,6 +25,7 @@ struct ForgeView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    Image("StudyFrogBrand").resizable().scaledToFit().accessibilityLabel("StudyFrog brand artwork")
                     Text("CREATE · LEARN · REFINE").font(.caption).foregroundStyle(.mint)
                     TextEditor(text: $prompt).frame(height: 120).padding(8).background(.quaternary).clipShape(RoundedRectangle(cornerRadius: 16))
                     if let image { Image(uiImage: image).resizable().scaledToFit().clipShape(RoundedRectangle(cornerRadius: 16)) }

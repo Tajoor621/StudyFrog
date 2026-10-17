@@ -28,4 +28,8 @@
     <string name="sf_reminder_title">A little time for learning</string>
     <string name="sf_reminder_body">Open StudyForge and continue when you are ready.</string>
     <string name="sf_setup_complete">Setup complete · progress saved on this device</string>
+    <string name="sf_brand_artwork">StudyFrog scholar frog brand artwork</string>
+    <string name="sf_about_title">About and privacy</string>
+    <string name="sf_close">Close</string>
+    <string name="sf_about">Version %1$s. Offline schematics, editable projects and still-reveal video. AI image generation requires your own local computer engine and downloaded models. Analytics and crash sharing are optional. Source: Apache 2.0. Model licenses are separate.</string>
 </resources>

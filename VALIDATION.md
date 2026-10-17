@@ -2,9 +2,9 @@
 
 ## Locally checked
 
-- Eight Python engine tests pass, covering API authorization, input validation,
+- Eleven Python engine tests pass, covering API authorization, input validation,
   persistence, missing-model errors, diagram output, tiled composition mechanics
-  with a mock inference callback, and actual encoded video frames.
+  with a mock inference callback, actual encoded video frames, cancellation cleanup, active-job deletion protection, and strength/guidance limits.
 - The earlier full-length FFmpeg validation produced 1920x1080, 24 fps,
   720 frames and exactly 30 seconds.
 - Integrated XML/YAML, resource references, package paths and shell syntax are

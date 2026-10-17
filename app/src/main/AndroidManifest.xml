@@ -9,7 +9,7 @@
     <uses-permission android:name="android.permission.ACCESS_ADSERVICES_TOPICS" tools:node="remove" />
     <application android:label="StudyForge"
         android:theme="@android:style/Theme.Material.NoActionBar"
-        android:icon="@drawable/ic_xxhdpi" android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="false"
         android:supportsRtl="true" android:networkSecurityConfig="@xml/network_security_config"
         android:name="com.scenio.mth.features.StudyForgeApplication"
         android:extractNativeLibs="true"

@@ -21,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.*
 import com.scenio.mth.R
+import com.scenio.mth.BuildConfig
 import com.scenio.mth.features.ui.*
 
 class FeaturesActivity : ComponentActivity() {
@@ -43,6 +44,11 @@ class FeaturesActivity : ComponentActivity() {
                         modifier = Modifier.safeDrawingPadding().padding(24.dp)) }
                 }
                 is SettingsLoad.Ready -> StudyForgeTheme(state.value) {
+                    var showAbout by remember { mutableStateOf(false) }
+                    if(showAbout) AlertDialog(onDismissRequest={ showAbout=false },
+                        title={ Text(stringResource(R.string.sf_app_name)) },
+                        text={ Column { BrandHeader();Text(stringResource(R.string.sf_about,BuildConfig.VERSION_NAME)) } },
+                        confirmButton={ TextButton(onClick={ showAbout=false }) { Text(stringResource(R.string.sf_close)) } })
                     val nav = rememberNavController()
                     val initial = remember { if (state.value.onboarded) "home" else "onboarding" }
                     LaunchedEffect(state.value.onboarded) {
@@ -66,6 +72,7 @@ class FeaturesActivity : ComponentActivity() {
                                         .collectAsStateWithLifecycle(initialValue = null)
                                     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
                                         .padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                        BrandHeader()
                                         Text(stringResource(R.string.sf_app_name),
                                             style = MaterialTheme.typography.headlineMedium,
                                             modifier = Modifier.semantics { heading() })
@@ -82,6 +89,7 @@ class FeaturesActivity : ComponentActivity() {
                                         OutlinedButton(onClick = { nav.navigate("settings") }) {
                                             Text(stringResource(R.string.sf_settings))
                                         }
+                                        TextButton(onClick={ showAbout=true }) { Text(stringResource(R.string.sf_about_title)) }
                                     }
                                 }
                                 composable("settings") {

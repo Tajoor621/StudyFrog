@@ -1,5 +1,7 @@
 # StudyForge
 
+![StudyFrog artwork](branding/studyfrog-banner.webp)
+
 StudyForge is a prompt-first Android creative and study workspace. This
 repository is hosted as **StudyFrog**; the app name is **StudyForge** and its
 Android application ID is `com.scenio.mth`.
@@ -9,12 +11,14 @@ Android application ID is `com.scenio.mth`.
 - First-use onboarding and navigation to the creative studio.
 - Room-backed progress, transactional updates, and DataStore preferences.
 - Material 3 system/light/dark appearance and Android 12+ dynamic color for
-  the feature screens.
+  the feature screens and native studio.
 - Optional local study reminders with contextual notification permission.
 - Separate, default-off analytics and crash-reporting controls. Firebase is
   optional and is not initialized by this app until an explicit opt-in.
-- Local schematic templates, photo import, ink annotation, undo, local project
-  saving/browsing and PNG export.
+- Local schematic templates, photo import, ink annotation, undo/redo, pressure-aware ink, editable project
+  saving, search/rename/delete, ZIP backups and aspect-preserving PNG export.
+- EXIF-aware photo import, rotation state retention and background draft recovery.
+- Authenticated local engine job history, cancellation and result deletion.
 - Phone-local 30-second 1080p still-reveal video encoder implementation.
 - Optional computer-local SD 1.x text-to-image/img2img engine and API-only tiled
   refinement, requiring separately downloaded model files.
@@ -103,3 +107,10 @@ actual CI/device results; the presence of source is not proof of a passing build
 Source is Apache-2.0. Third-party tools and model weights retain their own licenses.
 There are no paid APIs, ads, mandatory subscriptions or paid distribution tools.
 Hosted CI quotas and external free-service terms remain provider-controlled.
+
+## Audit and branding
+
+See [the professional audit](docs/AUDIT.md) for corrected defects, validation
+and remaining release blockers. Your supplied artwork is included unchanged in
+`branding/`, with launcher-safe crops and Android/iOS assets. The repository and
+artwork use StudyFrog; the existing product display name remains StudyForge.

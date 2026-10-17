@@ -1,6 +1,6 @@
 """StudyForge local-only engine. No remote inference, implicit downloads or paid APIs."""
 from __future__ import annotations
-import base64, binascii, hmac, io, json, os, queue, re, secrets, shutil, subprocess, threading, uuid
+import base64, binascii, hmac, io, json, os, queue, re, secrets, shutil, subprocess, threading, uuid, time, tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageOps
@@ -13,6 +13,30 @@ JOBS = queue.Queue(maxsize=2)
 LOCK = threading.Lock()
 UUID = re.compile(r"^[0-9a-f]{32}$")
 PIPE = None
+CANCELLED = set()
+class JobCancelled(Exception): pass
+
+def checkpoint(job):
+    with LOCK:
+        if job.get("id") in CANCELLED: raise JobCancelled("Job cancelled by user")
+
+def cancel_job(job_id):
+    with LOCK:
+        file=path_for(job_id)
+        job=json.loads(file.read_text())
+        if job["status"] in ("queued","running","cancelling"):
+            CANCELLED.add(job_id);job["status"]="cancelling"
+            temp=file.with_suffix(".tmp");temp.write_text(json.dumps(job));temp.replace(file)
+        return {"id":job_id,"status":job["status"]}
+
+def delete_job(job_id):
+    with LOCK:
+        file=path_for(job_id);job=json.loads(file.read_text())
+        if job["status"] in ("queued","running","cancelling"): raise RuntimeError("Cancel the job before deleting it")
+        for suffix in (".json",".png",".mp4",".source.png",".tmp"):
+            (ROOT/(job_id+suffix)).unlink(missing_ok=True)
+        CANCELLED.discard(job_id)
+
 
 def path_for(job_id):
     if not UUID.fullmatch(job_id): raise ValueError("Invalid job id")
@@ -46,6 +70,10 @@ def validate(body):
         if type(value) is not int or not low<=value<=high: raise ValueError(f"Invalid {key}")
         if key in ("width","height") and value%8: raise ValueError("Dimensions must be multiples of 8")
         values[key]=value
+    for key,default,low,high in (("strength",.65,.1,1.0),("guidance",7.5,1.0,15.0)):
+        value=body.get(key,default)
+        if type(value) not in (int,float) or not low<=value<=high: raise ValueError(f"Invalid {key}")
+        values[key]=float(value)
     picture=body.get("image")
     if picture is not None:
         if not isinstance(picture,str) or len(picture)>12_000_000: raise ValueError("Image too large")
@@ -77,6 +105,7 @@ def schematic(prompt, width, height):
 
 def diffusion(job):
     global PIPE
+    checkpoint(job)
     model=os.environ.get("STUDYFORGE_MODEL", "")
     if not model or not Path(model).is_dir():
         raise RuntimeError("Set STUDYFORGE_MODEL to a local SD 1.x Diffusers folder with its safety checker. No model is bundled.")
@@ -86,16 +115,17 @@ def diffusion(job):
         dtype=torch.float16 if torch.cuda.is_available() else torch.float32
         candidate=StableDiffusionPipeline.from_pretrained(model,local_files_only=True,torch_dtype=dtype,use_safetensors=True)
         if candidate.safety_checker is None: raise RuntimeError("This build requires a model safety checker")
+        candidate.enable_attention_slicing()
+        candidate.enable_vae_tiling()
+        candidate.to("cuda" if torch.cuda.is_available() else "cpu")
         PIPE=candidate
-        PIPE.enable_attention_slicing()
-        PIPE.enable_vae_tiling()
-        PIPE.to("cuda" if torch.cuda.is_available() else "cpu")
     generator=torch.Generator(device=PIPE.device).manual_seed(job["seed"])
-    args=dict(prompt=job["prompt"],negative_prompt=job["negative"],num_inference_steps=job["steps"],generator=generator)
+    args=dict(prompt=job["prompt"],negative_prompt=job["negative"],num_inference_steps=job["steps"],generator=generator,
+        guidance_scale=job.get("guidance",7.5),callback_on_step_end=lambda pipe,step,timestep,kwargs: (checkpoint(job),kwargs)[1])
     if job.get("image"):
         pipe=StableDiffusionImg2ImgPipeline(**PIPE.components)
         source=ImageOps.fit(decode_image(job["image"]),(job["width"],job["height"]))
-        result=pipe(image=source,strength=.65,**args)
+        result=pipe(image=source,strength=job.get("strength",.65),**args)
     else:
         result=PIPE(width=job["width"],height=job["height"],**args)
     if result.nsfw_content_detected and any(result.nsfw_content_detected):
@@ -113,6 +143,7 @@ def tiled_refine(job, generate=diffusion):
         return sorted(set(list(range(0,length-tile+1,stride))+[length-tile]))
     for y in positions(height):
         for x in positions(width):
+            checkpoint(job)
             tw=min(tile,width-x);th=min(tile,height-y)
             patch=source.crop((x,y,x+tw,y+th))
             buffer=io.BytesIO();patch.save(buffer,format="PNG")
@@ -129,8 +160,9 @@ def tiled_refine(job, generate=diffusion):
             result.paste(generated,(x,y),mask)
     return result
 
-def reveal_video(image,output,seconds=30,width=1920,height=1080,fps=24):
+def reveal_video(image,output,seconds=30,width=1920,height=1080,fps=24,cancel=None):
     """Progressive left-to-right still reveal. NOT AI motion or a drawing simulation."""
+    if not seconds>=3: raise ValueError("Video duration must be at least 3 seconds")
     executable=shutil.which("ffmpeg")
     if not executable: raise RuntimeError("Install free FFmpeg to render video")
     src=output.with_suffix(".source.png")
@@ -138,22 +170,46 @@ def reveal_video(image,output,seconds=30,width=1920,height=1080,fps=24):
     # Blend original with a dark canvas, exposing successive pixels with time.
     graph=f"[0:v]format=yuv420p,split[a][b];[b]lut=y=24:u=128:v=128[dark];[a][dark]blend=all_expr='if(lte(X,W*T/{seconds-2}),A,B)'[v]"
     try:
-        subprocess.run([executable,"-hide_banner","-loglevel","error","-y","-loop","1","-framerate",str(fps),"-i",str(src),"-filter_complex",graph,"-map","[v]","-t",str(seconds),"-r",str(fps),"-c:v","libx264","-preset","veryfast","-crf","20","-pix_fmt","yuv420p","-movflags","+faststart",str(output)],check=True,timeout=1800,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+        command=[executable,"-hide_banner","-loglevel","error","-y","-loop","1","-framerate",str(fps),"-i",str(src),"-filter_complex",graph,"-map","[v]","-t",str(seconds),"-r",str(fps),"-c:v","libx264","-preset","veryfast","-crf","20","-pix_fmt","yuv420p","-movflags","+faststart",str(output)]
+        with tempfile.TemporaryFile() as errors:
+            process=subprocess.Popen(command,stdout=subprocess.DEVNULL,stderr=errors)
+            deadline=time.monotonic()+1800
+            try:
+                while process.poll() is None:
+                    if cancel: cancel()
+                    if time.monotonic()>deadline: raise TimeoutError("Video encoder timed out")
+                    threading.Event().wait(.1)
+                if process.returncode:
+                    errors.seek(0);raise RuntimeError("Video encoder failed: "+errors.read(400).decode(errors="replace"))
+            finally:
+                if process.poll() is None: process.kill();process.wait()
+
     finally: src.unlink(missing_ok=True)
 
 def process(job):
     job["status"]="running";save(job)
+    output=None
     try:
+        checkpoint(job)
         output=ROOT/(job["id"]+(".mp4" if job["kind"]=="video" else ".png"))
-        if job["kind"]=="video": reveal_video(decode_image(job["image"]),output)
+        if job["kind"]=="video": reveal_video(decode_image(job["image"]),output,cancel=lambda: checkpoint(job))
         elif job["kind"]=="refine": tiled_refine(job).save(output)
         elif job["kind"]=="diagram": schematic(job["prompt"],job["width"],job["height"]).save(output)
         else: diffusion(job).save(output)
+        checkpoint(job)
         job["status"]="done"
+    except JobCancelled:
+        job["status"]="cancelled"
     except Exception as exc:
         job["status"]="failed";job["error"]=str(exc)[:400]
     finally:
-        job.pop("image",None);save(job)
+        with LOCK:
+            if job["id"] in CANCELLED: job["status"]="cancelled"
+            if job["status"]!="done" and output: output.unlink(missing_ok=True)
+            job.pop("image",None)
+            path=path_for(job["id"]);temp=path.with_suffix(".tmp")
+            temp.write_text(json.dumps(job));temp.replace(path)
+            CANCELLED.discard(job["id"])
 
 def work():
     while True:
@@ -167,17 +223,21 @@ class Handler(BaseHTTPRequestHandler):
         data=json.dumps(data).encode();self.send_response(code);self.send_header("Content-Type","application/json");self.send_header("Content-Length",str(len(data)));self.send_header("Cache-Control","no-store");self.end_headers();self.wfile.write(data)
     def authorized(self):
         # Browser-origin requests are rejected; clients use native HTTP.
-        if self.headers.get("Origin") or not hmac.compare_digest(self.headers.get("Authorization",""),"Bearer "+TOKEN):
+        if self.headers.get("Origin") or not hmac.compare_digest(self.headers.get("Authorization","").encode(),("Bearer "+TOKEN).encode()):
             self.reply(401,{"error":"Unauthorized"});return False
         return True
     def do_POST(self):
         if not self.authorized(): return
+        if self.path.startswith("/jobs/") and self.path.endswith("/cancel"):
+            try: self.reply(200,cancel_job(self.path.split("/")[2]))
+            except (ValueError,FileNotFoundError): self.reply(404,{"error":"Not found"})
+            return
         if self.path!="/jobs": self.reply(404,{"error":"Not found"});return
         try:
             n=int(self.headers.get("Content-Length","0"))
             if not 0<n<=13_000_000: raise ValueError("Invalid body size")
             job=validate(json.loads(self.rfile.read(n)))
-            job.update(id=uuid.uuid4().hex,status="queued")
+            job.update(id=uuid.uuid4().hex,status="queued",created=time.time())
             save(job)
             try: JOBS.put_nowait(job)
             except queue.Full:
@@ -188,8 +248,16 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self.authorized(): return
         try:
+            if self.path=="/jobs":
+                items=[]
+                for path in sorted(ROOT.glob("*.json"),key=lambda p:p.stat().st_mtime,reverse=True)[:50]:
+                    try:
+                        job=read(path.stem)
+                        items.append({k:job[k] for k in ("id","kind","status","created") if k in job})
+                    except (OSError,ValueError): continue
+                self.reply(200,{"jobs":items});return
             if self.path=="/health":
-                self.reply(200,{"local_only":True,"model_configured":bool(os.environ.get("STUDYFORGE_MODEL")),"video":"30-second reveal, not subject motion"});return
+                self.reply(200,{"local_only":True,"model_configured":Path(os.environ.get("STUDYFORGE_MODEL","/__unconfigured__")).is_dir(),"video":"30-second reveal, not subject motion"});return
             prefix,job_id=self.path.strip("/").split("/",1)
             if prefix not in ("jobs","results"): raise ValueError("Unknown route")
             job=read(job_id)
@@ -200,6 +268,15 @@ class Handler(BaseHTTPRequestHandler):
             with result.open("rb") as source: shutil.copyfileobj(source,self.wfile)
         except (ValueError,FileNotFoundError): self.reply(404,{"error":"Not found"})
 
+    def do_DELETE(self):
+        if not self.authorized(): return
+        try:
+            prefix,job_id=self.path.strip("/").split("/",1)
+            if prefix!="jobs": raise ValueError("Unknown route")
+            delete_job(job_id);self.reply(200,{"id":job_id,"status":"deleted"})
+        except (ValueError,FileNotFoundError): self.reply(404,{"error":"Not found"})
+        except RuntimeError as exc: self.reply(409,{"error":str(exc)})
+
 class Server(ThreadingHTTPServer):
     daemon_threads=True
     def get_request(self):
@@ -208,8 +285,9 @@ class Server(ThreadingHTTPServer):
 def main():
     # Never silently treat jobs interrupted by a restart as completed.
     for file in ROOT.glob("*.json"):
-        job=json.loads(file.read_text())
-        if job.get("status") in ("queued","running"):
+        try: job=json.loads(file.read_text());path_for(job["id"])
+        except (ValueError,KeyError,OSError): continue
+        if job.get("status") in ("queued","running","cancelling"):
             job.update(status="failed",error="Engine restarted; resubmit this job");job.pop("image",None);save(job)
     threading.Thread(target=work,daemon=True).start()
     print("StudyForge local engine http://127.0.0.1:8765",flush=True)

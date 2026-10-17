@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.graphics.BitmapFactory
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -53,6 +54,7 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val notification = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.sf_ic_notification)
+            .setLargeIcon(BitmapFactory.decodeResource(context.resources,R.drawable.sf_brand_avatar))
             .setContentTitle(context.getString(R.string.sf_reminder_title))
             .setContentText(context.getString(R.string.sf_reminder_body))
             .setContentIntent(intent).setAutoCancel(true)

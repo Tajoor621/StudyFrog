@@ -13,3 +13,5 @@ Apple-imposed conditions; permanent broad iOS distribution cannot be promised
 under a universally zero-cost workflow. No paid account is required by this source.
 
 The iOS code has not been compiled in the Linux build environment.
+
+Copy Assets.xcassets into the Xcode target and select AppIcon as the app icon source. The supplied artwork is installed for iPhone, iPad and the 1024px marketing icon.

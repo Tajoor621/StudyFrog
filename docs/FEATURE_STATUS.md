@@ -14,13 +14,13 @@
 | Hierarchical science visuals | Selector and illustrative template only; semantic zoom chains pending |
 | Medical images / CT / MRI overlays | Not implemented; no diagnostic functionality |
 | Scientific correctness | Human review required; no validator or accuracy slider |
-| Drawing layers | Base image + independent ink layer; undo; saved flattened |
-| Full layers, masks, blend modes, pressure, tilt | Pending |
+| Drawing layers | Base image + editable ink; undo/redo, pressure, color, size, ZIP backup |
+| Full layers, masks, blend modes, tilt | Pending |
 | Vectors / typography / booleans / print management | Pending |
 | Video 30 sec, 1080p, 24 fps | Verified FFmpeg reveal on computer; Android hardware encoder implementation supplied, device verification pending |
 | Ultra-realistic subject motion / camera instructions | Pending, not implemented |
 | AnimateDiff / video-model integration | Pending |
-| Local history / projects | Android image + prompt library; folders and full editable history pending |
+| Local history / projects | Editable base/ink/prompt library, search/rename/delete, backups and draft recovery; folders pending |
 | Adult Mode / age gate / parental PIN | Not implemented; unrestricted explicit-sexual generation excluded |
 | Certified child-safe mode | Not claimed; robust safety system pending |
 | iOS | Source starter: photos, schematics, saving and PNG export; no Xcode project or build |
@@ -50,4 +50,10 @@ reminders, opt-in telemetry, accessibility semantics, test sources, CI and
 environment-based release signing are now wired into the Android app.
 Package: com.scenio.mth. Build/device verification is still required.
 The new feature screens use Compose; the studio retains its original native
-view implementation. Project images remain flattened on disk.
+view implementation. Project schema 2 preserves the base and independent ink; legacy flattened projects can still be opened.
+
+## Audit update (0.3.0)
+
+Supplied icon integrated across platforms. See [AUDIT.md](AUDIT.md).
+Source changes require CI and hardware checks; status above does not establish
+model quality or complete original-specification delivery.

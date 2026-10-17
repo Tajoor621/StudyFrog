@@ -16,6 +16,7 @@ import com.scenio.mth.R
 fun OnboardingScreen(busy: Boolean, onContinue: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        BrandHeader()
         Text(stringResource(R.string.sf_welcome), style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.semantics { heading() })
         Text(stringResource(R.string.sf_onboarding_body))
