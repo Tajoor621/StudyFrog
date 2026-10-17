@@ -41,7 +41,9 @@ class StudyCatalog(context:Context) {
         canvas.drawText(node.title,60f,66f,paint);paint.textSize=23f;paint.typeface=Typeface.DEFAULT;canvas.drawText(node.level+" / simplified schematic",60f,106f,paint)
         for(shape in node.shapes) {
             paint.color=shape.color;paint.style=if(shape.fill) Paint.Style.FILL else Paint.Style.STROKE;paint.strokeWidth=5f;paint.strokeCap=Paint.Cap.ROUND
-            val values=shape.points;fun x(i:Int)=60+values[i]*1080;fun y(i:Int)=150+values[i]*600
+            val values=shape.points
+            fun x(i:Int)=60+values[i]*1080
+            fun y(i:Int)=150+values[i]*600
             when(shape.kind) {
                 "ellipse" -> canvas.drawOval(x(0),y(1),x(2),y(3),paint)
                 "rect" -> canvas.drawRoundRect(x(0),y(1),x(2),y(3),18f,18f,paint)
