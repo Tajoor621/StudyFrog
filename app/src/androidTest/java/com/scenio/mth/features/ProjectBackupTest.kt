@@ -40,6 +40,9 @@ class ProjectBackupTest {
     @Test fun backupRejectsPathTraversal() {
         val out=ByteArrayOutputStream()
         ZipOutputStream(out).use { zip -> zip.putNextEntry(ZipEntry("../escape.txt"));zip.write(byteArrayOf(1));zip.closeEntry() }
-        assertThrows(IllegalArgumentException::class.java) { ProjectStore(context).importArchive(ByteArrayInputStream(out.toByteArray())) }
+        val failure=assertThrows(Exception::class.java) { ProjectStore(context).importArchive(ByteArrayInputStream(out.toByteArray())) }
+        // Android 14+ can reject traversal before app validation runs.
+        assertTrue(failure is IllegalArgumentException || failure is java.util.zip.ZipException)
+        assertFalse(File(context.filesDir,"projects/escape.txt").exists())
     }
 }
