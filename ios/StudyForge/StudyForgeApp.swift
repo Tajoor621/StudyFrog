@@ -55,6 +55,7 @@ struct DrawingCanvas: UIViewRepresentable {
     @Published var percent = 0
     @Published var videoURL: URL?
     @Published var seed: Int64 = 42
+    @Published var resolution = 256
     var job: Task<Void,Never>?
     var videoTask: Task<Void,Error>?
     var computerJob: (ComputerEngine,String)?
@@ -91,14 +92,14 @@ struct DrawingCanvas: UIViewRepresentable {
     func generate(photo: Bool) {
         guard !working else { return }
         guard FileManager.default.fileExists(atPath: IOSModelStore.model.path) else { message = "Import a compatible SD 1.x GGUF model first";return }
-        let text = prompt, excluded = negative, number = seed, source = photo ? composite() : nil
+        let text = prompt, excluded = negative, number = seed, dimension = resolution, source = photo ? composite() : nil
         if photo && source == nil { message = "Import a photo first";return }
         working = true;percent = 0;UIApplication.shared.isIdleTimerDisabled = true
         job = Task {
             let monitor = Task { while !Task.isCancelled { percent = Int(sf_progress());try? await Task.sleep(nanoseconds: 500_000_000) } }
             defer { monitor.cancel();working = false;UIApplication.shared.isIdleTimerDisabled = false }
             do {
-                let result = try await Task.detached { try NativeDiffusion.generate(model: IOSModelStore.model,prompt: text,negative: excluded,size: 256,steps: 20,seed: number,initial: source) }.value
+                let result = try await Task.detached { try NativeDiffusion.generate(model: IOSModelStore.model,prompt: text,negative: excluded,size: dimension,steps: 20,seed: number,initial: source) }.value
                 image = result;resetLayers();percent = 100;message = "Generated locally · seed \(number)"
             } catch { message = error.localizedDescription }
         }
@@ -171,6 +172,7 @@ struct ForgeView: View {
                 ScrollView { VStack(alignment: .leading,spacing: 16) {
                     TextEditor(text: $store.prompt).frame(minHeight: 120).overlay(RoundedRectangle(cornerRadius: 10).stroke(.secondary)).accessibilityLabel("Generation prompt").disabled(store.working)
                     TextField("Negative prompt",text: $store.negative).textFieldStyle(.roundedBorder).disabled(store.working)
+                    Picker("Generation resolution",selection: $store.resolution) { Text("256px preview · 6 GB RAM").tag(256);Text("512px standard · 8 GB RAM").tag(512) }.disabled(store.working)
                     HStack { Button("Generate on device") { store.generate(photo: false) };Button("Photo conversion") { store.generate(photo: true) } }.buttonStyle(.borderedProminent).disabled(store.working)
                     if let image = store.image {
                         GeometryReader { geometry in
@@ -212,7 +214,7 @@ struct ForgeView: View {
         }.navigationTitle("StudyForge").task { store.refresh();if store.image == nil { do { if let draft = try IOSProjectStore().draft() { store.open(draft);store.message = "Recovered editable draft" } } catch { store.message = error.localizedDescription } } }
         .onChange(of: scenePhase) { _,phase in if phase == .background && store.image != nil { store.save(draft: true) } }
         .onChange(of: photo) { _,item in Task {
-            do { guard let data = try await item?.loadTransferable(type: Data.self), data.count <= 32_000_000, let image = UIImage(data: data), image.size.width*image.size.height <= 40_000_000 else { throw LocalFailure(message: "Unsupported or oversized photo") };store.image = image;store.resetLayers();store.message = "Photo imported locally" }
+            do { guard let data = try await item?.loadTransferable(type: Data.self) else { return };store.image = try IOSPhotoDecoder.decode(data);store.resetLayers();store.message = "Photo imported locally" }
             catch { store.message = error.localizedDescription }
         } }
         .alert("Send photo to your local computer?",isPresented: $motionConsent) {

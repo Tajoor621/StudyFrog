@@ -295,11 +295,12 @@ def main():
         if job.get("status") in ("queued","running","cancelling"):
             job.update(status="failed",error="Engine restarted; resubmit this job");job.pop("image",None);save(job)
     threading.Thread(target=work,daemon=True).start()
-    print("StudyForge local engine http://127.0.0.1:8765",flush=True)
-    print("Session token:",TOKEN,flush=True)
     bind=os.environ.get("STUDYFORGE_BIND","127.0.0.1")
     address=ipaddress.ip_address(bind)
     if address.is_unspecified or address.is_multicast or not (address.is_loopback or address.is_private): raise ValueError("Bind only to loopback or your explicit private LAN address")
+    if address.version!=4: raise ValueError("This server uses an IPv4 loopback/private LAN address")
+    print(f"StudyForge local engine http://{bind}:8765",flush=True)
+    print("Session token:",TOKEN,flush=True)
     Server((bind,8765),Handler).serve_forever()
 
 if __name__=="__main__": main()

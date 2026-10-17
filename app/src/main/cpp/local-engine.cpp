@@ -13,7 +13,7 @@ std::string bytes(JNIEnv* env,jbyteArray data) {
 extern "C" JNIEXPORT jboolean JNICALL Java_com_scenio_mth_inference_NativeEngine_available(JNIEnv*,jobject) { return sf_available()!=0; }
 extern "C" JNIEXPORT jint JNICALL Java_com_scenio_mth_inference_NativeEngine_progress(JNIEnv*,jobject) { return sf_progress(); }
 extern "C" JNIEXPORT void JNICALL Java_com_scenio_mth_inference_NativeEngine_cancel(JNIEnv*,jobject) { sf_cancel(); }
-extern "C" JNIEXPORT jintArray JNICALL Java_com_scenio_mth_inference_NativeEngine_generate(JNIEnv* env,jobject,jbyteArray model,jbyteArray prompt,jbyteArray negative,jint size,jint steps,jlong seed,jfloat strength,jintArray initial) {
+extern "C" JNIEXPORT jintArray JNICALL Java_com_scenio_mth_inference_NativeEngine_generate(JNIEnv* env,jobject,jbyteArray model,jbyteArray prompt,jbyteArray negative,jint size,jint steps,jlong seed,jfloat strength,jintArray initial,jlong requestToken) {
  if(size!=256 && size!=512) { env->ThrowNew(env->FindClass("java/lang/IllegalArgumentException"),"Size must be 256 or 512");return nullptr; }
  std::vector<uint8_t> rgb;
  if(initial) {
@@ -22,8 +22,10 @@ extern "C" JNIEXPORT jintArray JNICALL Java_com_scenio_mth_inference_NativeEngin
    for(int i=0;i<size*size;i++){rgb[i*3]=(pixels[i]>>16)&255;rgb[i*3+1]=(pixels[i]>>8)&255;rgb[i*3+2]=pixels[i]&255;}
  }
  const auto m=bytes(env,model),p=bytes(env,prompt),n=bytes(env,negative);uint8_t* result=nullptr;char* error=nullptr;
- const int ok=sf_generate(m.c_str(),p.c_str(),n.c_str(),size,size,steps,seed,strength,rgb.empty()?nullptr:rgb.data(),&result,&error);
+ const int ok=sf_generate_request(static_cast<uint64_t>(requestToken),m.c_str(),p.c_str(),n.c_str(),size,size,steps,seed,strength,rgb.empty()?nullptr:rgb.data(),&result,&error);
  if(!ok) { env->ThrowNew(env->FindClass("java/lang/IllegalStateException"),error?error:"Local inference failed");sf_free(error);return nullptr; }
  std::vector<jint> output(size*size);for(int i=0;i<size*size;i++) output[i]=static_cast<jint>(0xff000000u|(result[i*3]<<16)|(result[i*3+1]<<8)|result[i*3+2]);sf_free(result);
  auto array=env->NewIntArray(size*size);if(array) env->SetIntArrayRegion(array,0,size*size,output.data());return array;
 }
+
+extern "C" JNIEXPORT void JNICALL Java_com_scenio_mth_inference_NativeEngine_cancelRequest(JNIEnv*,jobject,jlong token) { sf_cancel_request(static_cast<uint64_t>(token)); }

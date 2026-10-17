@@ -59,6 +59,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var mode: Spinner
     private lateinit var level: Spinner
     private lateinit var seed: EditText
+    private lateinit var nativeResolution: Spinner
     private lateinit var strength: SeekBar
     private lateinit var steps: SeekBar
     private val worker = Executors.newSingleThreadExecutor()
@@ -118,6 +119,7 @@ class MainActivity : ComponentActivity() {
             val report=File(filesDir,"generated/benchmark-latest.json")
             if(!report.isFile) say("Generate on this device once to record a real benchmark") else background { val copy=File(cacheDir,"studyforge-benchmark.json");report.copyTo(copy,overwrite=true);ui { export(copy,"application/json","studyforge-benchmark.json") } }
         })
+        nativeResolution=choices(listOf("256px preview · 6 GB RAM","512px standard · 8 GB RAM"));root.addView(nativeResolution)
         root.addView(button("Generate on this device") { localGenerate() })
         root.addView(button("Cancel on-device generation") { NativeEngine.cancel();WorkManager.getInstance(this).cancelUniqueWork(LocalGenerationWorker.NAME) })
         root.addView(button("Create offline schematic") { canvas.image=canvas.diagram(prompt.text.toString(),level.selectedItem.toString());say("Template generated on this device. This is not AI inference.") })
@@ -312,12 +314,13 @@ class MainActivity : ComponentActivity() {
         if(!model.isFile) { say("Import an SD 1.x GGUF model first");return }
         val memory=android.app.ActivityManager.MemoryInfo()
         (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager).getMemoryInfo(memory)
-        if(memory.totalMem<5_500_000_000L || memory.availMem<2_000_000_000L || memory.lowMemory) { say("Local inference needs a device with at least 6 GB RAM and 2 GB currently available. Close other apps or use your local computer engine.");return }
+        val dimension=if(nativeResolution.selectedItemPosition==0) 256 else 512
+        if(memory.totalMem<(if(dimension==512) 7_500_000_000L else 5_500_000_000L) || memory.availMem<(if(dimension==512) 4_000_000_000L else 2_000_000_000L) || memory.lowMemory) { say("Local inference needs a device with 6 GB RAM / 2 GB available for 256px, or 8 GB RAM / 4 GB available for 512px. Close other apps or use your local computer engine.");return }
         val text=prompt.text.toString();val excluded=negative.text.toString()
         if(text.isBlank() || text.length>2000 || excluded.length>2000) { say("Enter a prompt of 1–2000 characters");return }
         val number=if(seed.text.isBlank()) java.security.SecureRandom().nextInt(Int.MAX_VALUE).toLong() else seed.text.toString().toLongOrNull()
         if(number==null || number !in 0L..2147483647L) { say("Invalid seed");return }
-        val id=UUID.randomUUID();val input=JSONObject().put("prompt",text).put("negative",excluded).put("size",256).put("steps",steps.progress+10).put("seed",number).put("strength",(strength.progress+10)/100.0)
+        val id=UUID.randomUUID();val input=JSONObject().put("prompt",text).put("negative",excluded).put("size",dimension).put("steps",steps.progress+10).put("seed",number).put("strength",(strength.progress+10)/100.0)
         val snapshot=if(mode.selectedItem.toString()=="Photo Converter") canvas.snapshot() else null
         if(snapshot!=null && snapshot.base==null) { say("Import a photo first");return }
         background {
@@ -329,7 +332,7 @@ class MainActivity : ComponentActivity() {
             val requestFile=File(noBackupFilesDir,"local-jobs/$id.json").apply { parentFile?.mkdirs();writeText(input.toString()) }
             val request=OneTimeWorkRequestBuilder<LocalGenerationWorker>().setId(id).build()
             WorkManager.getInstance(applicationContext).enqueueUniqueWork(LocalGenerationWorker.NAME,ExistingWorkPolicy.KEEP,request)
-            ui { localActive=true;say("Queued local generation · seed $number · 256 px memory-saving preview") }
+            ui { localActive=true;say("Queued local generation · seed $number · $dimension px on-device image") }
         }
     }
     private fun localVideo() {

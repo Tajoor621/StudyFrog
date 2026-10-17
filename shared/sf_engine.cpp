@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstdlib>
 #include <cstring>
+#include <cmath>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
@@ -14,6 +15,7 @@ namespace {
 std::atomic<int> progress{0};
 std::atomic<bool> cancelled{false};
 std::mutex generation_mutex, context_mutex;
+uint64_t active_token=0;
 #ifdef SF_LOCAL_INFERENCE
 sd_ctx_t* active_context=nullptr;
 struct ContextDeleter { void operator()(sd_ctx_t* p) const { free_sd_ctx(p); } };
@@ -29,21 +31,24 @@ return 0;
 }
 extern "C" int sf_progress() { return progress.load(); }
 extern "C" void sf_free(void* memory) { std::free(memory); }
-extern "C" void sf_cancel() {
+extern "C" void sf_cancel_request(uint64_t token) {
+    std::lock_guard<std::mutex> guard(context_mutex);
+    if(token!=0 && token!=active_token) return;
     cancelled=true;
 #ifdef SF_LOCAL_INFERENCE
-    std::lock_guard<std::mutex> guard(context_mutex);
     if(active_context) sd_cancel_generation(active_context,SD_CANCEL_ALL);
 #endif
 }
-extern "C" int sf_generate(const char* model,const char* prompt,const char* negative,int width,int height,int steps,int64_t seed,float strength,const uint8_t* initial,uint8_t** output,char** error) {
+extern "C" void sf_cancel() { sf_cancel_request(0); }
+extern "C" int sf_generate_request(uint64_t token,const char* model,const char* prompt,const char* negative,int width,int height,int steps,int64_t seed,float strength,const uint8_t* initial,uint8_t** output,char** error) {
     if(!output || !error) return 0;
     *output=nullptr;*error=nullptr;
     std::unique_lock<std::mutex> generation(generation_mutex);
-    cancelled=false;progress=0;
+    { std::lock_guard<std::mutex> guard(context_mutex);active_token=token;cancelled=false; }
+    progress=0;
     try {
         if(!model || !*model || !prompt || !*prompt || !negative) throw std::runtime_error("A model and prompt are required");
-        if(width<256 || width>512 || height<256 || height>512 || width%64 || height%64 || steps<1 || steps>40 || strength<.1f || strength>1.f) throw std::runtime_error("Invalid inference dimensions or parameters");
+        if(width<256 || width>512 || height<256 || height>512 || width%64 || height%64 || steps<1 || steps>40 || !std::isfinite(strength) || strength<.1f || strength>1.f) throw std::runtime_error("Invalid inference dimensions or parameters");
 #ifndef SF_LOCAL_INFERENCE
         throw std::runtime_error("Local inference was disabled when this application was built");
 #else
@@ -68,8 +73,8 @@ extern "C" int sf_generate(const char* model,const char* prompt,const char* nega
         sd_image_t* raw=nullptr;int count=0;
         bool ok=false;
         try { ok=generate_image(context.get(),&parameters,&raw,&count); }
-        catch(...) { std::lock_guard<std::mutex> guard(context_mutex);active_context=nullptr;throw; }
-        { std::lock_guard<std::mutex> guard(context_mutex);active_context=nullptr; }
+        catch(...) { std::lock_guard<std::mutex> guard(context_mutex);active_context=nullptr;active_token=0;throw; }
+        { std::lock_guard<std::mutex> guard(context_mutex);active_context=nullptr;active_token=0; }
         std::unique_ptr<sd_image_t,ImagesDeleter> images(raw,ImagesDeleter{count});
         if(cancelled) throw std::runtime_error("Generation cancelled");
         if(!ok || !raw || count<1 || !raw[0].data || raw[0].channel!=3 || raw[0].width!=static_cast<uint32_t>(width) || raw[0].height!=static_cast<uint32_t>(height)) throw std::runtime_error("The local model returned no valid RGB image");
@@ -83,6 +88,11 @@ extern "C" int sf_generate(const char* model,const char* prompt,const char* nega
           active_context=nullptr;
 #endif
         }
+        { std::lock_guard<std::mutex> guard(context_mutex);active_token=0; }
         *error=static_cast<char*>(std::malloc(std::strlen(e.what())+1));if(*error) std::strcpy(*error,e.what());return 0;
     } catch(...) { return 0; }
+}
+
+extern "C" int sf_generate(const char* model,const char* prompt,const char* negative,int width,int height,int steps,int64_t seed,float strength,const uint8_t* initial,uint8_t** output,char** error) {
+    return sf_generate_request(0,model,prompt,negative,width,height,steps,seed,strength,initial,output,error);
 }

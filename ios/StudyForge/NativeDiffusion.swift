@@ -9,7 +9,7 @@ struct LocalFailure: LocalizedError {
 struct NativeDiffusion {
     static func generate(model: URL, prompt: String, negative: String, size: Int, steps: Int, seed: Int64, initial: UIImage?) throws -> UIImage {
         guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, prompt.count <= 2000, negative.count <= 2000, !prompt.contains("\0"), !negative.contains("\0"), [256,512].contains(size), (1...40).contains(steps) else { throw LocalFailure(message: "Invalid prompt or inference parameters") }
-        guard ProcessInfo.processInfo.physicalMemory >= 5_500_000_000 else { throw LocalFailure(message: "Local generation requires at least 6 GB device memory") }
+        guard ProcessInfo.processInfo.physicalMemory >= (size == 512 ? 7_500_000_000 : 5_500_000_000) else { throw LocalFailure(message: "This resolution requires 6 GB (256px) or 8 GB (512px) device memory") }
         var input = [UInt8]()
         if let initial {
             let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
