@@ -81,7 +81,7 @@ ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 tasks.withType<Test>().configureEach { useJUnitPlatform() }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2025.02.00")
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
     implementation("androidx.core:core-ktx:1.15.0")
