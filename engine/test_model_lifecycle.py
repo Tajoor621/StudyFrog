@@ -3,12 +3,19 @@ import io
 import sys
 import types
 import unittest
+import tempfile
+from pathlib import Path
 import weakref
 from unittest.mock import patch
 from PIL import Image
 import server
 
 class ModelLifecycleTests(unittest.TestCase):
+    def setUp(self):
+        directory=tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        root=patch.object(server,'ROOT',Path(directory.name))
+        root.start();self.addCleanup(root.stop)
     def run_motion(self,fail):
         class Pipeline: pass
         pipeline=Pipeline();reference=weakref.ref(pipeline);server.PIPE=pipeline;del pipeline
