@@ -1,7 +1,7 @@
 -r requirements.txt
 torch==2.6.0
 diffusers==0.32.2
-transformers==4.49.0
+transformers==5.19.0
 accelerate==1.4.0
 safetensors==0.5.3
 sentencepiece==0.2.0
