@@ -21,10 +21,10 @@ jobs:
     - uses: gradle/actions/setup-gradle@v4
     - name: Install existing native build toolchain
       run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
-    - name: Lint, JVM tests, unsigned release assembly
+    - name: Lint, JVM tests, test APK compilation and release assembly
       run: 'chmod +x gradlew
 
-        ./gradlew --no-daemon lintDebug testDebugUnitTest assembleRelease bundleRelease -PfirebaseEnabled=false'
+        ./gradlew --no-daemon lintDebug testDebugUnitTest assembleDebugAndroidTest assembleRelease bundleRelease -PfirebaseEnabled=false'
     - name: Obtain pinned bundletool
       run: curl -fL --retry 3 https://github.com/google/bundletool/releases/download/1.18.2/bundletool-all-1.18.2.jar -o "$RUNNER_TEMP/bundletool.jar"
     - name: Create ephemeral packaging-test key
