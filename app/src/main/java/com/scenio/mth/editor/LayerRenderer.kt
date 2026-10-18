@@ -49,10 +49,18 @@ object LayerRenderer {
     }
     fun draw(c:Canvas,snapshot:ForgeCanvas.Snapshot,b:RectF) {
         val p=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        if(android.os.Build.VERSION.SDK_INT<29 && snapshot.layers.any { it.visible && it.blend=="multiply" }) {
+            val composite=LegacyBlendRenderer.render(snapshot,b.width().toInt().coerceAtLeast(1),b.height().toInt().coerceAtLeast(1))
+            try { c.drawBitmap(composite,null,b,p) } finally { if(!c.isHardwareAccelerated) composite.recycle() };return
+        }
         snapshot.base?.let { c.drawBitmap(it,null,b,p) }
         val clip=c.save();c.clipRect(b)
         for(layer in snapshot.layers.filter { it.visible && it.opacity>0 }) {
-            val blend=Paint().apply { alpha=(layer.opacity*255).toInt();xfermode=PorterDuffXfermode(when(layer.blend) { "multiply" -> PorterDuff.Mode.MULTIPLY;"screen" -> PorterDuff.Mode.SCREEN;else -> PorterDuff.Mode.SRC_OVER }) }
+            val blend=Paint().apply {
+                alpha=(layer.opacity*255).toInt()
+                if(android.os.Build.VERSION.SDK_INT>=29 && layer.blend=="multiply") blendMode=BlendMode.MULTIPLY
+                else xfermode=PorterDuffXfermode(if(layer.blend=="screen") PorterDuff.Mode.SCREEN else PorterDuff.Mode.SRC_OVER)
+            }
             val save=c.saveLayer(b,blend);c.concat(matrix(layer,b))
             layer.raster?.let { image ->
                 val fit=fitImage(b.width(),b.height(),image.width,image.height)

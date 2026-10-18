@@ -77,6 +77,20 @@ class AdvancedEditorTest {
             } finally { base.recycle() }
         }
     }
+    @Test fun multiplyPreservesTransparentAreasAndMatchesLegacyFallback() {
+        val base=bitmap(Color.WHITE)
+        val dot=ForgeCanvas.Stroke(mutableListOf(ForgeCanvas.Point(.5f,.5f)),Color.RED,.05f)
+        val snapshot=ForgeCanvas.Snapshot(base,listOf(dot),listOf(ForgeCanvas.InkLayer("ink","Multiply",opacity=.5f,blend="multiply")))
+        val native=ForgeCanvas.render(snapshot)
+        val legacy=com.scenio.mth.editor.LegacyBlendRenderer.render(snapshot,200,200)
+        try {
+            for(result in listOf(native,legacy)) {
+                assertEquals(Color.WHITE,result.getPixel(10,10))
+                val center=result.getPixel(100,100)
+                assertEquals(255,Color.alpha(center));assertEquals(255,Color.red(center));assertTrue(Color.green(center) in 126..129)
+            }
+        } finally { native.recycle();legacy.recycle();base.recycle() }
+    }
     @Test fun malformedRasterReferencesAndTransformsAreRejected() {
         val valid="""{"version":4,"layers":[{"id":"ink","name":"Ink","visible":true,"opacity":1,"blend":"normal"}],"strokes":[]}"""
         assertThrows(IllegalArgumentException::class.java) { ForgeCanvas.decodeDocument(valid.replace("\"blend\":\"normal\"","\"blend\":\"normal\",\"raster\":\"../escape.png\"")) }
