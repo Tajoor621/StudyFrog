@@ -1,4 +1,4 @@
-name: StudyForge build and verification
+name: Study Frog Android build and verification
 permissions:
   contents: read
 concurrency:
