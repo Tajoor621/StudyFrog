@@ -97,3 +97,15 @@ See [FAMILY_ACCESS.md](docs/FAMILY_ACCESS.md),
 No production signing key, real token, Firebase configuration, user project or
 model weight is committed. Preserve original signing identity and Room history.
 The previous 0.5.0 baseline recorded 61 passing tests; this delivery adds 19.
+
+## Independently checked GitHub Actions runs — 2026-10-18
+
+The following GitHub run metadata, job conclusions and available artifacts were checked directly after the original 0.6.0 report was published:
+
+| Run | Source commit | GitHub job conclusions | Artifacts |
+| --- | --- | --- | --- |
+| [Android 39121050440](https://github.com/Tajoor621/StudyFrog/actions/runs/39121050440) | `43ac0b3e1053f481a6075bf55a23ebd9b61c6755` | `engine-tests`, `checks`, `device-tests`: success; `signed-release`: skipped | `device-test-reports`, `validation-reports`, `studyforge-packaging-test` |
+| [iOS 39121520515](https://github.com/Tajoor621/StudyFrog/actions/runs/39121520515) | `52abc98916e9edd48499fe447e047348af35feff` | `ios`: success, including shared framework build and simulator build-and-test step | `studyforge-ios-simulator` |
+| [GitHub Pages 39139518000](https://github.com/Tajoor621/StudyFrog/actions/runs/39139518000) | `1cd1b342814e07e3abbec19e4cc3c7d80fbe4724` | `build`, `deploy`, `report-build-status`: success | `github-pages` |
+
+All listed artifacts were unexpired at inspection time. These checks verify workflow and job outcomes, **not** a fresh build of every platform against the latest documentation commit. The Android and iOS builds used different commits, whose source consistency is discussed above. The 80-test figure is reported by the existing validation evidence; the workflow metadata alone does not independently prove the individual test count. A signed Android release and real physical-device/model evaluation remain outstanding. No application source or build configuration was changed by this evidence update.
