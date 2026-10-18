@@ -4,6 +4,8 @@ Scope: Android, JNI/AAB packaging, local Python engine, project storage, privacy
 CI, iOS app, branding and the original product requirements. Static review
 is not a substitute for device, model-quality or accessibility evaluation.
 
+Historical findings below refer to the version named in each section. Current coverage is recorded in [MASTER_SPEC_AUDIT.md](MASTER_SPEC_AUDIT.md).
+
 ## Defects corrected
 
 | Priority | Finding | Correction |
@@ -131,3 +133,17 @@ coverage exercises rendering, non-destructive restoration, full-action history,
 serialization/backup round trips, folder persistence and legacy decoding.
 This addition does not establish real-model quality, clinical accuracy, child
 safety, physical stylus feel or complete original-specification delivery.
+
+
+## Family, generation and iOS layer integration — 0.6.0
+
+- Added private parent-PIN storage, persisted cooldown and restricted entry/worker checks on Android; Keychain-backed root gating on iOS. Bundled study/anatomy remains available; private data/general inputs/browser links are hidden.
+- Android consent observers force telemetry off while restricted, including restart. Adult self-declaration is not verified age or child-safety certification.
+- Saved bounded visual-direction profiles on both platforms and exposed/persisted iOS inference parameters.
+- Added local-only SD 1.x ControlNet/IP-Adapter image paths, explicit encoder loading, cache-mode replacement and request validation; iOS computer image jobs use an ephemeral, no-redirect session.
+- Replaced iOS parallel editor arrays with one layer model; added raster/mask/transform/order/document-undo support and bounded native assets with legacy defaults.
+- Mask-render failures cannot silently export unmasked pixels. Project snapshots encode off the UI thread; pending folders stay out of the library. Stale rename updates preserve current folder metadata.
+- Android spinner selections/dropdowns use explicit contrasting colors. The iOS permission description includes image and motion transfers.
+- Push CI filters relevant platform inputs; full PR/manual checks remain. No build/test checks were removed.
+
+See [FAMILY_ACCESS.md](FAMILY_ACCESS.md), [GENERATION_CONTROLS.md](GENERATION_CONTROLS.md), [EDITOR.md](EDITOR.md) and current [VALIDATION.md](../VALIDATION.md). Real models, physical devices, deliberate bypass testing and independent medical review remain outstanding.

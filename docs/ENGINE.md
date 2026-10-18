@@ -151,3 +151,6 @@ collects unused model allocations after completion/failure. The next image job
 reloads SD. This reduces retained image/video memory overlap; it is not a GPU
 VRAM guarantee. Model-lifecycle tests use stubs; actual CUDA/weights still need
 measurement. Failed CUDA cache cleanup does not terminate the job worker.
+
+
+Optional local Canny/depth/pose ControlNet and IP-Adapter image modes are documented in [GENERATION_CONTROLS.md](GENERATION_CONTROLS.md). They require separately prepared SD 1.x weights; depth/pose inputs are prepared maps, not automatic detector outputs.

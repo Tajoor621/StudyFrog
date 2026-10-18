@@ -79,8 +79,7 @@ characters. Legacy projects without folder metadata remain Unfiled.
 
 Android ZIP backups preserve folder metadata. iOS folders persist in its own
 editable project format and drafts. Android ZIP and PencilKit projects are not
-interchangeable. Raster/mask/transform/vector tools described above are Android
-features; full iOS editor parity remains unfinished.
+interchangeable. The vector/guide tools above are Android features; iOS core layer parity is described below. Full professional parity remains unfinished.
 
 ## Verification
 
@@ -97,3 +96,20 @@ interaction, low-memory behavior and SVG viewer parity still need device checks.
 
 Rendering references: Android's [BlendMode API](https://developer.android.com/reference/android/graphics/BlendMode#MULTIPLY)
 and [PorterDuff.Mode API](https://developer.android.com/reference/android/graphics/PorterDuff.Mode#MULTIPLY).
+
+
+## iOS layer document — 0.6.0
+
+iOS now supports independent raster photos, PencilKit ink and reversible black/white masks per layer. Add photo layer after creating a base. Select a layer to rename, hide, change opacity/blend, reorder/delete, move, scale or rotate it. Pen/pencil/marker brushes use the native PencilKit engine; actual pressure/tilt needs Apple Pencil evaluation.
+
+Edit mask shows local layer coordinates: black hides and white restores. Disable Edit mask for the composite. Mask enable/clear and document Undo/Redo preserve original photos. Preview, PNG, computer inputs and reveal video share layer/mask rules. Mask-render failure stops export rather than exposing an unmasked layer.
+
+Undo covers drawing gestures, masks, layer operations and transforms. Limits: 16 layers, 512 combined ink/mask strokes, 100,000 points and 8,000,000 current raster pixels, with 1024px per raster side. Bases are bounded to 2048px. History retains at most 32 actions/250,000 stored points and 16,000,000 raster pixels across history. Physical gesture/accessibility behavior still needs testing.
+
+New records add assetVersion=1, raster-presence/mask-enable arrays and transforms. Files use bounded indices: mask-<index>.pkdrawing and raster-<index>.png. Old records reopen with empty masks/no raster assets; legacy names are normalized. Asset reads are bounded, invalid metadata fails and pending folders do not appear in the library.
+
+Saves capture immutable snapshots and encode off the main thread. A short system background allowance helps drafts; it does not guarantee completion after OS termination. Staged directory commits preserve the prior valid project. Metadata changes read the latest record, preventing stale renames from reverting a newer folder move.
+
+LayerDocumentTests checks mask hide/restore/disable and source preservation, transforms/multiply and invalid bounds, asset/settings persistence, legacy defaults, stale metadata and document undo. iOS still lacks Android's SVG/vector boolean/text-label tools, guides/symmetry and cross-platform editable exchange.
+
+Editable backups retain original photos, hidden layers and masks. A mask affects its selected layer; other layers/base can remain visible. Inspect the composite before sharing. An editable project is not a permanent redaction format.

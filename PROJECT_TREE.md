@@ -15,6 +15,7 @@ VALIDATION.md
 app/build.gradle.kts
 app/src/androidTest/java/com/scenio/mth/features/AccessibilityTest.kt
 app/src/androidTest/java/com/scenio/mth/features/AdvancedEditorTest.kt
+app/src/androidTest/java/com/scenio/mth/features/FamilyPolicyTest.kt
 app/src/androidTest/java/com/scenio/mth/features/LayerDocumentTest.kt
 app/src/androidTest/java/com/scenio/mth/features/NativeBoundaryTest.kt
 app/src/androidTest/java/com/scenio/mth/features/OnboardingTest.kt
@@ -42,6 +43,10 @@ app/src/main/java/com/scenio/mth/editor/LegacyBlendRenderer.kt
 app/src/main/java/com/scenio/mth/editor/PhotoDecoder.kt
 app/src/main/java/com/scenio/mth/editor/ProjectStore.kt
 app/src/main/java/com/scenio/mth/editor/VectorExporter.kt
+app/src/main/java/com/scenio/mth/family/FamilyControlsActivity.kt
+app/src/main/java/com/scenio/mth/family/FamilyHomeActivity.kt
+app/src/main/java/com/scenio/mth/family/FamilyPolicy.kt
+app/src/main/java/com/scenio/mth/family/PinDigest.kt
 app/src/main/java/com/scenio/mth/features/FeatureRuntime.kt
 app/src/main/java/com/scenio/mth/features/FeaturesActivity.kt
 app/src/main/java/com/scenio/mth/features/data/ProgressStore.kt
@@ -53,6 +58,8 @@ app/src/main/java/com/scenio/mth/features/ui/FeatureViewModel.kt
 app/src/main/java/com/scenio/mth/features/ui/OnboardingScreen.kt
 app/src/main/java/com/scenio/mth/features/ui/SettingsScreen.kt
 app/src/main/java/com/scenio/mth/features/ui/StudyForgeTheme.kt
+app/src/main/java/com/scenio/mth/generation/GenerationProfile.kt
+app/src/main/java/com/scenio/mth/generation/ProfileCodec.kt
 app/src/main/java/com/scenio/mth/inference/GenerationAwait.kt
 app/src/main/java/com/scenio/mth/inference/LocalGenerationWorker.kt
 app/src/main/java/com/scenio/mth/inference/ModelStore.kt
@@ -87,8 +94,10 @@ app/src/main/res/xml/network_security_config.xml
 app/src/main/res/xml/sf_backup_rules.xml
 app/src/main/res/xml/sf_data_extraction_rules.xml
 app/src/test/java/com/scenio/mth/editor/CanvasGeometryTest.kt
+app/src/test/java/com/scenio/mth/family/PinDigestTest.kt
 app/src/test/java/com/scenio/mth/features/ProgressTest.kt
 app/src/test/java/com/scenio/mth/features/SettingsStoreTest.kt
+app/src/test/java/com/scenio/mth/generation/GenerationProfileTest.kt
 app/src/test/java/com/scenio/mth/inference/GenerationAwaitTest.kt
 branding/README.md
 branding/studyfrog-banner.webp
@@ -100,7 +109,9 @@ docs/ANDROID_BUILD.md
 docs/AUDIT.md
 docs/EDITOR.md
 docs/ENGINE.md
+docs/FAMILY_ACCESS.md
 docs/FEATURE_STATUS.md
+docs/GENERATION_CONTROLS.md
 docs/LOCAL_MODELS.md
 docs/MASTER_SPEC_AUDIT.md
 docs/SCIENCE_EXPLORER.md
@@ -109,11 +120,14 @@ docs/XXHDPI.md
 docs/android-features/IMPLEMENTATION.md
 docs/android-features/MERGE.md
 docs/android-features/SOURCES.md
+engine/image_guidance.py
 engine/motion_video.py
 engine/requirements-models.txt
+engine/requirements-test.txt
 engine/requirements.txt
 engine/server.py
 engine/test_engine.py
+engine/test_image_guidance.py
 engine/test_model_lifecycle.py
 engine/test_motion_video.py
 gradle.properties
@@ -145,6 +159,10 @@ ios/StudyForge/Assets.xcassets/Contents.json
 ios/StudyForge/Assets.xcassets/StudyFrogBrand.imageset/Contents.json
 ios/StudyForge/Assets.xcassets/StudyFrogBrand.imageset/studyfrog.png
 ios/StudyForge/ComputerEngine.swift
+ios/StudyForge/FamilyAccess.swift
+ios/StudyForge/GenerationProfile.swift
+ios/StudyForge/LayerDocument.swift
+ios/StudyForge/LayerStudioView.swift
 ios/StudyForge/NativeDiffusion.swift
 ios/StudyForge/PhotoDecoder.swift
 ios/StudyForge/ProjectStore.swift
@@ -154,6 +172,8 @@ ios/StudyForge/RevealEncoder.swift
 ios/StudyForge/StudyCatalog.swift
 ios/StudyForge/StudyExplorerView.swift
 ios/StudyForge/StudyForgeApp.swift
+ios/StudyForgeTests/FamilyAccessTests.swift
+ios/StudyForgeTests/LayerDocumentTests.swift
 ios/StudyForgeTests/ProjectStoreTests.swift
 ios/StudyForgeTests/StudyCatalogTests.swift
 ios/project.yml

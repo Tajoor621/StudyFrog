@@ -8,6 +8,11 @@ Android application ID is `com.scenio.mth`.
 
 ## Included functionality
 
+- Android/iOS parent PIN and study-only workspaces, persisted retry cooldown and adult self-declaration.
+- Saved style/detail/realism/scientific-intent prompt directions and preview.
+- Computer-local ControlNet Canny/depth/pose and IP-Adapter image guidance with explicit local weights.
+- iOS raster layers, reversible masks, move/scale/rotate, document undo and background project snapshots.
+
 - Offline Science Explorer on Android/iOS: ten linked views, body-to-cell and
   mitosis paths, source references, accessible descriptions and prompt handoff.
 - Android text-label editing/positioning and persistent study-label layers.
@@ -97,7 +102,7 @@ app/device/crash information; review the in-app disclosure before enabling them.
 
 ## Implementation limits
 
-Version 0.5.0 implements these software paths; real model outputs and device
+Version 0.6.0 implements these software paths; real model outputs and device
 latency/thermals are unverified. CPU image generation offers 256px previews or
 512px outputs with conservative RAM guards. Fast mid-range-phone generation
 and native full-frame 8K denoising are not promised. Computer tiled refinement
@@ -108,13 +113,15 @@ denoises at 768×448 before scaling to 1080p; model quality, transitions and
 ultra-realism remain unevaluated. Still reveal is a separate animation of an image.
 
 Advanced typography/print tools, reviewed medical/scientific content,
-parental safety controls and complete iOS parity remain unfinished. There is no
+independently evaluated family/content safety and complete vector/guide/export parity remain unfinished. There is no
 unrestricted Adult Mode or certified child-safe mode. See the audit for blockers.
 
 ## Documentation and validation
 
 - [Android packaging and installation](docs/ANDROID_BUILD.md)
 - [Android features: complete code and setup reference](docs/android-features/IMPLEMENTATION.md)
+- [Family access and parent PIN](docs/FAMILY_ACCESS.md)
+- [Prompt controls and local image guidance](docs/GENERATION_CONTROLS.md)
 - [Editor, raster layers, masks and folders](docs/EDITOR.md)
 - [Science Explorer and content sources](docs/SCIENCE_EXPLORER.md)
 - [Complete master-specification coverage](docs/MASTER_SPEC_AUDIT.md)

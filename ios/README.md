@@ -1,11 +1,11 @@
-# StudyForge iOS — 0.5.0
+# StudyForge iOS — 0.6.0
 
 Buildable SwiftUI/PencilKit app with a shared native CPU image runtime, photo
 import, editable layers/projects/drafts, PNG export, onboarding/appearance,
 opt-in reminders, AVAssetWriter reveal video and optional computer motion client.
 Projects include folder assignment, library filtering and move actions. Legacy
-records without folder metadata remain supported. Android raster/mask/transform
-and vector tools are not yet ported; full Android parity and a production-signed
+records without folder metadata remain supported. Raster/mask/transform layers and document undo are now ported; advanced vector,
+guide and interchange tools are not yet ported; full Android parity and a production-signed
 physical release remain incomplete.
 
 On a Mac install free Xcode/iOS 17+ simulator, CMake/Ninja/Git and
@@ -45,3 +45,8 @@ Science Explorer includes the same ten bundled conceptual views as Android,
 with source references, descriptions, navigation, label visibility and prompt
 handoff. iOS labels are flattened into the diagram base; PencilKit annotations
 remain independent. See [SCIENCE_EXPLORER.md](../docs/SCIENCE_EXPLORER.md).
+
+
+Family access uses Keychain-backed PIN/cooldown and a study-only root workspace; see [FAMILY_ACCESS.md](../docs/FAMILY_ACCESS.md). Prompt controls, saved inference settings and optional computer image/guidance jobs accompany motion; see [GENERATION_CONTROLS.md](../docs/GENERATION_CONTROLS.md).
+
+The editor now supports photo layers, black/white masks, opacity/blend, transforms, ordering/deletion and document undo. Assets save independently off the main thread and legacy records remain readable; see [EDITOR.md](../docs/EDITOR.md). Actual Keychain/signing, physical encoders/accessibility and real weights remain unverified.
