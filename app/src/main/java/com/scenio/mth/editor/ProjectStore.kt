@@ -28,21 +28,22 @@ class ProjectStore(context: Context) {
         require(UUID.fromString(id).toString()==id) { "Invalid project identifier" }
         return File(root,id)
     }
+    private fun readAtomic(file:File)=AtomicFile(file).openRead().bufferedReader().use { it.readText() }
     private val pointer=File(context.filesDir,"editor-draft.json")
     fun autosave(snapshot:ForgeCanvas.Snapshot,meta:JSONObject) {
         draftExecutor.execute { runCatching {
-            val old=runCatching { JSONObject(pointer.readText()).getString("id") }.getOrNull()
+            val old=runCatching { JSONObject(readAtomic(pointer)).getString("id") }.getOrNull()
             val id=save(snapshot,meta.put("draft",true));val file=AtomicFile(pointer);val stream=file.startWrite()
             try { stream.write(JSONObject().put("id",id).toString().toByteArray());file.finishWrite(stream) }
             catch(e:Exception) { file.failWrite(stream);throw e }
             if(old!=null && old!=id) runCatching { delete(old) }
         } }
     }
-    fun loadDraft():LoadedProject? = runCatching { load(JSONObject(pointer.readText()).getString("id")) }.getOrNull()
+    fun loadDraft():LoadedProject? = runCatching { load(JSONObject(readAtomic(pointer)).getString("id")) }.getOrNull()
     companion object { private val draftExecutor=java.util.concurrent.Executors.newSingleThreadExecutor() }
     fun list(): List<ProjectInfo> = root.listFiles().orEmpty().filter { it.isDirectory && runCatching { UUID.fromString(it.name).toString()==it.name }.getOrDefault(false) }
         .mapNotNull { dir -> runCatching {
-            val meta=JSONObject(File(dir,"project.json").readText())
+            val meta=JSONObject(readAtomic(File(dir,"project.json")))
             ProjectInfo(dir.name,meta.optString("title",meta.optString("prompt","Untitled project")).take(160),meta)
         }.getOrNull() }.filter { !it.meta.optBoolean("draft",false) }.sortedByDescending { it.meta.optLong("created",0) }
     fun save(snapshot: ForgeCanvas.Snapshot, meta: JSONObject): String {
@@ -67,7 +68,7 @@ class ProjectStore(context: Context) {
         } finally { pending.deleteRecursively() }
     }
     fun load(id: String): LoadedProject {
-        val dir=directory(id);val meta=JSONObject(File(dir,"project.json").readText())
+        val dir=directory(id);val meta=JSONObject(readAtomic(File(dir,"project.json")))
         val baseFile=File(dir,"base.png").takeIf { it.isFile } ?: File(dir,"image.png")
         val bounds=BitmapFactory.Options().apply { inJustDecodeBounds=true };BitmapFactory.decodeFile(baseFile.path,bounds)
         require(bounds.outWidth>0 && bounds.outHeight>0 && bounds.outWidth.toLong()*bounds.outHeight<=16_000_000) { "Invalid project image" }
@@ -79,20 +80,20 @@ class ProjectStore(context: Context) {
     }
     fun rename(id: String, title: String) {
         require(title.isNotBlank() && title.length<=160)
-        val file=File(directory(id),"project.json");val meta=JSONObject(file.readText()).put("title",title.trim())
+        val file=File(directory(id),"project.json");val meta=JSONObject(readAtomic(file)).put("title",title.trim())
         val atomic=AtomicFile(file);val stream=atomic.startWrite()
         try { stream.write(meta.toString().toByteArray());atomic.finishWrite(stream) }
         catch(e:Exception) { atomic.failWrite(stream);throw e }
     }
     fun setFolder(id:String,folder:String) {
         require(folder.trim().length<=80 && folder.none { it.isISOControl() })
-        val file=File(directory(id),"project.json");val meta=JSONObject(file.readText()).put("folder",folder.trim())
+        val file=File(directory(id),"project.json");val meta=JSONObject(readAtomic(file)).put("folder",folder.trim())
         val atomic=AtomicFile(file);val stream=atomic.startWrite()
         try { stream.write(meta.toString().toByteArray());atomic.finishWrite(stream) } catch(e:Exception) { atomic.failWrite(stream);throw e }
     }
     fun delete(id: String) { check(directory(id).deleteRecursively()) { "Could not delete project" } }
     fun archive(id: String, output: File) {
-        val dir=directory(id);require(File(dir,"project.json").isFile)
+        val dir=directory(id);JSONObject(readAtomic(File(dir,"project.json")))
         require(dir.listFiles().orEmpty().filter { it.isFile && allowedAsset(it.name) }.sumOf { it.length() }<=64_000_000) { "Project exceeds the 64 MB backup limit; reduce raster layers first" }
         ZipOutputStream(output.outputStream().buffered()).use { zip ->
             dir.listFiles().orEmpty().filter { it.isFile && allowedAsset(it.name) }.sortedBy { it.name }.forEach { file -> val name=file.name;if(file.isFile) {

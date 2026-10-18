@@ -43,6 +43,16 @@ class ProjectBackupTest {
             } finally { loaded.snapshot.base?.recycle();loaded.snapshot.layers.forEach { it.raster?.recycle() } }
         } finally { bitmap.recycle();raster.recycle();archive.delete();store.delete(id);imported?.let { store.delete(it) } }
     }
+    @Test fun interruptedMetadataWriteRecoversBeforeFolderUpdateAndListing() {
+        val store=ProjectStore(context);val bitmap=Bitmap.createBitmap(32,32,Bitmap.Config.ARGB_8888)
+        val id=store.save(ForgeCanvas.Snapshot(bitmap,emptyList()),JSONObject().put("title","Recovery"))
+        try {
+            val metadata=File(context.filesDir,"projects/$id/project.json")
+            metadata.copyTo(File(metadata.path+".bak"),overwrite=true);assertTrue(metadata.delete())
+            assertTrue(store.list().any { it.id==id && it.title=="Recovery" })
+            store.setFolder(id,"Recovered");assertEquals("Recovered",store.list().first { it.id==id }.folder)
+        } finally { store.delete(id);bitmap.recycle() }
+    }
     @Test fun backupRejectsPathTraversal() {
         val out=ByteArrayOutputStream()
         ZipOutputStream(out).use { zip -> zip.putNextEntry(ZipEntry("../escape.txt"));zip.write(byteArrayOf(1));zip.closeEntry() }

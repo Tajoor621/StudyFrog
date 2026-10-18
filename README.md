@@ -24,8 +24,11 @@ Android application ID is `com.scenio.mth`.
 - Authenticated local engine job history, cancellation and result deletion.
 - Native CPU SD 1.x GGUF inference on Android/iOS, manual model import,
   256/512px resolution controls, Android foreground jobs and benchmark export.
-- Multiple editable ink layers, opacity/blending/visibility, layer erasing,
-  shape/text annotations, SVG export and backward-compatible schema 3 projects.
+- Multiple editable ink/raster layers, opacity/blending/visibility, layer erasing,
+  shape/text annotations, streamed SVG and backward-compatible schema 4 projects.
+- Android imported raster layers, reversible masks, move/scale/rotate, boolean
+  shape operations, grids/ruler/perspective guides, symmetry and adjustable smoothing.
+- Android/iOS project folders, folder filtering and moving existing projects.
 - Phone-local 30-second 1080p still-reveal video encoder implementations.
 - Optional computer-local SD 1.x text-to-image/img2img engine and tiled
   refinement, requiring separately downloaded model files.
@@ -94,7 +97,7 @@ app/device/crash information; review the in-app disclosure before enabling them.
 
 ## Implementation limits
 
-Version 0.4.1 implements these software paths; real model outputs and device
+Version 0.5.0 implements these software paths; real model outputs and device
 latency/thermals are unverified. CPU image generation offers 256px previews or
 512px outputs with conservative RAM guards. Fast mid-range-phone generation
 and native full-frame 8K denoising are not promised. Computer tiled refinement
@@ -104,7 +107,7 @@ LTX motion requires a compatible CUDA computer and complete local weights. It
 denoises at 768×448 before scaling to 1080p; model quality, transitions and
 ultra-realism remain unevaluated. Still reveal is a separate animation of an image.
 
-Full raster/mask/boolean/typography tools, reviewed medical/scientific content,
+Advanced typography/print tools, reviewed medical/scientific content,
 parental safety controls and complete iOS parity remain unfinished. There is no
 unrestricted Adult Mode or certified child-safe mode. See the audit for blockers.
 
@@ -112,6 +115,7 @@ unrestricted Adult Mode or certified child-safe mode. See the audit for blockers
 
 - [Android packaging and installation](docs/ANDROID_BUILD.md)
 - [Android features: complete code and setup reference](docs/android-features/IMPLEMENTATION.md)
+- [Editor, raster layers, masks and folders](docs/EDITOR.md)
 - [Science Explorer and content sources](docs/SCIENCE_EXPLORER.md)
 - [Complete master-specification coverage](docs/MASTER_SPEC_AUDIT.md)
 - [Current feature status](docs/FEATURE_STATUS.md)

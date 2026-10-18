@@ -106,3 +106,28 @@ this trades warm-cache speed for lower retained GPU memory between image/video
 jobs. Actual GPU memory and native cancellation responsiveness need hardware
 validation. These fixes do not remove the outstanding product requirements.
 See [MASTER_SPEC_AUDIT.md](MASTER_SPEC_AUDIT.md) for the full requirement matrix.
+
+
+## Advanced editor and folder integration — 0.5.0
+
+- Added bounded raster-layer import and non-destructive hide/restore masks;
+  keep immutable layer assets outside JSON and use UUID-only asset references.
+- Unified canvas, PNG and video compositing in `LayerRenderer`; SVG streams raster
+  data and preserves transforms, masks and vector geometry.
+- Extended undo from ink-only actions to complete editor snapshots with limits
+  on action count, points and retained raster pixels. Loading a project resets
+  history, while undo/redo restores content without resetting the opposite stack.
+- Added move/scale/rotate, boolean shape combinations, grid/ruler/perspective,
+  mirrored marks, adjustable smoothing, optional tilt width and system fonts.
+- Corrected multiply compositing: Android 10+ native blend mode and a strip-based
+  software fallback on Android 7–9 preserve the base outside transparent marks.
+- Added folder assignment/filter/move on Android/iOS without interpreting folder
+  names as filesystem paths; older project formats remain readable.
+- Enforced layer/document/ZIP/image bounds, rejected malformed raster references,
+  preserved new assets in backups and tightened odd-dimension photo downsampling.
+
+See [EDITOR.md](EDITOR.md) for exact limits and platform differences. Regression
+coverage exercises rendering, non-destructive restoration, full-action history,
+serialization/backup round trips, folder persistence and legacy decoding.
+This addition does not establish real-model quality, clinical accuracy, child
+safety, physical stylus feel or complete original-specification delivery.

@@ -1,6 +1,6 @@
 # Master specification coverage — 2026-10-18 (Asia/Dubai)
 
-The requested product is **not fully implemented**. StudyForge 0.4.1 has working
+The requested product is **not fully implemented**. StudyForge 0.5.0 has working
 Android/iOS builds and a substantial offline foundation. A passing build is not
 proof of model quality, medical accuracy, device performance or complete scope.
 The tested source and exact results are recorded in [VALIDATION.md](../VALIDATION.md).
@@ -21,11 +21,11 @@ The tested source and exact results are recorded in [VALIDATION.md](../VALIDATIO
 | ControlNet, IP-Adapter, OpenPose, depth maps | Not integrated |
 | 8K still output | Optional computer tiled refinement can allocate 7680×4320; real-model quality/seams unverified; native phone inference limited to 256/512px |
 | Fast mid-range-phone generation | Not established; CPU runtime, RAM guards and benchmark export exist; phone thermal/battery/latency tests pending |
-| Layers/masks/blending | Base plus up to 16 editable ink layers, opacity/visibility and normal/multiply/screen; layer erasing; full arbitrary raster layers/masks incomplete |
-| Brush engine | Pressure-aware ink and simple smoothing; tilt, advanced stabilization and professional brush presets incomplete |
-| Vector/raster hybrid | Editable vector ink/geometry/text over a raster base; SVG export; boolean vector editing incomplete |
-| Perspective, symmetry, rulers and grids | Not implemented as professional tools |
-| Typography/open fonts/print tools | System font labels and PNG/SVG export; font management, advanced typography and print/color workflows incomplete |
+| Layers/masks/blending | Android base plus up to 16 ink/raster layers, reversible hide/restore masks, transforms, opacity/visibility, normal/multiply/screen and full-action undo; resource limits documented in EDITOR.md; iOS advanced parity incomplete |
+| Brush engine | Android pressure/optional tilt width and adjustable smoothing; professional textured brush presets and physical stylus validation incomplete |
+| Vector/raster hybrid | Android raster layers, editable ink/geometry/text, union/intersection/subtract/XOR of closed shapes and streamed SVG; complete vector-node editing incomplete |
+| Perspective, symmetry, rulers and grids | Android bounded grids, percentage ruler, one-point perspective/ray tool and mirrored drawing implemented; multi-point and calibrated professional rulers incomplete |
+| Typography/open fonts/print tools | Android sans-serif/serif/monospace labels and PNG/SVG export; custom font management, advanced typography and print/color workflows incomplete |
 | Image-to-video, 30 seconds | Phone still-reveal implementations and optional computer LTX motion adapter; real-model inference and phone encoders unverified |
 | Subject movement/transformation/camera prompts | Prompt passed to local LTX; real temporal quality and instruction adherence unverified |
 | Cinematic creation/drawing process | Still reveal is implemented; it does not infer or reconstruct an artist's actual brush sequence |
@@ -33,7 +33,7 @@ The tested source and exact results are recorded in [VALIDATION.md](../VALIDATIO
 | Medical layers: skin/muscle/bone/organs/vessels/nerves | Full multi-layer atlas not implemented |
 | X-ray/CT/MRI overlays | No validated imaging/overlay system or diagnostic functionality |
 | Six named modes | Mode choices exist; many actions share pipelines; complete dedicated mode experiences incomplete |
-| Projects/folders/prompt history | Local editable projects, Android backups, draft recovery and computer job history; folders and full cross-platform interchange incomplete |
+| Projects/folders/prompt history | Local editable projects, folders/filter/search/move on Android/iOS, Android schema 4 raster ZIP backups, draft recovery and computer job history; cross-platform editable interchange incomplete |
 | Adult Mode/age gate/parental PIN | Not implemented; no unrestricted explicit-sexual mode or evaluated parental controls |
 | Completely safe child mode | Not established; simple checks are not a child-safe guarantee |
 | Medical content available in safe mode | No separate safe/adult mode exists; normal anatomy study content remains available |
@@ -83,6 +83,8 @@ tracked private-key payloads and signing/configuration secret files.
 Run `python3 scripts/audit_repository.py`. It is also part of the engine CI job.
 Its count includes individual structural assertions, not additional model or UI
 tests. It does not prove that every branch in every file is conflict-free.
+
+The 0.5.0 editor/folder additions are described in [EDITOR.md](EDITOR.md).
 
 This audit corrected cancellation cleanup ordering, image/video model memory
 handoff, benchmark model-hash reporting, and SVG opacity/pressure consistency.

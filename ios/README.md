@@ -1,9 +1,12 @@
-# StudyForge iOS — 0.4.1
+# StudyForge iOS — 0.5.0
 
 Buildable SwiftUI/PencilKit app with a shared native CPU image runtime, photo
 import, editable layers/projects/drafts, PNG export, onboarding/appearance,
 opt-in reminders, AVAssetWriter reveal video and optional computer motion client.
-Full Android parity and a production-signed physical release remain incomplete.
+Projects include folder assignment, library filtering and move actions. Legacy
+records without folder metadata remain supported. Android raster/mask/transform
+and vector tools are not yet ported; full Android parity and a production-signed
+physical release remain incomplete.
 
 On a Mac install free Xcode/iOS 17+ simulator, CMake/Ninja/Git and
 [XcodeGen 2.42.0](https://github.com/yonaskolb/XcodeGen/releases/tag/2.42.0).
