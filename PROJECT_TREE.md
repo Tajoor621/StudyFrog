@@ -14,6 +14,7 @@ SHA256SUMS
 VALIDATION.md
 app/build.gradle.kts
 app/src/androidTest/java/com/scenio/mth/features/AccessibilityTest.kt
+app/src/androidTest/java/com/scenio/mth/features/AdvancedEditorTest.kt
 app/src/androidTest/java/com/scenio/mth/features/LayerDocumentTest.kt
 app/src/androidTest/java/com/scenio/mth/features/NativeBoundaryTest.kt
 app/src/androidTest/java/com/scenio/mth/features/OnboardingTest.kt
@@ -34,7 +35,10 @@ app/src/main/java/com/scenio/mth/ForgeCanvas.kt
 app/src/main/java/com/scenio/mth/MainActivity.kt
 app/src/main/java/com/scenio/mth/RevealVideo.kt
 app/src/main/java/com/scenio/mth/editor/CanvasGeometry.kt
+app/src/main/java/com/scenio/mth/editor/DocumentCodec.kt
 app/src/main/java/com/scenio/mth/editor/EditorSession.kt
+app/src/main/java/com/scenio/mth/editor/LayerRenderer.kt
+app/src/main/java/com/scenio/mth/editor/LegacyBlendRenderer.kt
 app/src/main/java/com/scenio/mth/editor/PhotoDecoder.kt
 app/src/main/java/com/scenio/mth/editor/ProjectStore.kt
 app/src/main/java/com/scenio/mth/editor/VectorExporter.kt
@@ -94,6 +98,7 @@ build.gradle.kts
 content/study-catalog.json
 docs/ANDROID_BUILD.md
 docs/AUDIT.md
+docs/EDITOR.md
 docs/ENGINE.md
 docs/FEATURE_STATUS.md
 docs/LOCAL_MODELS.md

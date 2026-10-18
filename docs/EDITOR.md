@@ -94,3 +94,6 @@ invalid names and decoding old records without folder metadata.
 Run Android instrumentation on a development device or emulator and iOS tests
 on macOS as described in the root validation guide. Stylus feel, accessibility
 interaction, low-memory behavior and SVG viewer parity still need device checks.
+
+Rendering references: Android's [BlendMode API](https://developer.android.com/reference/android/graphics/BlendMode#MULTIPLY)
+and [PorterDuff.Mode API](https://developer.android.com/reference/android/graphics/PorterDuff.Mode#MULTIPLY).

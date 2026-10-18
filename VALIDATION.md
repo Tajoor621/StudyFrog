@@ -1,98 +1,92 @@
-# Validation — 2026-10-18 (Asia/Dubai), version 0.4.1
+# Validation — 2026-10-18 (UTC), version 0.5.0
 
-Tested source: `8c2f2e401193992d24b427d4bf2a64b5e090e93e`.
-The audit documentation and integrity-manifest follow-up does not change the
-application or test code verified below. CI timestamps are UTC; the validation
-date above uses Asia/Dubai.
+Tested source: `442ab6256e8a3dda04229f5e226ad91b9bbd62f4`.
+The final documentation/tree/checksum follow-up does not change application or
+test code. A passing build does not establish complete master-spec delivery.
 
 ## Passing CI
 
 | Workflow | Verified result |
 | --- | --- |
-| [Android 39065556114](https://github.com/Tajoor621/StudyFrog/actions/runs/39065556114) | Lint, eight JVM tests, instrumentation APK compilation, release APK/AAB assembly, generated split verification, repository guard, Python checks and API 35 emulator tests pass |
-| [iOS 39065556067](https://github.com/Tajoor621/StudyFrog/actions/runs/39065556067) | Shared native CPU framework and SwiftUI app compile; four XCTest tests pass |
+| [Android 39116104866](https://github.com/Tajoor621/StudyFrog/actions/runs/39116104866) | Lint, eight JVM tests, instrumentation APK compilation, release APK/AAB assembly, generated split verification, repository guard, Python checks and API 35 emulator tests pass |
+| [iOS 39116104838](https://github.com/Tajoor621/StudyFrog/actions/runs/39116104838) | Shared native CPU framework and SwiftUI app compile; five XCTest tests pass |
 
-**53 automated tests passed; one opt-in real-model test was skipped.**
-Counts: eight JVM, fifteen Android instrumentation, eighteen engine, four
-manifest-parser, four study-content and four iOS tests. The skipped test requires a physical phone
-and an imported compatible model. The protected signed-release job was also
-intentionally skipped because it requires owner signing secrets and explicit
-workflow dispatch. Optional Firebase-enabled builds remain unverified.
+**61 automated tests passed; one opt-in real-model test was skipped.**
+Counts: eight JVM, twenty-two Android instrumentation, eighteen engine, four
+manifest-parser, four study-content and five iOS tests. The skipped test needs a
+physical phone and imported compatible weights. The protected signed-release
+job is intentionally skipped without owner signing secrets and explicit dispatch.
+Optional configured Firebase builds remain unverified. Android/JVM counts were
+checked against the downloaded JUnit XML: 23 instrumentation cases with one
+skipped and no failures/errors, plus eight JVM cases with no skips/failures.
 
 Android uses JDK 17, SDK 35, NDK 27.2.12479018, CMake 3.22.1, Gradle 8.9 and
-AGP 8.7.3. It builds native CPU inference for arm64-v8a and x86_64. iOS builds
-with macOS/Xcode, XcodeGen 2.42.0 and the same pinned inference sources.
-Upstream C++ deprecation/override warnings remain visible in logs. AGP warns
-that native extraction is normally controlled through packaging DSL; this app
-also retains the explicit source attribute required by its packaging specification.
+AGP 8.7.3, building arm64-v8a and x86_64 native CPU inference. iOS uses macOS/Xcode,
+XcodeGen 2.42.0 and the same pinned native runtime. Upstream C++ warnings and
+AGP's extractNativeLibs packaging advisory remain visible, without disabling lint.
 
 ## What passed
 
-- Generated binary manifests contain `split="config.xxhdpi"`,
-  `splitTypes="base__density"`, and `android:hasCode=false` in the density split;
-  base application contains `android:extractNativeLibs=true`.
-- Native libraries are packaged; the density split has no DEX. Source manifests
-  do not hardcode generated split attributes or Play-derived APK metadata.
-- JVM tests exercise geometry and reactive data/preferences. Android tests
-  cover onboarding recreation, double font scaling, Room updates/reopening,
-  disabled reminders, editable ZIP round trips/traversal rejection, studio
-  recreation, layer persistence/erasing/legacy reads, JNI bounds checks, every bundled study
-  view, editable study labels, explorer navigation/recreation and SVG
-  opacity/pressure/escaped-label serialization.
-- iOS tests exercise editable project reopening/rename/delete, invalid
-  inference-input rejection, hierarchy-context prompts and all ten study
-  diagram renders. They do not run a real model.
-- Python tests cover authentication, limits, job persistence/cancellation,
-  missing-model failure, tiling mechanics, motion segment planning and
-  image/video model-memory handoff. Lifecycle tests use model/CUDA stubs;
-  they do not establish real VRAM behavior. Motion
-  tests use fixture frames; actual FFmpeg/ffprobe verifies 720 frames, 24fps,
-  1920×1080 and 30 seconds. No real LTX denoising is exercised.
-- Repository integrity, XML, backup exclusions and whitespace checks pass.
-  Eighteen engine tests and eight parser/content tests also passed locally.
-  The repository guard checks merge markers, manifest class resolution, JNI
-  symbols, version/toolchain consistency, icon sizes, secret-file exclusions
-  and local documentation links.
+- Actual bundletool binary manifests contain `split="config.xxhdpi"`,
+  `splitTypes="base__density"`, density `android:hasCode=false`, and base
+  `android:extractNativeLibs=true`. Native libraries are packaged; the density
+  split has no DEX. Source manifests do not hardcode Play-derived or split data.
+- JVM tests cover geometry, reactive progress/preferences and cancellation that
+  joins native-like non-cooperative work before cleanup.
+- Android tests cover onboarding/recreation, double font scaling, Room
+  persistence, disabled reminders, JNI input bounds, studio recreation, linked
+  study navigation/content/labels and legacy documents.
+- Editor regressions cover reversible raster masks, transforms, guide exclusion
+  from rendered exports, SVG streaming, native and legacy multiply alpha,
+  full-action undo/redo, boolean shapes, mirrored gestures, and malformed raster
+  references/transforms. Legacy multiply is called directly in the API 35 test;
+  this is not an API 24–28 device UI run.
+- ZIP round trips retain raster pixels, transforms, mask state and folder names;
+  traversal is rejected. Metadata recovery tests restore a legacy AtomicFile
+  backup before listing and updating the folder.
+- iOS tests cover project reopening/rename/delete, folder persistence and invalid
+  names, old records with no folder field, invalid model input, hierarchy prompts
+  and all ten conceptual diagram renders.
+- Engine tests cover authentication, limits, job persistence/cancellation,
+  missing-model failure, tiling mechanics, motion segment planning and image/video
+  model-memory handoff. Model/CUDA lifecycle checks use stubs. Actual FFmpeg and
+  ffprobe check fixture output at 720 frames, 24fps, 1920×1080 and 30 seconds;
+  no real LTX denoising is exercised.
+- Repository integrity, XML, backup privacy exclusions and whitespace checks pass.
+  The repository guard checks merge markers, manifest/JNI identities, versions,
+  toolchain/ABI pins, icon sizes, secret-file exclusions and documentation links.
+  Eight parser/content tests also pass locally.
 
-CI artifacts include test reports, AAB/test APK set and iOS simulator app/results.
-Packaging-test APKs use a disposable certificate, not a durable release identity.
-The simulator app is not an installable signed iPhone release.
+CI artifacts include Android test/lint reports, AAB and packaging-test APK set,
+and the iOS simulator app/results. Packaging-test keys are disposable; they are
+not the owner's durable update identity. A simulator app is not a signed iPhone
+release. No production keys, configuration secrets, bearer tokens or model
+weights are committed.
 
-## Hardware/model checks still required
+## Hardware and product boundaries
 
 No real SD/LTX weights, compatible CUDA GPU or connected ARM64/iPhone device
-were available for this implementation. Native output quality, scientific
-accuracy, real LTX motion/segment continuity, real 8K refinement, latency,
-thermals/battery, hardware encoders and physical 16 KB-page-size compatibility
-remain unverified. A compiled runtime is not a model benchmark.
+were available. Output quality, prompt adherence, scientific accuracy, real
+motion/segment continuity, real 8K refinement, latency, battery/thermals, physical
+encoders, real stylus behavior and physical 16 KB-page-size compatibility remain
+unverified. The manual real-device workflow was not dispatched.
 
-Native images are 256/512px. LTX denoises at 768×448 before scaling to 1080p;
-container/frame tests cannot establish ultra-realism or native 1080p model detail.
-The supplied manual physical-device workflow was not dispatched. See
-[LOCAL_MODELS.md](docs/LOCAL_MODELS.md) for model import, benchmark export and
-real-device commands.
+Native inference offers 256/512px. LTX denoises at 768×448 before scaling to
+1080p; container/frame tests do not prove ultra-realism or native 1080p detail.
+See [LOCAL_MODELS.md](docs/LOCAL_MODELS.md) for model and benchmark steps.
 
-Simulator tests do not certify TalkBack/VoiceOver, contrast, every OS version,
-process death, interrupted import, storage exhaustion or low-memory recovery.
-Android schema 3 supports legacy projects; iOS uses its own editable format,
-not cross-platform ZIP interchange. Full original-specification delivery is
-not claimed; see [FEATURE_STATUS.md](docs/FEATURE_STATUS.md).
+Automated checks do not certify TalkBack/VoiceOver, contrast, every OS version,
+process death, interrupted imports, low-memory/storage behavior or child safety.
+Android schema 4 reads legacy projects and backs up raster assets; iOS uses its
+own PencilKit format. Advanced Android editor tools are not fully ported to iOS.
+Owner-signed release updates and physical iOS distribution need owner setup.
 
-## Audit-fix regression evidence
+See [EDITOR.md](docs/EDITOR.md) for editor bounds, [FEATURE_STATUS.md](docs/FEATURE_STATUS.md)
+and [MASTER_SPEC_AUDIT.md](docs/MASTER_SPEC_AUDIT.md) for all remaining scope, and
+[SCIENCE_EXPLORER.md](docs/SCIENCE_EXPLORER.md) for conceptual content provenance.
+No complete-master-specification or “10/10” claim is made.
 
-The JVM cancellation test verifies that native-like non-cooperative work is
-joined before file cleanup can run. The SVG instrumentation test verifies color
-opacity, pressure-scaled dots/segments and escaped label text. Three engine
-regressions verify cached image-pipeline release before motion loading, cleanup
-after success/failure, and worker survival when CUDA cache cleanup fails. These
-are the five additions to the prior 48-test baseline. The worker benchmark now
-records imported model SHA-256, or an explicit unknown marker.
-
-Full requirements and remaining implementation gaps are recorded in
-[MASTER_SPEC_AUDIT.md](docs/MASTER_SPEC_AUDIT.md); the study catalog is documented
-in [SCIENCE_EXPLORER.md](docs/SCIENCE_EXPLORER.md). No 10/10 or complete-master-
-specification claim is made.
-
-No production signing keys, Firebase configuration, real bearer tokens, user
-projects or weights are committed. Preserve the existing app's signing key and
-Room schema history before releases and database migrations.
+Previous verified 0.4.1 source: `8c2f2e401193992d24b427d4bf2a64b5e090e93e`,
+[Android 39065556114](https://github.com/Tajoor621/StudyFrog/actions/runs/39065556114)
+and [iOS 39065556067](https://github.com/Tajoor621/StudyFrog/actions/runs/39065556067).
+The 0.5.0 changes add seven Android tests and one iOS test to that 53-test baseline.
