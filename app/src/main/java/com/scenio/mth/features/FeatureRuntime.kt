@@ -40,7 +40,9 @@ class FeatureGraph internal constructor(context: Context) {
         }
         scope.launch {
             try {
-                settings.data.map { it.analytics to it.crashes }.distinctUntilChanged().collect {
+                combine(settings.data,com.scenio.mth.family.FamilyPolicy.observe(app)) { settings,restricted ->
+                    (settings.analytics && !restricted) to (settings.crashes && !restricted)
+                }.distinctUntilChanged().collect {
                     telemetry.applyConsent(it.first, it.second)
                 }
             } catch (e: CancellationException) { throw e }

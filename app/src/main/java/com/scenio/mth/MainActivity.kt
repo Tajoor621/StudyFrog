@@ -50,6 +50,9 @@ class MainActivity : ComponentActivity() {
     private var pendingExport: File? = null
     private var dirty = false
     private var projectFolder = ""
+    private var generationProfile=com.scenio.mth.generation.GenerationProfile()
+    private lateinit var controlMode:Spinner
+    private lateinit var controlStrength:SeekBar
     private var editRevision = 0L
     private var darkPalette = true
     private lateinit var canvas: ForgeCanvas
@@ -81,8 +84,10 @@ class MainActivity : ComponentActivity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if(com.scenio.mth.family.FamilyPolicy.restricted(this)) { com.scenio.mth.family.FamilyControlsActivity.openHome(this);finish();return }
         latestJob=prefs.getString("latestJob",null)
         projectFolder=session.folder
+        generationProfile=if(session.snapshot!=null || session.prompt.isNotEmpty()) session.profile else runCatching { com.scenio.mth.generation.ProfileCodec.decode(JSONObject(prefs.getString("generation-profile","{}")!!)) }.getOrDefault(com.scenio.mth.generation.GenerationProfile())
         pendingExport=savedInstanceState?.getString("pendingExport")?.let { path ->
             File(path).takeIf { it.isFile && it.canonicalFile.parentFile==cacheDir.canonicalFile }
         }
@@ -102,6 +107,7 @@ class MainActivity : ComponentActivity() {
         mode=choices(listOf("Free Generate","Science Lab","Art Studio","Medical Explorer","Photo Converter","Video Creator"));root.addView(mode)
         prompt=EditText(this).apply { hint="Describe your idea or photo transformation…";minLines=3;setText(session.prompt.ifBlank { prefs.getString("prompt","Show mitosis step by step") });setTextColor(Color.WHITE) };root.addView(prompt)
         negative=EditText(this).apply { hint="Negative prompt";setText(session.negative);setTextColor(Color.WHITE) };root.addView(negative)
+        root.addView(button("Visual directions · style, detail and realism") { profileControls() })
         seed=EditText(this).apply { hint="Seed (blank gives a new variation)";inputType=android.text.InputType.TYPE_CLASS_NUMBER;setTextColor(Color.WHITE);setText(session.seed) };root.addView(seed)
         root.addView(text("Photo transformation strength"))
         strength=SeekBar(this).apply { max=90;progress=55;contentDescription="Photo transformation strength from 10 to 100 percent" };root.addView(strength)
@@ -169,6 +175,9 @@ class MainActivity : ComponentActivity() {
         root.addView(button("Import project backup") { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type="application/zip";addCategory(Intent.CATEGORY_OPENABLE) },12) })
         root.addView(text("Optional local computer engine • USB connection • no cloud"))
         token=EditText(this).apply { hint="Engine token (kept in memory only)";inputType=129;setTextColor(Color.WHITE) };root.addView(token)
+        root.addView(text("Computer image guidance · imported local model required"))
+        controlMode=choices(listOf("No extra guidance","ControlNet Canny edges from photo","ControlNet prepared depth map","ControlNet prepared OpenPose map","IP-Adapter reference photo"));root.addView(controlMode)
+        root.addView(text("Image guidance strength · 0 to 100 percent"));controlStrength=SeekBar(this).apply { max=100;progress=70;contentDescription="Computer image guidance strength" };root.addView(controlStrength)
         root.addView(button("Generate with local model") { submit("image") })
         root.addView(button("Generate 30-second AI motion video (local computer)") { submit("motion") })
         root.addView(button("30-second 1080p reveal video") { submit("video") })
@@ -221,7 +230,7 @@ class MainActivity : ComponentActivity() {
             val draft=projects.loadDraft()
             if(draft!=null) ui { if(canvas.image==null) { applyProject(draft);say("Recovered editable draft from this device") } }
         }
-        if (!prefs.getBoolean("notice",false)) AlertDialog.Builder(this).setTitle("Educational creative tools").setMessage("Generated visuals may contain scientific errors. This build has no Adult Mode and is not a certified child-safe system. Medical anatomy remains available.").setPositiveButton("Continue") { _,_ -> prefs.edit().putBoolean("notice",true).apply() }.show()
+        if (!prefs.getBoolean("age-ack-18-v1",false)) AlertDialog.Builder(this).setTitle("Educational creative tools").setMessage("Generated visuals may contain scientific errors. The creative workspace is for adults. Family controls can lock access to bundled educational diagrams with a parent PIN; this is not a certified child-safe content filter. Medical anatomy remains available.").setCancelable(false).setNegativeButton("Study-only setup") { _,_ -> startActivity(Intent(this,com.scenio.mth.family.FamilyControlsActivity::class.java));finish() }.setPositiveButton("I am 18 or older") { _,_ -> prefs.edit().putBoolean("age-ack-18-v1",true).apply() }.show()
     }
     private fun say(s:String) { if(!isFinishing && !isDestroyed) status.text=s }
     private fun progress(id: String, step: Int, total: Int) {
@@ -232,8 +241,8 @@ class MainActivity : ComponentActivity() {
         }
     }
     private fun metadata() = JSONObject().put("prompt",prompt.text.toString()).put("negative",negative.text.toString())
-        .put("folder",projectFolder).put("seed",seed.text.toString()).put("strength",strength.progress+10).put("mode",mode.selectedItem.toString()).put("level",level.selectedItem.toString()).put("steps",steps.progress+10)
-    private fun ui(block:()->Unit) { runOnUiThread { if(!isFinishing && !isDestroyed) block() } }
+        .put("profile",com.scenio.mth.generation.ProfileCodec.encode(generationProfile)).put("folder",projectFolder).put("seed",seed.text.toString()).put("strength",strength.progress+10).put("mode",mode.selectedItem.toString()).put("level",level.selectedItem.toString()).put("steps",steps.progress+10)
+    private fun ui(block:()->Unit) { runOnUiThread { if(!isFinishing && !isDestroyed && !com.scenio.mth.family.FamilyPolicy.restricted(this)) block() } }
     private fun markEdited() { dirty=true;editRevision++ }
     private fun saveProject() {
         if(canvas.image==null) { say("Import or generate an image first");return }
@@ -241,7 +250,7 @@ class MainActivity : ComponentActivity() {
         background { val id=projects.save(snapshot,meta);ui { progress("project:$id",1,1);if(editRevision==savedRevision) dirty=false;say("Saved editable image, ink layer and prompt") } }
     }
     private fun applyProject(loaded:com.scenio.mth.editor.LoadedProject) {
-        canvas.restore(loaded.snapshot);val meta=loaded.info.meta;projectFolder=loaded.info.folder
+        canvas.restore(loaded.snapshot);val meta=loaded.info.meta;projectFolder=loaded.info.folder;generationProfile=runCatching { com.scenio.mth.generation.ProfileCodec.decode(meta.optJSONObject("profile")) }.getOrDefault(com.scenio.mth.generation.GenerationProfile())
         prompt.setText(meta.optString("prompt"));negative.setText(meta.optString("negative"))
         (0 until mode.adapter.count).firstOrNull { mode.adapter.getItem(it).toString()==meta.optString("mode") }?.let { mode.setSelection(it) }
         (0 until level.adapter.count).firstOrNull { level.adapter.getItem(it).toString()==meta.optString("level") }?.let { level.setSelection(it) }
@@ -267,6 +276,21 @@ class MainActivity : ComponentActivity() {
                 }
             }.show()
         }.setNegativeButton("Close",null).show()
+    }
+    private fun profileControls() {
+        val value=generationProfile;val form=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL;setPadding(24,8,24,8) }
+        val enabled=Switch(this).apply { text="Append visual directions to my prompt";isChecked=value.enabled };form.addView(enabled)
+        val styles=com.scenio.mth.generation.GenerationProfile.STYLES
+        val style=choices(styles.values.toList()).apply { setSelection(styles.keys.indexOf(value.style)) };form.addView(style)
+        form.addView(text("Detail · simple to fine"));val detail=SeekBar(this).apply { max=100;progress=value.detail;contentDescription="Detail direction" };form.addView(detail)
+        form.addView(text("Realism · illustrative to photographic"));val realism=SeekBar(this).apply { max=100;progress=value.realism;contentDescription="Realism direction" };form.addView(realism)
+        val science=Switch(this).apply { text="Scientific intent · requires human review";isChecked=value.scientific };form.addView(science)
+        form.addView(text("These settings add visible instructions to the prompt. They do not verify scientific accuracy or guarantee model adherence."))
+        AlertDialog.Builder(this).setTitle("Visual directions").setView(form).setPositiveButton("Apply") { _,_ ->
+            generationProfile=com.scenio.mth.generation.GenerationProfile(enabled.isChecked,styles.keys.elementAt(style.selectedItemPosition),detail.progress,realism.progress,science.isChecked)
+            prefs.edit().putString("generation-profile",com.scenio.mth.generation.ProfileCodec.encode(generationProfile).toString()).apply();markEdited()
+            AlertDialog.Builder(this).setTitle("Prompt sent to image model").setMessage(runCatching { generationProfile.apply(prompt.text.toString()) }.getOrElse { it.message }).setPositiveButton("Close",null).show()
+        }.setNegativeButton("Cancel",null).show()
     }
     private fun folderDialog(initial:String,apply:(String)->Unit) {
         val field=EditText(this).apply { hint="Folder name · blank means Unfiled";setText(initial);filters=arrayOf(android.text.InputFilter.LengthFilter(80));setSingleLine() }
@@ -350,6 +374,7 @@ class MainActivity : ComponentActivity() {
     }
     override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?) {
         super.onActivityResult(requestCode,resultCode,data)
+        if(com.scenio.mth.family.FamilyPolicy.restricted(this)) return
         if(resultCode!=RESULT_OK) { if(requestCode==11) { pendingExport?.delete();pendingExport=null };return }
         if(requestCode==14) {
             val id=data?.getStringExtra("study-id") ?: return
@@ -381,6 +406,7 @@ class MainActivity : ComponentActivity() {
         }
     }
     private fun localGenerate() {
+        if(com.scenio.mth.family.FamilyPolicy.restricted(this)) return
         if(localActive || busy) { say("Wait for the current request or cancel generation");return }
         if(!NativeEngine.available()) { say("This build was compiled without local inference");return }
         val model=ModelStore(applicationContext).model
@@ -389,7 +415,7 @@ class MainActivity : ComponentActivity() {
         (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager).getMemoryInfo(memory)
         val dimension=if(nativeResolution.selectedItemPosition==0) 256 else 512
         if(memory.totalMem<(if(dimension==512) 7_500_000_000L else 5_500_000_000L) || memory.availMem<(if(dimension==512) 4_000_000_000L else 2_000_000_000L) || memory.lowMemory) { say("Local inference needs a device with 6 GB RAM / 2 GB available for 256px, or 8 GB RAM / 4 GB available for 512px. Close other apps or use your local computer engine.");return }
-        val text=prompt.text.toString();val excluded=negative.text.toString()
+        val text=runCatching { generationProfile.apply(prompt.text.toString()) }.getOrElse { say(it.message ?: "Invalid visual directions");return };val excluded=negative.text.toString()
         if(text.isBlank() || text.length>2000 || excluded.length>2000) { say("Enter a prompt of 1–2000 characters");return }
         val number=if(seed.text.isBlank()) java.security.SecureRandom().nextInt(Int.MAX_VALUE).toLong() else seed.text.toString().toLongOrNull()
         if(number==null || number !in 0L..2147483647L) { say("Invalid seed");return }
@@ -421,6 +447,7 @@ class MainActivity : ComponentActivity() {
         }
     }
     private fun api(path:String,auth:String,body:JSONObject?=null,method:String=if(body==null) "GET" else "POST"):ByteArray {
+        checkCreativeAccess()
         val c=URL("http://127.0.0.1:8765$path").openConnection() as HttpURLConnection
         try {
             c.instanceFollowRedirects=false;c.connectTimeout=10000;c.readTimeout=30000;c.requestMethod=method;c.setRequestProperty("Authorization","Bearer $auth")
@@ -453,13 +480,16 @@ class MainActivity : ComponentActivity() {
         }
     }
     private fun submit(kind:String,width:Int=768,height:Int=432) {
+        if(com.scenio.mth.family.FamilyPolicy.restricted(this)) return
         val auth=token.text.toString();if(auth.isBlank()) { say("Start the local engine and enter its token first");return }
         val value=if(seed.text.isBlank()) java.security.SecureRandom().nextInt(Int.MAX_VALUE) else seed.text.toString().toIntOrNull()
         if(value==null || value<0) { say("Seed must be between 0 and 2147483647");return }
         if(prompt.text.isBlank() || prompt.length()>2000 || negative.length()>2000) { say("Write a prompt of 1–2000 characters; negative prompt maximum 2000");return }
-        val body=JSONObject().put("kind",kind).put("prompt",prompt.text.toString()).put("negative",negative.text.toString())
+        val effective=runCatching { generationProfile.apply(prompt.text.toString()) }.getOrElse { say(it.message ?: "Invalid visual directions");return }
+        val control=if(kind=="image") listOf("none","canny","depth","pose","reference")[controlMode.selectedItemPosition] else "none"
+        val body=JSONObject().put("control",control).put("control_scale",controlStrength.progress/100.0).put("kind",kind).put("prompt",effective).put("negative",negative.text.toString())
             .put("steps",steps.progress+10).put("seed",value).put("strength",(strength.progress+10)/100.0).put("width",width).put("height",height)
-        val photo=kind in listOf("video","motion","refine") || mode.selectedItem.toString()=="Photo Converter"
+        val photo=control!="none" || kind in listOf("video","motion","refine") || mode.selectedItem.toString()=="Photo Converter"
         val snapshot=if(photo) canvas.snapshot() else null
         if(photo && snapshot?.base==null) { say("Import or generate an image first");return }
         say("Submitting to your local engine…")
@@ -496,6 +526,7 @@ class MainActivity : ComponentActivity() {
         }
     }
     private fun download(path:String,auth:String,file:File) {
+        checkCreativeAccess()
         val c=URL("http://127.0.0.1:8765$path").openConnection() as HttpURLConnection
         try {
             c.instanceFollowRedirects=false;c.connectTimeout=10000;c.readTimeout=30000;c.setRequestProperty("Authorization","Bearer $auth")
@@ -507,8 +538,14 @@ class MainActivity : ComponentActivity() {
             } }
         } catch(e:Exception) { file.delete();throw e } finally { c.disconnect() }
     }
+    private fun checkCreativeAccess() { check(!com.scenio.mth.family.FamilyPolicy.restricted(this)) { "Creative workspace is locked by family controls" } }
+    override fun onResume() {
+        super.onResume()
+        if(com.scenio.mth.family.FamilyPolicy.restricted(this)) { com.scenio.mth.family.FamilyControlsActivity.openHome(this);finish() }
+    }
     private fun rememberEditor() {
-        session.folder=projectFolder;session.snapshot=canvas.snapshot();session.prompt=prompt.text.toString();session.negative=negative.text.toString()
+        if(!::canvas.isInitialized) return
+        session.profile=generationProfile;session.folder=projectFolder;session.snapshot=canvas.snapshot();session.prompt=prompt.text.toString();session.negative=negative.text.toString()
         session.mode=mode.selectedItemPosition;session.level=level.selectedItemPosition;session.steps=steps.progress;session.seed=seed.text.toString()
         prefs.edit().putString("prompt",session.prompt).apply()
     }
@@ -517,7 +554,7 @@ class MainActivity : ComponentActivity() {
     }
     override fun onStop() {
         rememberEditor()
-        if(dirty && canvas.image!=null) { projects.autosave(canvas.snapshot(),metadata());dirty=false }
+        if(::canvas.isInitialized && dirty && canvas.image!=null) { projects.autosave(canvas.snapshot(),metadata());dirty=false }
         super.onStop()
     }
     override fun onDestroy() { localDialog?.dismiss();worker.shutdownNow();super.onDestroy() }

@@ -15,6 +15,11 @@ struct ProjectRecord: Codable, Identifiable {
     var blends: [String]?
     var draft: Bool?
     var folder: String?
+    var profile: GenerationProfile?
+    var seed: Int64?
+    var steps: Int?
+    var resolution: Int?
+    var strength: Double?
 }
 struct IOSProjectStore {
     let root: URL
@@ -28,10 +33,10 @@ struct IOSProjectStore {
             try? JSONDecoder().decode(ProjectRecord.self,from: Data(contentsOf: directory.appendingPathComponent("project.json")))
         }.filter { $0.draft != true }.sorted { $0.created > $1.created }
     }
-    @discardableResult func save(title: String,prompt: String,negative: String,image: UIImage,drawings: [PKDrawing],names: [String],visible: [Bool] = [],opacity: [Double] = [],blends: [String] = [],draft: Bool = false,folder: String = "") throws -> ProjectRecord {
+    @discardableResult func save(title: String,prompt: String,negative: String,image: UIImage,drawings: [PKDrawing],names: [String],visible: [Bool] = [],opacity: [Double] = [],blends: [String] = [],draft: Bool = false,folder: String = "",profile: GenerationProfile? = nil,seed: Int64? = nil,steps: Int? = nil,resolution: Int? = nil,strength: Double? = nil) throws -> ProjectRecord {
         let folder = try validatedFolder(folder)
         guard drawings.count == names.count, drawings.count <= 16, let png = image.pngData() else { throw LocalFailure(message: "Invalid project layers") }
-        let record = ProjectRecord(id: UUID(),title: String(title.prefix(160)),prompt: prompt,negative: negative,created: Date(),layerNames: names,visible: visible,opacity: opacity,blends: blends,draft: draft,folder: folder)
+        let record = ProjectRecord(id: UUID(),title: String(title.prefix(160)),prompt: prompt,negative: negative,created: Date(),layerNames: names,visible: visible,opacity: opacity,blends: blends,draft: draft,folder: folder,profile: profile,seed: seed,steps: steps,resolution: resolution,strength: strength)
         let temporary = root.appendingPathComponent("pending-\(record.id.uuidString)",isDirectory: true)
         try FileManager.default.createDirectory(at: temporary,withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: temporary) }

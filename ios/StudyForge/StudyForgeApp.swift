@@ -6,9 +6,14 @@ import UserNotifications
 import sf_engine
 
 @main
-struct StudyForgeApp: App {
+@MainActor struct StudyForgeApp: App {
+    @StateObject private var family = FamilyAccess.shared
+    @AppStorage("creativeAgeAcknowledged") private var acknowledged = false
     @AppStorage("appearance") private var appearance = "system"
-    var body: some Scene { WindowGroup { ForgeView().preferredColorScheme(appearance == "dark" ? .dark : appearance == "light" ? .light : nil) } }
+    var body: some Scene { WindowGroup {
+        Group { if family.restricted { FamilyLearningHomeView() } else if !acknowledged { CreativeAgeGateView() } else { ForgeView() } }
+            .environmentObject(family).preferredColorScheme(appearance == "dark" ? .dark : appearance == "light" ? .light : nil)
+    } }
 }
 struct ExportDocument: FileDocument {
     static var readableContentTypes: [UTType] { [.png,.movie] }
@@ -57,6 +62,9 @@ struct DrawingCanvas: UIViewRepresentable {
     @Published var videoURL: URL?
     @Published var seed: Int64 = 42
     @Published var resolution = 256
+    @Published var inferenceSteps = 20
+    @Published var photoStrength = 0.65
+    @Published var profile = GenerationProfile()
     var job: Task<Void,Never>?
     var videoTask: Task<Void,Error>?
     var computerJob: (ComputerEngine,String)?
@@ -76,14 +84,18 @@ struct DrawingCanvas: UIViewRepresentable {
     }
     func save(draft: Bool = false) {
         guard let image else { return }
-        do { try IOSProjectStore().save(title: String(prompt.prefix(80)),prompt: prompt,negative: negative,image: image,drawings: drawings,names: layerNames,visible: visible,opacity: opacity,blends: blends,draft: draft,folder: folder);refresh();message = "Editable project saved on this device" }
+        do { try IOSProjectStore().save(title: String(prompt.prefix(80)),prompt: prompt,negative: negative,image: image,drawings: drawings,names: layerNames,visible: visible,opacity: opacity,blends: blends,draft: draft,folder: folder,profile: profile,seed: seed,steps: inferenceSteps,resolution: resolution,strength: photoStrength);refresh();message = "Editable project saved on this device" }
         catch { message = error.localizedDescription }
     }
     func open(_ record: ProjectRecord) {
         do {
             let loaded = try IOSProjectStore().load(record);image = loaded.0;drawings = loaded.1;layerNames = record.layerNames
             if drawings.isEmpty { resetLayers() } else { visible = record.visible?.count == drawings.count ? record.visible! : Array(repeating: true,count: drawings.count);opacity = record.opacity?.count == drawings.count ? record.opacity! : Array(repeating: 1,count: drawings.count);blends = record.blends?.count == drawings.count ? record.blends! : Array(repeating: "normal",count: drawings.count);selected = 0 }
-            prompt = record.prompt;negative = record.negative;folder = record.folder ?? "";message = "Editable project opened"
+            prompt = record.prompt;negative = record.negative;folder = record.folder ?? "";profile = record.profile ?? GenerationProfile()
+            inferenceSteps = (10...40).contains(record.steps ?? 20) ? (record.steps ?? 20) : 20
+            photoStrength = (0.1...1).contains(record.strength ?? 0.65) ? (record.strength ?? 0.65) : 0.65
+            seed = (0...2_147_483_647).contains(record.seed ?? 42) ? (record.seed ?? 42) : 42
+            resolution = [256,512].contains(record.resolution ?? 256) ? (record.resolution ?? 256) : 256;message = "Editable project opened"
         } catch { message = error.localizedDescription }
     }
     func install(_ url: URL) {
@@ -91,17 +103,20 @@ struct DrawingCanvas: UIViewRepresentable {
         job = Task { do { let hash = try await Task.detached { try IOSModelStore.install(url) }.value;message = "Model imported · SHA-256 \(hash.prefix(16))" } catch { message = error.localizedDescription };working = false }
     }
     func generate(photo: Bool) {
+        guard !FamilyAccess.shared.restricted else { message = "Generation is locked by family controls";return }
         guard !working else { return }
         guard FileManager.default.fileExists(atPath: IOSModelStore.model.path) else { message = "Import a compatible SD 1.x GGUF model first";return }
-        let text = prompt, excluded = negative, number = seed, dimension = resolution, source = photo ? composite() : nil
+        let text: String
+        do { text = try profile.apply(prompt) } catch { message = error.localizedDescription;return }
+        let excluded = negative, number = seed, dimension = resolution, source = photo ? composite() : nil, steps = inferenceSteps, strength = photoStrength
         if photo && source == nil { message = "Import a photo first";return }
         working = true;percent = 0;UIApplication.shared.isIdleTimerDisabled = true
         job = Task {
             let monitor = Task { while !Task.isCancelled { percent = Int(sf_progress());try? await Task.sleep(nanoseconds: 500_000_000) } }
             defer { monitor.cancel();working = false;UIApplication.shared.isIdleTimerDisabled = false }
             do {
-                let result = try await Task.detached { try NativeDiffusion.generate(model: IOSModelStore.model,prompt: text,negative: excluded,size: dimension,steps: 20,seed: number,initial: source) }.value
-                image = result;resetLayers();percent = 100;message = "Generated locally · seed \(number)"
+                let result = try await Task.detached { try NativeDiffusion.generate(model: IOSModelStore.model,prompt: text,negative: excluded,size: dimension,steps: steps,seed: number,initial: source,strength: strength) }.value
+                try Task.checkCancellation();guard !FamilyAccess.shared.restricted else { throw CancellationError() };image = result;resetLayers();percent = 100;message = "Generated locally · seed \(number)"
             } catch { message = error.localizedDescription }
         }
     }
@@ -118,7 +133,38 @@ struct DrawingCanvas: UIViewRepresentable {
             } catch { message = error.localizedDescription }
         }
     }
+    func computerImage(host: String,token: String,control: String,scale: Double,photo: Bool) {
+        guard !working,!FamilyAccess.shared.restricted else { return }
+        let source = photo || control != "none" ? composite() : nil
+        if (photo || control != "none") && source == nil { message = "Import a photo or prepared guidance map first";return }
+        let text: String
+        do { text = try profile.apply(prompt) } catch { message = error.localizedDescription;return }
+        let engine = ComputerEngine(host: host,token: token),excluded = negative,number = seed,steps = inferenceSteps,strength = photoStrength
+        working = true;percent = 0;UIApplication.shared.isIdleTimerDisabled = true
+        job = Task {
+            defer { working = false;UIApplication.shared.isIdleTimerDisabled = false;computerJob = nil }
+            do {
+                let id = try await engine.submit(image: source,prompt: text,negative: excluded,seed: number,kind: "image",control: control,controlScale: scale,steps: steps,strength: strength)
+                computerJob = (engine,id)
+                while true {
+                    try Task.checkCancellation()
+                    guard !FamilyAccess.shared.restricted else { throw CancellationError() }
+                    let status = try await engine.status(id)
+                    switch status["status"] as? String {
+                    case "done":
+                        let file = try await engine.result(id,video: false);defer { try? FileManager.default.removeItem(at: file) }
+                        let result = try IOSPhotoDecoder.decode(Data(contentsOf: file))
+                        try Task.checkCancellation();guard !FamilyAccess.shared.restricted else { throw CancellationError() }
+                        image = result;resetLayers();percent = 100;message = "Computer image generated · seed \(number). Review model output before study use";return
+                    case "failed","cancelled": throw LocalFailure(message: status["error"] as? String ?? "Computer generation stopped")
+                    default: message = "Computer image job: \(status["status"] as? String ?? "queued")";try await Task.sleep(nanoseconds: 2_000_000_000)
+                    }
+                }
+            } catch { if let (engine,id) = computerJob { try? await engine.cancel(id) };message = error.localizedDescription }
+        }
+    }
     func motion(host: String,token: String) {
+        guard !FamilyAccess.shared.restricted else { return }
         guard !working,let image = composite() else { return }
         let engine = ComputerEngine(host: host,token: token),text = prompt,excluded = negative,number = seed
         working = true;percent = 0;UIApplication.shared.isIdleTimerDisabled = true
@@ -151,6 +197,8 @@ struct ForgeView: View {
     @State private var showExport = false
     @State private var exportData = Data()
     @State private var showSettings = false
+    @EnvironmentObject private var family: FamilyAccess
+    @State private var showFamilyControls = false
     @State private var showLibrary = false
     @State private var showScience = false
     @State private var erasing = false
@@ -159,6 +207,10 @@ struct ForgeView: View {
     @AppStorage("computerHost") private var computerHost = ""
     @State private var computerToken = ""
     @State private var motionConsent = false
+    @State private var computerImageConsent = false
+    @State private var imageGuidance = "none"
+    @State private var imageGuidanceScale = 0.7
+    @State private var computerUsesPhoto = false
     @State private var deleteRecord: ProjectRecord?
     @State private var folderFilter = "\u{0}"
     @State private var moveRecord: ProjectRecord?
@@ -181,6 +233,7 @@ struct ForgeView: View {
                 ScrollView { VStack(alignment: .leading,spacing: 16) {
                     TextEditor(text: $store.prompt).frame(minHeight: 120).overlay(RoundedRectangle(cornerRadius: 10).stroke(.secondary)).accessibilityLabel("Generation prompt").disabled(store.working)
                     TextField("Negative prompt",text: $store.negative).textFieldStyle(.roundedBorder).disabled(store.working)
+                    GenerationControlsView(profile: $store.profile,steps: $store.inferenceSteps,strength: $store.photoStrength,prompt: store.prompt).disabled(store.working)
                     Picker("Generation resolution",selection: $store.resolution) { Text("256px preview · 6 GB RAM").tag(256);Text("512px standard · 8 GB RAM").tag(512) }.disabled(store.working)
                     HStack { Button("Generate on device") { store.generate(photo: false) };Button("Photo conversion") { store.generate(photo: true) } }.buttonStyle(.borderedProminent).disabled(store.working)
                     if let image = store.image {
@@ -211,6 +264,13 @@ struct ForgeView: View {
                     TextField("Folder for new saves · blank means Unfiled",text: $store.folder).textFieldStyle(.roundedBorder).accessibilityLabel("Project folder")
                     HStack { Button("Save project") { store.save() };Button("Export PNG") { exportData = store.composite()?.pngData() ?? Data();showExport = true } }.disabled(store.image == nil || store.working)
                     Button("Create 30-second reveal video") { store.video() }.disabled(store.image == nil || store.working)
+                    DisclosureGroup("Local computer image generation") {
+                        Toggle("Use current image for photo conversion",isOn: $computerUsesPhoto)
+                        Picker("Image guidance",selection: $imageGuidance) { Text("None").tag("none");Text("ControlNet Canny edges from photo").tag("canny");Text("ControlNet prepared depth map").tag("depth");Text("ControlNet prepared OpenPose map").tag("pose");Text("IP-Adapter reference photo").tag("reference") }
+                        Slider(value: $imageGuidanceScale,in: 0...1) { Text("Image guidance strength") }
+                        Text("Requires your own computer and separately prepared local SD 1.x guidance weights. Depth and pose modes expect prepared maps.").font(.footnote)
+                        Button("Generate image with local computer") { computerImageConsent = true }.disabled(store.working)
+                    }
                     Button("Generate AI motion video on local computer") { motionConsent = true }.disabled(store.image == nil || store.working)
                     if let video = store.videoURL { ShareLink("Share video",item: video) }
                     if store.working { ProgressView(value: Double(store.percent),total: 100);Button("Cancel") { store.cancel() } }
@@ -223,11 +283,16 @@ struct ForgeView: View {
                 }
             }
         }.navigationTitle("StudyForge").task { store.refresh();if store.image == nil { do { if let draft = try IOSProjectStore().draft() { store.open(draft);store.message = "Recovered editable draft" } } catch { store.message = error.localizedDescription } } }
+        .onDisappear { if family.restricted { store.cancel() } }
         .onChange(of: scenePhase) { _,phase in if phase == .background && store.image != nil { store.save(draft: true) } }
         .onChange(of: photo) { _,item in Task {
             do { guard let data = try await item?.loadTransferable(type: Data.self) else { return };store.image = try IOSPhotoDecoder.decode(data);store.resetLayers();store.message = "Photo imported locally" }
             catch { store.message = error.localizedDescription }
         } }
+        .alert("Send an image job to your local computer?",isPresented: $computerImageConsent) {
+            Button("Generate") { store.computerImage(host: computerHost,token: computerToken,control: imageGuidance,scale: imageGuidanceScale,photo: computerUsesPhoto) }
+            Button("Cancel",role: .cancel) {}
+        } message: { Text("Your prompt and selected photo/map are sent to the computer host in Settings over your local network. Use your own computer and a trusted network. No cloud or paid API is used.") }
         .alert("Send photo to your local computer?",isPresented: $motionConsent) {
             Button("Generate") { store.motion(host: computerHost,token: computerToken) }
             Button("Cancel",role: .cancel) {}
@@ -235,7 +300,9 @@ struct ForgeView: View {
         .fileImporter(isPresented: $showModelPicker,allowedContentTypes: [.data]) { result in do { store.install(try result.get()) } catch { store.message = error.localizedDescription } }
         .fileExporter(isPresented: $showExport,document: ExportDocument(data: exportData),contentType: .png,defaultFilename: "StudyForge") { result in if case .failure(let error) = result { store.message = error.localizedDescription } }
         .sheet(isPresented: $showScience) { StudyExplorerView(hasExistingImage: store.image != nil) { image,prompt in store.prompt = prompt;if let image { store.image = image;store.resetLayers() };store.message = "Study view selected; model-generated refinements require review" } }
+        .sheet(isPresented: $showFamilyControls) { FamilyControlsView() }
         .sheet(isPresented: $showSettings) { NavigationStack { Form {
+            Button("Family access · parent PIN") { showSettings = false;showFamilyControls = true }
             Picker("Appearance",selection: $appearance) { Text("System").tag("system");Text("Light").tag("light");Text("Dark").tag("dark") }
             Button("Import local GGUF model") { showSettings = false;showModelPicker = true }.disabled(store.working)
             Text("No model weights are bundled. Use a complete SD 1.x GGUF and retain its model license.")

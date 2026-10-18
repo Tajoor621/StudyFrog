@@ -29,6 +29,8 @@
         <meta-data android:name="google_analytics_default_allow_ad_personalization_signals" android:value="false" />
         <activity android:name="com.scenio.mth.science.StudyExplorerActivity" android:exported="false"
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <activity android:name="com.scenio.mth.family.FamilyControlsActivity" android:exported="false" />
+        <activity android:name="com.scenio.mth.family.FamilyHomeActivity" android:exported="false" />
         <activity android:name="com.scenio.mth.MainActivity" android:exported="false" />
         <activity android:name="com.scenio.mth.features.FeaturesActivity" android:exported="true"
             android:theme="@android:style/Theme.Material.Light.NoActionBar">

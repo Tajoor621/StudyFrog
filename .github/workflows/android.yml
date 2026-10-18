@@ -165,7 +165,7 @@ jobs:
 
         sudo apt-get install -y ffmpeg'
     - name: Install engine dependency
-      run: python -m pip install -r engine/requirements.txt
+      run: python -m pip install -r engine/requirements-test.txt
     - name: Run local engine tests
       working-directory: engine
       run: |

@@ -50,15 +50,18 @@ class StudyExplorerActivity:ComponentActivity() {
         node.next?.let { id -> action("Next phase: "+catalog.node(id).title) { select(id) } }
         val previous=node.parent ?: catalog.nodes.firstOrNull { it.next==selected }?.id
         previous?.let { id -> action("Previous view: "+catalog.node(id).title) { select(id) } }
-        body.addView(notes)
-        action("Open diagram in editor") { finishWith("diagram") }
-        action("Use this view as generation prompt") { finishWith("prompt") }
+        if(!com.scenio.mth.family.FamilyPolicy.restricted(this)) {
+            body.addView(notes)
+            action("Open diagram in editor") { finishWith("diagram") }
+            action("Use this view as generation prompt") { finishWith("prompt") }
+        }
         body.addView(text(catalog.notice,15f))
         body.addView(text("Sources",19f).apply { androidx.core.view.ViewCompat.setAccessibilityHeading(this,true) })
-        catalog.sources.filter { it.id in node.sourceIds }.forEach { source -> action(source.title+" · opens browser") { runCatching { startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(source.url))) }.onFailure { Toast.makeText(this,"No browser is available; open the source URL from the documentation",Toast.LENGTH_LONG).show() } } }
-        action("Return to studio") { finish() }
+        catalog.sources.filter { it.id in node.sourceIds }.forEach { source -> if(com.scenio.mth.family.FamilyPolicy.restricted(this)) body.addView(text(source.title)) else action(source.title+" · opens browser") { runCatching { startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(source.url))) }.onFailure { Toast.makeText(this,"No browser is available; open the source URL from the documentation",Toast.LENGTH_LONG).show() } } }
+        action(if(com.scenio.mth.family.FamilyPolicy.restricted(this)) "Return to study-only home" else "Return to studio") { finish() }
     }
     private fun finishWith(action:String) {
+        if(com.scenio.mth.family.FamilyPolicy.restricted(this)) return
         setResult(RESULT_OK,Intent().putExtra("study-id",selected).putExtra("study-action",action).putExtra("study-labels",showLabels).putExtra("study-notes",notes.text.toString()));finish()
     }
     override fun onSaveInstanceState(outState:Bundle) { outState.putString("selected",selected);outState.putBoolean("labels",showLabels);outState.putString("notes",notes.text.toString());super.onSaveInstanceState(outState) }

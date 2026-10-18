@@ -6,3 +6,6 @@ accelerate==1.4.0
 safetensors==0.5.3
 sentencepiece==0.2.0
 protobuf==5.29.3
+
+numpy==1.26.4
+opencv-python-headless==4.11.0.86

@@ -7,8 +7,8 @@ struct LocalFailure: LocalizedError {
     var errorDescription: String? { message }
 }
 struct NativeDiffusion {
-    static func generate(model: URL, prompt: String, negative: String, size: Int, steps: Int, seed: Int64, initial: UIImage?) throws -> UIImage {
-        guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, prompt.count <= 2000, negative.count <= 2000, !prompt.contains("\0"), !negative.contains("\0"), [256,512].contains(size), (1...40).contains(steps) else { throw LocalFailure(message: "Invalid prompt or inference parameters") }
+    static func generate(model: URL, prompt: String, negative: String, size: Int, steps: Int, seed: Int64, initial: UIImage?,strength: Double = 0.65) throws -> UIImage {
+        guard strength.isFinite,(0.1...1).contains(strength),!prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, prompt.count <= 2000, negative.count <= 2000, !prompt.contains("\0"), !negative.contains("\0"), [256,512].contains(size), (1...40).contains(steps) else { throw LocalFailure(message: "Invalid prompt or inference parameters") }
         guard ProcessInfo.processInfo.physicalMemory >= (size == 512 ? 7_500_000_000 : 5_500_000_000) else { throw LocalFailure(message: "This resolution requires 6 GB (256px) or 8 GB (512px) device memory") }
         var input = [UInt8]()
         if let initial {
@@ -32,7 +32,7 @@ struct NativeDiffusion {
         var output: UnsafeMutablePointer<UInt8>?, error: UnsafeMutablePointer<CChar>?
         let ok = model.path.withCString { modelPath in prompt.withCString { text in negative.withCString { excluded in
             input.withUnsafeBufferPointer { pixels in
-                sf_generate(modelPath,text,excluded,Int32(size),Int32(size),Int32(steps),seed,0.65,initial == nil ? nil : pixels.baseAddress,&output,&error)
+                sf_generate(modelPath,text,excluded,Int32(size),Int32(size),Int32(steps),seed,Float(strength),initial == nil ? nil : pixels.baseAddress,&output,&error)
             }
         } } }
         defer { sf_free(output); sf_free(error) }

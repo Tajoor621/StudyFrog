@@ -11,6 +11,7 @@ struct StudyExplorerView: View {
     @State private var replace = false
     @State private var pendingDiagram = false
     let hasExistingImage: Bool
+    var readOnly = false
     let use: (UIImage?,String) -> Void
     var body: some View {
         NavigationStack {
@@ -26,12 +27,14 @@ struct StudyExplorerView: View {
                     ForEach(node.children,id: \.self) { id in Button("Explore deeper: "+((try? catalog.node(id).title) ?? id)) { selected = id } }
                     if let next = node.next { Button("Next phase: "+((try? catalog.node(next).title) ?? next)) { selected = next } }
                     if let previous = node.parent ?? catalog.nodes.first(where: { $0.next == selected })?.id { Button("Previous view: "+((try? catalog.node(previous).title) ?? previous)) { selected = previous } }
+                    if !readOnly {
                     TextField("Additional generation instructions",text: $notes,axis: .vertical).textFieldStyle(.roundedBorder).onChange(of: notes) { _,value in if value.count > 500 { notes = String(value.prefix(500)) } }
                     Button("Open diagram in editor") { request(true) }.buttonStyle(.borderedProminent)
                     Button("Use this view as generation prompt") { request(false) }
+                    }
                     Text(catalog.notice).font(.footnote)
                     Text("Sources").font(.headline).accessibilityAddTraits(.isHeader)
-                    ForEach(catalog.sources.filter { node.sourceIds.contains($0.id) }) { source in Link(source.title+" · opens browser",destination: source.url) }
+                    ForEach(catalog.sources.filter { node.sourceIds.contains($0.id) }) { source in if readOnly { Text(source.title) } else { Link(source.title+" · opens browser",destination: source.url) } }
                 }
                 if !error.isEmpty { Text(error).foregroundStyle(.red) }
             }.padding() }

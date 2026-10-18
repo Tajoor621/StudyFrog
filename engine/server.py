@@ -16,6 +16,7 @@ JOBS = queue.Queue(maxsize=2)
 LOCK = threading.Lock()
 UUID = re.compile(r"^[0-9a-f]{32}$")
 PIPE = None
+PIPE_KEY = None
 CANCELLED = set()
 class JobCancelled(Exception): pass
 
@@ -82,7 +83,12 @@ def validate(body):
         if not isinstance(picture,str) or len(picture)>12_000_000: raise ValueError("Image too large")
         decode_image(picture)  # Reject corrupt input before queueing it.
     if kind in ("video","motion","refine") and not picture: raise ValueError("Video/refine requires an image")
-    return dict(kind=kind,prompt=prompt,negative=negative,image=picture,**values)
+    from image_guidance import MODES
+    control=body.get("control","none");scale=body.get("control_scale",.7)
+    if not isinstance(control,str) or control not in MODES: raise ValueError("Unknown image-guidance mode")
+    if type(scale) not in (int,float) or not 0<=scale<=1: raise ValueError("Image guidance strength must be 0–1")
+    if control!="none" and (kind!="image" or not picture): raise ValueError("Image guidance requires an image-generation job with a photo or prepared map")
+    return dict(kind=kind,prompt=prompt,negative=negative,image=picture,control=control,control_scale=float(scale),**values)
 
 def decode_image(encoded):
     try:
@@ -108,8 +114,8 @@ def schematic(prompt, width, height):
 
 def release_image_pipeline():
     """Single-worker boundary: free cached SD before/after a motion-model job."""
-    global PIPE
-    PIPE=None
+    global PIPE, PIPE_KEY
+    PIPE=None;PIPE_KEY=None
     gc.collect()
     torch=sys.modules.get("torch")
     if torch is not None:
@@ -119,25 +125,34 @@ def release_image_pipeline():
             pass  # A failed CUDA context must not terminate the job worker during cleanup.
 
 def diffusion(job):
-    global PIPE
+    global PIPE, PIPE_KEY
     checkpoint(job)
     model=os.environ.get("STUDYFORGE_MODEL", "")
     if not model or not Path(model).is_dir():
         raise RuntimeError("Set STUDYFORGE_MODEL to a local SD 1.x Diffusers folder with its safety checker. No model is bundled.")
     import torch
-    from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline
+    from diffusers import StableDiffusionImg2ImgPipeline
+    from image_guidance import cache_key, load_pipeline, condition
+    mode=job.get("control","none");key=cache_key(model,mode)
+    if PIPE_KEY!=key: release_image_pipeline()
     if PIPE is None:
         dtype=torch.float16 if torch.cuda.is_available() else torch.float32
-        candidate=StableDiffusionPipeline.from_pretrained(model,local_files_only=True,torch_dtype=dtype,use_safetensors=True)
+        candidate=load_pipeline(model,mode,dtype)
         if candidate.safety_checker is None: raise RuntimeError("This build requires a model safety checker")
         candidate.enable_attention_slicing()
         candidate.enable_vae_tiling()
         candidate.to("cuda" if torch.cuda.is_available() else "cpu")
-        PIPE=candidate
+        PIPE=candidate;PIPE_KEY=key
     generator=torch.Generator(device=PIPE.device).manual_seed(job["seed"])
     args=dict(prompt=job["prompt"],negative_prompt=job["negative"],num_inference_steps=job["steps"],generator=generator,
         guidance_scale=job.get("guidance",7.5),callback_on_step_end=lambda pipe,step,timestep,kwargs: (checkpoint(job),kwargs)[1])
-    if job.get("image"):
+    if mode!="none":
+        source=condition(decode_image(job["image"]),mode,job["width"],job["height"])
+        if mode=="reference":
+            PIPE.set_ip_adapter_scale(job.get("control_scale",.7))
+            result=PIPE(ip_adapter_image=source,width=job["width"],height=job["height"],**args)
+        else: result=PIPE(image=source,controlnet_conditioning_scale=job.get("control_scale",.7),width=job["width"],height=job["height"],**args)
+    elif job.get("image"):
         pipe=StableDiffusionImg2ImgPipeline(**PIPE.components)
         source=ImageOps.fit(decode_image(job["image"]),(job["width"],job["height"]))
         result=pipe(image=source,strength=job.get("strength",.65),**args)
@@ -278,7 +293,7 @@ class Handler(BaseHTTPRequestHandler):
                     except (OSError,ValueError): continue
                 self.reply(200,{"jobs":items});return
             if self.path=="/health":
-                self.reply(200,{"local_only":True,"model_configured":Path(os.environ.get("STUDYFORGE_MODEL","/__unconfigured__")).is_dir(),"video":"30-second reveal; optional LTX motion model", "motion_configured":Path(os.environ.get("STUDYFORGE_VIDEO_MODEL","/__unconfigured__")).is_dir()});return
+                self.reply(200,{"local_only":True,"model_configured":Path(os.environ.get("STUDYFORGE_MODEL","/__unconfigured__")).is_dir(),"video":"30-second reveal; optional LTX motion model", "motion_configured":Path(os.environ.get("STUDYFORGE_VIDEO_MODEL","/__unconfigured__")).is_dir(), "image_guidance":__import__("image_guidance").capabilities()});return
             prefix,job_id=self.path.strip("/").split("/",1)
             if prefix not in ("jobs","results"): raise ValueError("Unknown route")
             job=read(job_id)

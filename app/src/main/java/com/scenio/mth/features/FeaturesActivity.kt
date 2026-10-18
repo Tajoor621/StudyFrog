@@ -27,6 +27,7 @@ import com.scenio.mth.features.ui.*
 class FeaturesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if(com.scenio.mth.family.FamilyPolicy.restricted(this)) { com.scenio.mth.family.FamilyControlsActivity.openHome(this);finish();return }
         val graph = FeatureRuntime.graph(this)
         setContent {
             val vm: FeatureViewModel = viewModel(factory = FeatureViewModel.Factory(graph))
@@ -102,4 +103,9 @@ class FeaturesActivity : ComponentActivity() {
             }
         }
     }
+    override fun onResume() {
+        super.onResume()
+        if(com.scenio.mth.family.FamilyPolicy.restricted(this)) { com.scenio.mth.family.FamilyControlsActivity.openHome(this);finish() }
+    }
+
 }

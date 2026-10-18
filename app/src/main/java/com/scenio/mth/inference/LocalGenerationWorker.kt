@@ -20,6 +20,7 @@ import android.os.SystemClock
 
 class LocalGenerationWorker(context:Context,params:WorkerParameters):CoroutineWorker(context,params) {
     override suspend fun doWork():Result = supervisorScope {
+        if(com.scenio.mth.family.FamilyPolicy.restricted(applicationContext)) return@supervisorScope Result.failure(workDataOf("error" to "Generation is locked by family controls"))
         setForeground(foreground())
         val models=ModelStore(applicationContext)
         val model=models.model
@@ -45,12 +46,15 @@ class LocalGenerationWorker(context:Context,params:WorkerParameters):CoroutineWo
                 finally { if(scaled!==bitmap) scaled.recycle();bitmap.recycle();file.delete() }
             }
             currentCoroutineContext().ensureActive()
+            check(!com.scenio.mth.family.FamilyPolicy.restricted(applicationContext)) { "Generation is locked by family controls" }
             val pixels=NativeEngine.generate(model.path.toByteArray(),prompt.toByteArray(),negative.toByteArray(),size,steps,data.optLong("seed",42),data.optDouble("strength",.65).toFloat(),initial,requestToken)
             currentCoroutineContext().ensureActive()
             val bitmap=Bitmap.createBitmap(pixels,size,size,Bitmap.Config.ARGB_8888)
             try { output.outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.PNG,100,it)) } } finally { bitmap.recycle() }
         }
-        val monitor=launch { while(isActive) { peakNativeBytes=maxOf(peakNativeBytes,android.os.Debug.getNativeHeapAllocatedSize());setProgress(workDataOf("percent" to NativeEngine.progress()));delay(500) } }
+        val monitor=launch { while(isActive) {
+            if(com.scenio.mth.family.FamilyPolicy.restricted(applicationContext)) { NativeEngine.cancelRequest(requestToken);task.cancel();break }
+            peakNativeBytes=maxOf(peakNativeBytes,android.os.Debug.getNativeHeapAllocatedSize());setProgress(workDataOf("percent" to NativeEngine.progress()));delay(500) } }
         try {
             task.awaitGeneration { NativeEngine.cancelRequest(requestToken) }
             val report=JSONObject().put("elapsed_ms",SystemClock.elapsedRealtime()-started).put("sampled_peak_native_heap_bytes",peakNativeBytes)

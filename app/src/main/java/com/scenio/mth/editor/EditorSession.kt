@@ -7,6 +7,7 @@ import com.scenio.mth.ForgeCanvas
 class EditorSession : ViewModel() {
     var snapshot: ForgeCanvas.Snapshot? = null
     var folder = ""
+    var profile = com.scenio.mth.generation.GenerationProfile()
     var prompt = ""
     var negative = ""
     var mode = 0

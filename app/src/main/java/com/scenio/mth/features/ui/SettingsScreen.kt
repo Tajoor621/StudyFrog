@@ -56,6 +56,7 @@ fun SettingsScreen(settings: FeatureSettings, vm: FeatureViewModel, busy: Boolea
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.sf_settings), style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.semantics { heading() })
+        OutlinedButton(onClick={ context.startActivity(Intent(context,com.scenio.mth.family.FamilyControlsActivity::class.java)) }) { Text("Family access · parent PIN") }
         Text(stringResource(R.string.sf_theme))
         Column(Modifier.selectableGroup()) {
         ThemeMode.entries.forEach { mode ->
