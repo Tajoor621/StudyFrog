@@ -6,6 +6,7 @@ import com.scenio.mth.ForgeCanvas
 /** Retain editor content over configuration changes without retaining an Activity. */
 class EditorSession : ViewModel() {
     var snapshot: ForgeCanvas.Snapshot? = null
+    var folder = ""
     var prompt = ""
     var negative = ""
     var mode = 0

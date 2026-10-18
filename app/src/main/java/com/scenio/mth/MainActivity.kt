@@ -49,6 +49,7 @@ class MainActivity : ComponentActivity() {
     private val projects by lazy { ProjectStore(applicationContext) }
     private var pendingExport: File? = null
     private var dirty = false
+    private var projectFolder = ""
     private var editRevision = 0L
     private var darkPalette = true
     private lateinit var canvas: ForgeCanvas
@@ -81,6 +82,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         latestJob=prefs.getString("latestJob",null)
+        projectFolder=session.folder
         pendingExport=savedInstanceState?.getString("pendingExport")?.let { path ->
             File(path).takeIf { it.isFile && it.canonicalFile.parentFile==cacheDir.canonicalFile }
         }
@@ -126,19 +128,29 @@ class MainActivity : ComponentActivity() {
         root.addView(button("Create offline schematic") { canvas.image=canvas.diagram(prompt.text.toString(),level.selectedItem.toString());say("Template generated on this device. This is not AI inference.") })
         root.addView(button("Import photo") { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type="image/*";addCategory(Intent.CATEGORY_OPENABLE) },10) })
         root.addView(Switch(this).apply { text="Draw / annotate on ink layer";setTextColor(Color.WHITE);setOnCheckedChangeListener { _,on -> canvas.drawing=on } })
-        root.addView(button("Undo ink") { canvas.undo() })
-        root.addView(button("Redo ink") { canvas.redo() })
+        root.addView(button("Undo edit") { canvas.undo() })
+        root.addView(button("Redo edit") { canvas.redo() })
         root.addView(text("Brush size"))
         root.addView(SeekBar(this).apply { max=19;progress=3;contentDescription="Brush size";setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar:SeekBar?,value:Int,fromUser:Boolean) { canvas.inkSize=(value+1)/1000f }
             override fun onStartTrackingTouch(bar:SeekBar?) {}
             override fun onStopTrackingTouch(bar:SeekBar?) {}
         }) })
-        val tools=choices(listOf("Brush","Erase mask","Line","Rectangle","Ellipse"));root.addView(tools)
+        val tools=choices(listOf("Brush","Erase prior marks","Mask: hide","Mask: restore","Line","Rectangle","Ellipse","Perspective ray"));root.addView(tools)
         tools.onItemSelectedListener=object:AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent:AdapterView<*>?,view:View?,position:Int,id:Long) { canvas.tool=listOf("brush","erase","line","rectangle","ellipse")[position] }
+            override fun onItemSelected(parent:AdapterView<*>?,view:View?,position:Int,id:Long) { canvas.tool=listOf("brush","erase","mask-hide","mask-show","line","rectangle","ellipse","perspective")[position] }
             override fun onNothingSelected(parent:AdapterView<*>?) {}
         }
+        root.addView(button("Import photo as editable layer") { if(canvas.image==null) say("Create or import a base image first") else startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type="image/*";addCategory(Intent.CATEGORY_OPENABLE) },15) })
+        root.addView(button("Guides, symmetry and stabilization") { guideControls() })
+        root.addView(Switch(this).apply { text="Stylus tilt affects brush width";setOnCheckedChangeListener { _,on -> canvas.pencilTilt=on } })
+        val fonts=choices(listOf("Sans serif","Serif","Monospace"));root.addView(text("Font for new text labels"));root.addView(fonts)
+        fonts.onItemSelectedListener=object:AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent:AdapterView<*>?,view:View?,position:Int,id:Long) { canvas.font=listOf("sans-serif","serif","monospace")[position] }
+            override fun onNothingSelected(parent:AdapterView<*>?) {}
+        }
+        root.addView(button("Combine last two closed shapes") { AlertDialog.Builder(this).setTitle("Filled vector result · active layer").setItems(arrayOf("Union","Intersect","Subtract second shape","Exclusive difference")) { _,which -> runCatching { canvas.combineShapes(listOf(android.graphics.Path.Op.UNION,android.graphics.Path.Op.INTERSECT,android.graphics.Path.Op.DIFFERENCE,android.graphics.Path.Op.XOR)[which]) }.onFailure { say(it.message ?: "Cannot combine these shapes") } }.setNegativeButton("Cancel",null).show() })
+        root.addView(button("Current project folder") { folderDialog(projectFolder) { projectFolder=it;markEdited();say("New saves use ${it.ifBlank { "Unfiled" }}") } })
         root.addView(button("Layers · visibility, opacity, blend and order") { layerControls() })
         root.addView(button("Edit text labels / positions") { editLabels() })
         root.addView(button("Add editable text label") { val field=EditText(this).apply { hint="Label text" };AlertDialog.Builder(this).setTitle("Text label").setView(field).setPositiveButton("Add") { _,_ -> runCatching { canvas.label(field.text.toString()) }.onFailure { say(it.message ?: "Cannot add label") } }.setNegativeButton("Cancel",null).show() })
@@ -150,7 +162,7 @@ class MainActivity : ComponentActivity() {
         root.addView(button("Create 30-second video on this phone") { localVideo() })
         root.addView(button("Export SVG · editable shapes and text") {
             if(canvas.image==null) say("Import or generate an image first") else {
-                val snapshot=canvas.snapshot();background { val file=File(cacheDir,"vector-${UUID.randomUUID()}.svg");file.writeText(com.scenio.mth.editor.VectorExporter.svg(snapshot));ui { export(file,"image/svg+xml","studyforge.svg") } }
+                val snapshot=canvas.snapshot();background { val file=File(cacheDir,"vector-${UUID.randomUUID()}.svg");file.bufferedWriter().use { com.scenio.mth.editor.VectorExporter.write(snapshot,it) };ui { export(file,"image/svg+xml","studyforge.svg") } }
             }
         })
         root.addView(button("Export PNG") { exportPng() })
@@ -220,7 +232,7 @@ class MainActivity : ComponentActivity() {
         }
     }
     private fun metadata() = JSONObject().put("prompt",prompt.text.toString()).put("negative",negative.text.toString())
-        .put("seed",seed.text.toString()).put("strength",strength.progress+10).put("mode",mode.selectedItem.toString()).put("level",level.selectedItem.toString()).put("steps",steps.progress+10)
+        .put("folder",projectFolder).put("seed",seed.text.toString()).put("strength",strength.progress+10).put("mode",mode.selectedItem.toString()).put("level",level.selectedItem.toString()).put("steps",steps.progress+10)
     private fun ui(block:()->Unit) { runOnUiThread { if(!isFinishing && !isDestroyed) block() } }
     private fun markEdited() { dirty=true;editRevision++ }
     private fun saveProject() {
@@ -229,7 +241,7 @@ class MainActivity : ComponentActivity() {
         background { val id=projects.save(snapshot,meta);ui { progress("project:$id",1,1);if(editRevision==savedRevision) dirty=false;say("Saved editable image, ink layer and prompt") } }
     }
     private fun applyProject(loaded:com.scenio.mth.editor.LoadedProject) {
-        canvas.restore(loaded.snapshot);val meta=loaded.info.meta
+        canvas.restore(loaded.snapshot);val meta=loaded.info.meta;projectFolder=loaded.info.folder
         prompt.setText(meta.optString("prompt"));negative.setText(meta.optString("negative"))
         (0 until mode.adapter.count).firstOrNull { mode.adapter.getItem(it).toString()==meta.optString("mode") }?.let { mode.setSelection(it) }
         (0 until level.adapter.count).firstOrNull { level.adapter.getItem(it).toString()==meta.optString("level") }?.let { level.setSelection(it) }
@@ -240,7 +252,7 @@ class MainActivity : ComponentActivity() {
         AlertDialog.Builder(this).setTitle("Layers · top entry is the front layer").setItems((layers.reversed().map { "${if(it.id==canvas.activeLayer) "✓ " else ""}${it.name} · ${if(it.visible) "visible" else "hidden"}" }+"Add layer").toTypedArray()) { _,index ->
             if(index==layers.size) { runCatching { canvas.addLayer() }.onFailure { say(it.message ?: "Cannot add layer") };return@setItems }
             val layer=layers.reversed()[index];canvas.selectLayer(layer.id)
-            AlertDialog.Builder(this).setTitle(layer.name).setItems(arrayOf("Select for editing","Rename","Show / hide","Opacity","Blend mode","Move forward","Move backward","Delete layer")) { _,action ->
+            AlertDialog.Builder(this).setTitle(layer.name).setItems(arrayOf("Select for editing","Rename","Show / hide","Opacity","Blend mode","Move forward","Move backward","Delete layer","Move, scale and rotate","Enable / disable mask","Clear mask")) { _,action ->
                 when(action) {
                     1 -> { val name=EditText(this).apply { setText(layer.name) };AlertDialog.Builder(this).setTitle("Layer name").setView(name).setPositiveButton("Save") { _,_ -> runCatching { canvas.updateLayer(layer.copy(name=name.text.toString())) }.onFailure { say("Use a name of 1–80 characters") } }.setNegativeButton("Cancel",null).show() }
                     2 -> canvas.updateLayer(layer.copy(visible=!layer.visible))
@@ -248,10 +260,38 @@ class MainActivity : ComponentActivity() {
                     4 -> AlertDialog.Builder(this).setTitle("Blend mode").setItems(arrayOf("Normal","Multiply","Screen")) { _,choice -> canvas.updateLayer(layer.copy(blend=listOf("normal","multiply","screen")[choice])) }.show()
                     5 -> canvas.moveLayer(layer.id,1)
                     6 -> canvas.moveLayer(layer.id,-1)
+                    8 -> transformLayer(layer)
+                    9 -> canvas.updateLayer(layer.copy(maskEnabled=!layer.maskEnabled))
+                    10 -> canvas.clearMask()
                     7 -> AlertDialog.Builder(this).setTitle("Delete this ink layer?").setPositiveButton("Delete") { _,_ -> runCatching { canvas.deleteLayer(layer.id) }.onFailure { say("Keep at least one editable layer") } }.setNegativeButton("Cancel",null).show()
                 }
             }.show()
         }.setNegativeButton("Close",null).show()
+    }
+    private fun folderDialog(initial:String,apply:(String)->Unit) {
+        val field=EditText(this).apply { hint="Folder name · blank means Unfiled";setText(initial);filters=arrayOf(android.text.InputFilter.LengthFilter(80));setSingleLine() }
+        AlertDialog.Builder(this).setTitle("Project folder").setView(field).setPositiveButton("Apply") { _,_ ->
+            val value=field.text.toString().trim();if(value.any { it.isISOControl() }) say("Use a folder name without control characters") else apply(value)
+        }.setNegativeButton("Cancel",null).show()
+    }
+    private fun transformLayer(layer:ForgeCanvas.InkLayer) {
+        val form=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL;setPadding(24,8,24,8) }
+        fun slider(label:String,limit:Int,value:Int)=SeekBar(this).apply { max=limit;progress=value;contentDescription=label;form.addView(text(label));form.addView(this) }
+        val x=slider("Horizontal shift: −100 to 100 percent",200,((layer.offsetX+1)*100).toInt())
+        val y=slider("Vertical shift: −100 to 100 percent",200,((layer.offsetY+1)*100).toInt())
+        val scale=slider("Scale: 10 to 400 percent",390,(layer.scale*100-10).toInt())
+        val rotation=slider("Rotation: −180 to 180 degrees",360,(layer.rotation+180).toInt())
+        AlertDialog.Builder(this).setTitle("Layer transform").setView(form).setPositiveButton("Apply") { _,_ -> canvas.updateLayer(layer.copy(offsetX=(x.progress-100)/100f,offsetY=(y.progress-100)/100f,scale=(scale.progress+10)/100f,rotation=(rotation.progress-180).toFloat())) }
+            .setNeutralButton("Reset") { _,_ -> canvas.updateLayer(layer.copy(offsetX=0f,offsetY=0f,scale=1f,rotation=0f)) }.setNegativeButton("Cancel",null).show()
+    }
+    private fun guideControls() {
+        val current=canvas.guides;val form=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL;setPadding(24,8,24,8) }
+        form.addView(text("Grid subdivisions"));val grid=choices(listOf("Off","5","10","20")).apply { setSelection(listOf(0,5,10,20).indexOf(current.grid)) };form.addView(grid)
+        form.addView(text("Mirror new marks"));val symmetry=choices(listOf("None","Vertical","Horizontal","Both")).apply { setSelection(listOf("none","vertical","horizontal","both").indexOf(current.symmetry)) };form.addView(symmetry)
+        val rulers=Switch(this).apply { text="Percentage ruler";isChecked=current.rulers };form.addView(rulers)
+        val perspective=Switch(this).apply { text="One-point perspective guide";isChecked=current.perspective };form.addView(perspective)
+        form.addView(text("Stroke stabilization · 0 to 95 percent"));val smoothing=SeekBar(this).apply { max=95;progress=(current.stabilization*100).toInt();contentDescription="Stroke stabilization" };form.addView(smoothing)
+        AlertDialog.Builder(this).setTitle("Drawing guides").setView(form).setPositiveButton("Apply") { _,_ -> canvas.configureGuides(ForgeCanvas.Guides(listOf(0,5,10,20)[grid.selectedItemPosition],rulers.isChecked,listOf("none","vertical","horizontal","both")[symmetry.selectedItemPosition],perspective.isChecked,smoothing.progress/100f)) }.setNegativeButton("Cancel",null).show()
     }
     private fun editLabels() {
         val labels=canvas.textLabels()
@@ -268,18 +308,24 @@ class MainActivity : ComponentActivity() {
     private fun library() { background {
         val items=projects.list();ui {
             if(items.isEmpty()) { say("No saved projects yet");return@ui }
-            val search=EditText(this).apply { hint="Search project titles";setSingleLine() }
-            AlertDialog.Builder(this).setTitle("Local projects").setView(search).setPositiveButton("Search") { _,_ ->
-                val query=search.text.toString();val found=items.filter { it.title.contains(query,true) || it.meta.optString("prompt").contains(query,true) }
+            val form=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL }
+            val search=EditText(this).apply { hint="Search project titles or prompts";setSingleLine() };form.addView(search)
+            val folderNames=items.map { it.folder }.filter { it.isNotBlank() }.distinct().sorted()
+            val folder=choices(listOf("All folders","Unfiled")+folderNames);form.addView(folder)
+            AlertDialog.Builder(this).setTitle("Local projects").setView(form).setPositiveButton("Search") { _,_ ->
+                val query=search.text.toString();val found=items.filter { item ->
+                    (folder.selectedItemPosition==0 || item.folder==if(folder.selectedItemPosition==1) "" else folderNames[folder.selectedItemPosition-2]) && (item.title.contains(query,true) || item.meta.optString("prompt").contains(query,true))
+                }
                 if(found.isEmpty()) say("No matching projects") else AlertDialog.Builder(this).setTitle("Projects").setItems(found.map { it.title }.toTypedArray()) { _,index ->
                     val item=found[index]
-                    AlertDialog.Builder(this).setTitle(item.title).setItems(arrayOf("Open","Rename","Export editable backup","Delete")) { _,action ->
+                    AlertDialog.Builder(this).setTitle(item.title).setItems(arrayOf("Open","Rename","Export editable backup","Delete","Move to folder")) { _,action ->
                         when(action) {
                             0 -> background { val loaded=projects.load(item.id);ui { applyProject(loaded);say("Editable project loaded") } }
                             1 -> { val title=EditText(this).apply { setText(item.title) };AlertDialog.Builder(this).setTitle("Rename project").setView(title).setPositiveButton("Save") { _,_ ->
                                 val name=title.text.toString();background { projects.rename(item.id,name);ui { say("Project renamed") } }
                             }.setNegativeButton("Cancel",null).show() }
                             2 -> background { val file=File(cacheDir,"project-${item.id}.zip");projects.archive(item.id,file);ui { export(file,"application/zip","studyforge-project.zip") } }
+                            4 -> folderDialog(item.folder) { value -> background { projects.setFolder(item.id,value);ui { say("Project moved to ${value.ifBlank { "Unfiled" }}") } } }
                             3 -> AlertDialog.Builder(this).setTitle("Delete this project?").setMessage("The saved project will be removed from this device.").setPositiveButton("Delete") { _,_ ->
                                 background { projects.delete(item.id);ui { say("Project deleted") } }
                             }.setNegativeButton("Cancel",null).show()
@@ -319,6 +365,7 @@ class MainActivity : ComponentActivity() {
         }
         val uri=data?.data ?: return
         when(requestCode) {
+            15 -> background { val bitmap=PhotoDecoder.read(contentResolver,uri,1024);ui { runCatching { canvas.addRaster(bitmap) }.onSuccess { say("Photo added as an editable layer") }.onFailure { bitmap.recycle();say(it.message ?: "Cannot add photo layer") } } }
             10 -> background { val bitmap=PhotoDecoder.read(contentResolver,uri);ui { canvas.image=bitmap;say("Photo imported with its original orientation and aspect ratio") } }
             11 -> { val file=pendingExport;pendingExport=null
                 if(file==null) { say("Export data is no longer available; export again");return }
@@ -461,7 +508,7 @@ class MainActivity : ComponentActivity() {
         } catch(e:Exception) { file.delete();throw e } finally { c.disconnect() }
     }
     private fun rememberEditor() {
-        session.snapshot=canvas.snapshot();session.prompt=prompt.text.toString();session.negative=negative.text.toString()
+        session.folder=projectFolder;session.snapshot=canvas.snapshot();session.prompt=prompt.text.toString();session.negative=negative.text.toString()
         session.mode=mode.selectedItemPosition;session.level=level.selectedItemPosition;session.steps=steps.progress;session.seed=seed.text.toString()
         prefs.edit().putString("prompt",session.prompt).apply()
     }

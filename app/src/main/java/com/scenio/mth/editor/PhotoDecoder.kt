@@ -8,13 +8,14 @@ import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
 
 object PhotoDecoder {
-    fun read(resolver: ContentResolver, uri: Uri): Bitmap {
+    fun read(resolver: ContentResolver, uri: Uri,maxSide:Int=2048): Bitmap {
+        require(maxSide in 256..2048)
         val bounds=BitmapFactory.Options().apply { inJustDecodeBounds=true }
         resolver.openInputStream(uri).use { requireNotNull(it);BitmapFactory.decodeStream(it,null,bounds) }
         require(bounds.outWidth>0 && bounds.outHeight>0) { "Unsupported or damaged image" }
         require(bounds.outWidth.toLong()*bounds.outHeight<=100_000_000) { "Image dimensions exceed the import limit" }
         val options=BitmapFactory.Options().apply { inSampleSize=1 }
-        while(bounds.outWidth/options.inSampleSize>2048 || bounds.outHeight/options.inSampleSize>2048) options.inSampleSize*=2
+        while(bounds.outWidth/options.inSampleSize>maxSide || bounds.outHeight/options.inSampleSize>maxSide) options.inSampleSize*=2
         val decoded=resolver.openInputStream(uri).use { requireNotNull(it);requireNotNull(BitmapFactory.decodeStream(it,null,options)) }
         val orientation=resolver.openInputStream(uri).use { input ->
             if(input==null) ExifInterface.ORIENTATION_NORMAL else runCatching { ExifInterface(input).getAttributeInt(ExifInterface.TAG_ORIENTATION,ExifInterface.ORIENTATION_NORMAL) }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)

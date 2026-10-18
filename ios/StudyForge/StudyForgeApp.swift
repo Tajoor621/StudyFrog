@@ -50,6 +50,7 @@ struct DrawingCanvas: UIViewRepresentable {
     @Published var blends = ["normal"]
     @Published var selected = 0
     @Published var records = [ProjectRecord]()
+    @Published var folder = ""
     @Published var message = "Import a compatible local SD 1.x GGUF to generate offline."
     @Published var working = false
     @Published var percent = 0
@@ -75,14 +76,14 @@ struct DrawingCanvas: UIViewRepresentable {
     }
     func save(draft: Bool = false) {
         guard let image else { return }
-        do { try IOSProjectStore().save(title: String(prompt.prefix(80)),prompt: prompt,negative: negative,image: image,drawings: drawings,names: layerNames,visible: visible,opacity: opacity,blends: blends,draft: draft);refresh();message = "Editable project saved on this device" }
+        do { try IOSProjectStore().save(title: String(prompt.prefix(80)),prompt: prompt,negative: negative,image: image,drawings: drawings,names: layerNames,visible: visible,opacity: opacity,blends: blends,draft: draft,folder: folder);refresh();message = "Editable project saved on this device" }
         catch { message = error.localizedDescription }
     }
     func open(_ record: ProjectRecord) {
         do {
             let loaded = try IOSProjectStore().load(record);image = loaded.0;drawings = loaded.1;layerNames = record.layerNames
             if drawings.isEmpty { resetLayers() } else { visible = record.visible?.count == drawings.count ? record.visible! : Array(repeating: true,count: drawings.count);opacity = record.opacity?.count == drawings.count ? record.opacity! : Array(repeating: 1,count: drawings.count);blends = record.blends?.count == drawings.count ? record.blends! : Array(repeating: "normal",count: drawings.count);selected = 0 }
-            prompt = record.prompt;negative = record.negative;message = "Editable project opened"
+            prompt = record.prompt;negative = record.negative;folder = record.folder ?? "";message = "Editable project opened"
         } catch { message = error.localizedDescription }
     }
     func install(_ url: URL) {
@@ -159,6 +160,13 @@ struct ForgeView: View {
     @State private var computerToken = ""
     @State private var motionConsent = false
     @State private var deleteRecord: ProjectRecord?
+    @State private var folderFilter = "\u{0}"
+    @State private var moveRecord: ProjectRecord?
+    @State private var folderDraft = ""
+    private var folders: [String] { Array(Set(store.records.compactMap { $0.folder }.filter { !$0.isEmpty })).sorted() }
+    private var filteredRecords: [ProjectRecord] { store.records.filter {
+        (folderFilter == "\u{0}" || ($0.folder ?? "") == folderFilter) && (query.isEmpty || $0.title.localizedCaseInsensitiveContains(query) || $0.prompt.localizedCaseInsensitiveContains(query))
+    } }
     private func ink(_ i: Int) -> Binding<PKDrawing> { Binding(get: { i < store.drawings.count ? store.drawings[i] : PKDrawing() },set: { if i < store.drawings.count { store.drawings[i] = $0 } }) }
     var body: some View {
         NavigationStack {
@@ -200,6 +208,7 @@ struct ForgeView: View {
                     }
                     Button("Explore science · linked levels and labeled diagrams") { showScience = true }.disabled(store.working)
                     PhotosPicker("Import photo",selection: $photo,matching: .images).disabled(store.working)
+                    TextField("Folder for new saves · blank means Unfiled",text: $store.folder).textFieldStyle(.roundedBorder).accessibilityLabel("Project folder")
                     HStack { Button("Save project") { store.save() };Button("Export PNG") { exportData = store.composite()?.pngData() ?? Data();showExport = true } }.disabled(store.image == nil || store.working)
                     Button("Create 30-second reveal video") { store.video() }.disabled(store.image == nil || store.working)
                     Button("Generate AI motion video on local computer") { motionConsent = true }.disabled(store.image == nil || store.working)
@@ -244,10 +253,19 @@ struct ForgeView: View {
             Text("No cloud analytics SDK is included in this iOS build. Projects and models are excluded from automatic backups; export important results yourself.")
         }.navigationTitle("Settings").toolbar { Button("Done") { showSettings = false } } } }
         .sheet(isPresented: $showLibrary) { NavigationStack {
-            List(store.records.filter { query.isEmpty || $0.title.localizedCaseInsensitiveContains(query) }) { record in
+            List {
+                Picker("Folder",selection: $folderFilter) { Text("All folders").tag("\u{0}");Text("Unfiled").tag("");ForEach(folders,id: \.self) { Text($0).tag($0) } }
+                ForEach(filteredRecords) { record in
                 Button(record.title.isEmpty ? "Untitled project" : record.title) { store.open(record);showLibrary = false }
                     .swipeActions { Button("Delete",role: .destructive) { deleteRecord = record } }
+                    .contextMenu { Button("Move to folder") { folderDraft = record.folder ?? "";moveRecord = record } }
+                }
             }.searchable(text: $query).navigationTitle("Local projects").toolbar { Button("Done") { showLibrary = false } }
+            .sheet(item: $moveRecord) { record in NavigationStack { Form {
+                TextField("Folder · blank means Unfiled",text: $folderDraft)
+                Button("Move project") { do { try IOSProjectStore().setFolder(record,folder: folderDraft);store.refresh();folderFilter = "\u{0}";moveRecord = nil } catch { store.message = error.localizedDescription } }
+                Text(store.message).font(.footnote)
+            }.navigationTitle("Project folder").toolbar { Button("Cancel") { moveRecord = nil } } } }
             .alert("Delete this project?",isPresented: Binding(get: { deleteRecord != nil },set: { if !$0 { deleteRecord = nil } })) {
                 Button("Delete",role: .destructive) { if let record = deleteRecord { do { try IOSProjectStore().delete(record.id);store.refresh() } catch { store.message = error.localizedDescription } };deleteRecord = nil }
                 Button("Cancel",role: .cancel) { deleteRecord = nil }

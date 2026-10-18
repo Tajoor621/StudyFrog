@@ -22,20 +22,26 @@ class ProjectBackupTest {
     @Test fun backupRetainsEditableInkAndRenamedTitle() {
         val store=ProjectStore(context)
         val bitmap=Bitmap.createBitmap(80,120,Bitmap.Config.ARGB_8888)
-        val snapshot=ForgeCanvas.Snapshot(bitmap,listOf(ForgeCanvas.Stroke(mutableListOf(ForgeCanvas.Point(.2f,.3f,1f)),0xff00ff00.toInt(),.01f)))
+        val raster=Bitmap.createBitmap(50,50,Bitmap.Config.ARGB_8888).apply { eraseColor(android.graphics.Color.RED) }
+        val layer=ForgeCanvas.InkLayer(java.util.UUID.randomUUID().toString(),"Photo",raster=raster,offsetX=.2f,maskEnabled=false)
+        val snapshot=ForgeCanvas.Snapshot(bitmap,listOf(ForgeCanvas.Stroke(mutableListOf(ForgeCanvas.Point(.2f,.3f,1f)),0xff00ff00.toInt(),.01f)),listOf(ForgeCanvas.InkLayer("ink","Ink"),layer))
         val id=store.save(snapshot,JSONObject().put("prompt","Test plant"));val archive=File.createTempFile("project-test-",".zip",context.cacheDir)
         var imported:String?=null
         try {
-            store.rename(id,"Botany");store.archive(id,archive)
+            store.rename(id,"Botany");store.setFolder(id,"Biology");store.archive(id,archive)
             val restored=archive.inputStream().use { store.importArchive(it) };imported=restored
             val loaded=store.load(restored)
             try {
                 assertEquals("Botany",loaded.info.title)
+                assertEquals("Biology",loaded.info.folder)
+                assertEquals(.2f,loaded.snapshot.layers.last().offsetX,0f)
+                assertFalse(loaded.snapshot.layers.last().maskEnabled)
+                assertEquals(android.graphics.Color.RED,loaded.snapshot.layers.last().raster!!.getPixel(25,25))
                 assertEquals(80,loaded.snapshot.base!!.width);assertEquals(120,loaded.snapshot.base!!.height)
                 assertEquals(1,loaded.snapshot.strokes.size)
                 assertEquals(.2f,loaded.snapshot.strokes.first().points.first().x,.0001f)
-            } finally { loaded.snapshot.base?.recycle() }
-        } finally { bitmap.recycle();archive.delete();store.delete(id);imported?.let { store.delete(it) } }
+            } finally { loaded.snapshot.base?.recycle();loaded.snapshot.layers.forEach { it.raster?.recycle() } }
+        } finally { bitmap.recycle();raster.recycle();archive.delete();store.delete(id);imported?.let { store.delete(it) } }
     }
     @Test fun backupRejectsPathTraversal() {
         val out=ByteArrayOutputStream()

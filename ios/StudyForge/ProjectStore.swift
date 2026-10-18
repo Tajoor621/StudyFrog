@@ -14,6 +14,7 @@ struct ProjectRecord: Codable, Identifiable {
     var opacity: [Double]?
     var blends: [String]?
     var draft: Bool?
+    var folder: String?
 }
 struct IOSProjectStore {
     let root: URL
@@ -27,9 +28,10 @@ struct IOSProjectStore {
             try? JSONDecoder().decode(ProjectRecord.self,from: Data(contentsOf: directory.appendingPathComponent("project.json")))
         }.filter { $0.draft != true }.sorted { $0.created > $1.created }
     }
-    @discardableResult func save(title: String,prompt: String,negative: String,image: UIImage,drawings: [PKDrawing],names: [String],visible: [Bool] = [],opacity: [Double] = [],blends: [String] = [],draft: Bool = false) throws -> ProjectRecord {
+    @discardableResult func save(title: String,prompt: String,negative: String,image: UIImage,drawings: [PKDrawing],names: [String],visible: [Bool] = [],opacity: [Double] = [],blends: [String] = [],draft: Bool = false,folder: String = "") throws -> ProjectRecord {
+        let folder = try validatedFolder(folder)
         guard drawings.count == names.count, drawings.count <= 16, let png = image.pngData() else { throw LocalFailure(message: "Invalid project layers") }
-        let record = ProjectRecord(id: UUID(),title: String(title.prefix(160)),prompt: prompt,negative: negative,created: Date(),layerNames: names,visible: visible,opacity: opacity,blends: blends,draft: draft)
+        let record = ProjectRecord(id: UUID(),title: String(title.prefix(160)),prompt: prompt,negative: negative,created: Date(),layerNames: names,visible: visible,opacity: opacity,blends: blends,draft: draft,folder: folder)
         let temporary = root.appendingPathComponent("pending-\(record.id.uuidString)",isDirectory: true)
         try FileManager.default.createDirectory(at: temporary,withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: temporary) }
@@ -54,6 +56,17 @@ struct IOSProjectStore {
         let directory = root.appendingPathComponent(record.id.uuidString,isDirectory: true)
         guard let image = UIImage(contentsOfFile: directory.appendingPathComponent("base.png").path), record.layerNames.count <= 16 else { throw LocalFailure(message: "Project image is missing") }
         return (image,try record.layerNames.indices.map { try PKDrawing(data: Data(contentsOf: directory.appendingPathComponent("ink-\($0).pkdrawing"))) })
+    }
+    private func validatedFolder(_ value: String) throws -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count <= 80, !value.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) else { throw LocalFailure(message: "Use a folder name of up to 80 characters without control characters") }
+        return trimmed
+    }
+    func setFolder(_ record: ProjectRecord,folder: String) throws {
+        let file = root.appendingPathComponent(record.id.uuidString).appendingPathComponent("project.json")
+        var updated = try JSONDecoder().decode(ProjectRecord.self,from: Data(contentsOf: file))
+        updated.folder = try validatedFolder(folder)
+        try JSONEncoder().encode(updated).write(to: file,options: .atomic)
     }
     func delete(_ id: UUID) throws { try FileManager.default.removeItem(at: root.appendingPathComponent(id.uuidString)) }
     func rename(_ record: ProjectRecord,title: String) throws {
