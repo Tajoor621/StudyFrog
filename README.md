@@ -1,10 +1,8 @@
-# StudyForge
+# Study Frog
 
 ![StudyFrog artwork](branding/studyfrog-banner.webp)
 
-StudyForge is a prompt-first Android creative and study workspace. This
-repository is hosted as **StudyFrog**; the app name is **StudyForge** and its
-Android application ID is `com.scenio.mth`.
+**Study Frog** is a prompt-first Android creative and study workspace. The GitHub repository slug is `StudyFrog` (GitHub repository URLs cannot contain spaces). Android and iOS display the app name **Study Frog**. Legacy internal build identifiers, iOS targets/directories and artifact filenames retain `StudyForge` to avoid breaking project references, existing builds or saved data. The Android application ID remains `com.scenio.mth`. This is a user-facing branding alignment, not a complete internal path migration.
 
 ## Included functionality
 
