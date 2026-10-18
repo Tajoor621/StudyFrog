@@ -69,11 +69,11 @@ class ForgeCanvas(context:Context):View(context) {
     fun deleteLayer(id:String) { require(layers.size>1 && layers.any { it.id==id });checkpoint();layers.removeAll { it.id==id };strokes.removeAll { it.layerId==id };activeLayer=layers.last().id;changed() }
     fun clearMask() { checkpoint();strokes.removeAll { it.layerId==activeLayer && it.kind.startsWith("mask-") };changed() }
     fun configureGuides(value:Guides) { require(value.grid in listOf(0,5,10,20) && value.symmetry in listOf("none","vertical","horizontal","both") && value.stabilization in 0f.. .95f);checkpoint();guides=value;changed() }
-    fun label(text:String) { require(text.isNotBlank() && text.length<=200 && strokes.size<512);checkpoint();strokes.add(Stroke(mutableListOf(Point(.1f,.15f)),inkColor,inkSize,activeLayer,"text",text,font));changed() }
+    fun label(text:String) { require(text.isNotBlank() && text.length<=200 && strokes.size<512 && strokes.sumOf { it.points.size }<100_000);checkpoint();strokes.add(Stroke(mutableListOf(Point(.1f,.15f)),inkColor,inkSize,activeLayer,"text",text,font));changed() }
     fun textLabels()=strokes.mapIndexedNotNull { i,s -> if(s.kind=="text") i to s.copy(points=s.points.toMutableList()) else null }
     fun updateTextLabel(index:Int,text:String,x:Float,y:Float) { require(index in strokes.indices && strokes[index].kind=="text" && text.isNotBlank() && text.length<=200 && x in 0f..1f && y in 0f..1f);checkpoint();strokes[index]=strokes[index].copy(text=text,points=mutableListOf(Point(x,y)));changed() }
-    fun undo() { if(history.isEmpty()) return;val previous=history.removeLast();val current=snapshot();apply(previous);future.addLast(current);changed() }
-    fun redo() { if(future.isEmpty()) return;val next=future.removeLast();val current=snapshot();apply(next);history.addLast(current);changed() }
+    fun undo() { if(history.isEmpty()) return;val previous=history.removeLast();future.addLast(snapshot());apply(previous) }
+    fun redo() { if(future.isEmpty()) return;val next=future.removeLast();history.addLast(snapshot());apply(next) }
     fun combineShapes(operation:Path.Op) {
         val base=requireNotNull(image);val chosenIndices=strokes.indices.filter { strokes[it].layerId==activeLayer && strokes[it].kind in listOf("rectangle","ellipse","filled-path") }.takeLast(2)
         val chosen=chosenIndices.map { strokes[it] }

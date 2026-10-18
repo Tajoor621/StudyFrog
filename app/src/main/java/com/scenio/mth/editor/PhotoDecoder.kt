@@ -15,7 +15,7 @@ object PhotoDecoder {
         require(bounds.outWidth>0 && bounds.outHeight>0) { "Unsupported or damaged image" }
         require(bounds.outWidth.toLong()*bounds.outHeight<=100_000_000) { "Image dimensions exceed the import limit" }
         val options=BitmapFactory.Options().apply { inSampleSize=1 }
-        while(bounds.outWidth/options.inSampleSize>maxSide || bounds.outHeight/options.inSampleSize>maxSide) options.inSampleSize*=2
+        while((bounds.outWidth+options.inSampleSize-1)/options.inSampleSize>maxSide || (bounds.outHeight+options.inSampleSize-1)/options.inSampleSize>maxSide) options.inSampleSize*=2
         val decoded=resolver.openInputStream(uri).use { requireNotNull(it);requireNotNull(BitmapFactory.decodeStream(it,null,options)) }
         val orientation=resolver.openInputStream(uri).use { input ->
             if(input==null) ExifInterface.ORIENTATION_NORMAL else runCatching { ExifInterface(input).getAttributeInt(ExifInterface.TAG_ORIENTATION,ExifInterface.ORIENTATION_NORMAL) }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)

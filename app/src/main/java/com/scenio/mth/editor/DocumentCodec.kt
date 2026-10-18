@@ -44,7 +44,7 @@ object DocumentCodec {
             val items=doc?.getJSONArray("strokes") ?: JSONArray(json);require(items.length()<=512);var total=0
             val strokes=(0 until items.length()).map { i ->
                 val item=items.getJSONObject(i);val size=item.getDouble("size").toFloat();require(size.isFinite() && size in .001f.. .05f)
-                val points=item.getJSONArray("points");total+=points.length();require(points.length()<=5000 && total<=100_000)
+                val points=item.getJSONArray("points");total+=points.length();require(points.length() in 1..5000 && total<=100_000)
                 val layer=item.optString("layer","ink");val kind=item.optString("kind","brush");val label=item.optString("text","");val font=item.optString("font","sans-serif")
                 require(layers.any { it.id==layer } && kind in listOf("brush","erase","mask-hide","mask-show","line","rectangle","ellipse","text","filled-path") && label.length<=200 && font in listOf("sans-serif","serif","monospace"))
                 val contours=item.optJSONArray("contours")?.let { a -> (0 until a.length()).map { a.getInt(it) } } ?: emptyList()
