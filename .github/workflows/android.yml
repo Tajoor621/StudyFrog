@@ -178,6 +178,17 @@ jobs:
   push:
     branches:
     - main
+    paths:
+    - 'app/**'
+    - 'engine/**'
+    - 'shared/**'
+    - 'scripts/**'
+    - 'gradle/**'
+    - 'gradlew'
+    - 'gradlew.bat'
+    - '*.gradle.kts'
+    - 'gradle.properties'
+    - '.github/workflows/android.yml'
   workflow_dispatch:
     inputs:
       signedRelease:

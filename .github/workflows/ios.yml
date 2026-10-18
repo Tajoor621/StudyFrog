@@ -2,6 +2,11 @@ name: StudyForge iOS simulator
 on:
   push:
     branches: [main]
+    paths:
+      - 'ios/**'
+      - 'shared/**'
+      - 'scripts/build-ios-native.sh'
+      - '.github/workflows/ios.yml'
   pull_request:
   workflow_dispatch:
 permissions:
