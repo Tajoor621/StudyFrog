@@ -13,7 +13,7 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
     def allowed(self):
-        return self.headers.get("Host", "").split(":")[0] in ("localhost", "127.0.0.1")
+        return (self.client_address[0] in ("127.0.0.1", "::1") and\n                (self.headers.get("Host", "").split(":")[0] in ("localhost", "127.0.0.1") or\n                 self.headers.get("Host", "").split(":")[0].endswith(".ts.net")) and\n                self.headers.get("Origin", "").strip() in ("", "http://127.0.0.1:8766", "http://localhost:8766",\n                 "https://" + self.headers.get("Host", "").split(":")[0]))
 
     def reply(self, code, data):
         payload = json.dumps(data).encode()
