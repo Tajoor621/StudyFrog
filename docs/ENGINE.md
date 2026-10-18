@@ -142,3 +142,12 @@ fallback occurs. Cancellation checks denoising steps and encoding frames and
 removes partial results. Android/iOS expose optional computer motion actions.
 The separate `kind=video` reveal route retains its original behavior.
 See [setup and testing](LOCAL_MODELS.md).
+
+
+### Image/video memory handoff
+
+A motion job discards the cached SD image pipeline before loading LTX and
+collects unused model allocations after completion/failure. The next image job
+reloads SD. This reduces retained image/video memory overlap; it is not a GPU
+VRAM guarantee. Model-lifecycle tests use stubs; actual CUDA/weights still need
+measurement. Failed CUDA cache cleanup does not terminate the job worker.

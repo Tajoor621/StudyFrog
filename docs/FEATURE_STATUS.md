@@ -1,4 +1,4 @@
-# Feature status — 0.4.0
+# Feature status — 0.4.1
 
 Evidence: [VALIDATION.md](../VALIDATION.md). Implementation and real-model quality
 validation are separate stages.
@@ -16,7 +16,7 @@ validation are separate stages.
 | Still-reveal video | Android MediaCodec, iOS AVAssetWriter and computer FFmpeg implementations; physical encoders untested |
 | Subject motion | Optional computer LTX integration, five chained segments, 720 frames/24fps/30sec; CUDA and complete model required, real inference untested |
 | Motion resolution | Model denoising 768×448 then 1920×1080 delivery; no native 1080p detail or ultra-realism claim |
-| Science/medical | Illustrative templates and hierarchy selector; semantic atlas, reviewed labels, CT/MRI and scientific accuracy validation missing |
+| Science/medical | Ten sourced, linked conceptual views (body-to-cell and mitosis), descriptions, labels and generation-context handoff; full atlas, AI semantic zoom, CT/MRI and independent scientific review missing |
 | Safety | No unrestricted explicit-sexual Adult Mode or evaluated parental controls; no child-safe certification |
 | iOS | XcodeGen project/shared native runtime, SwiftUI/PencilKit layers, projects/drafts, photo/PNG export, appearance/reminders, reveal and computer motion client; full Android parity incomplete |
 | Foundations | Room/DataStore, onboarding, Material 3, reminders, optional opt-in Firebase, accessibility semantics, tests, CI/signing config |

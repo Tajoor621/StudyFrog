@@ -8,6 +8,9 @@ Android application ID is `com.scenio.mth`.
 
 ## Included functionality
 
+- Offline Science Explorer on Android/iOS: ten linked views, body-to-cell and
+  mitosis paths, source references, accessible descriptions and prompt handoff.
+- Android text-label editing/positioning and persistent study-label layers.
 - First-use onboarding and navigation to the creative studio.
 - Room-backed progress, transactional updates, and DataStore preferences.
 - Material 3 system/light/dark appearance and Android 12+ dynamic color for
@@ -91,7 +94,7 @@ app/device/crash information; review the in-app disclosure before enabling them.
 
 ## Implementation limits
 
-Version 0.4.0 implements these software paths; real model outputs and device
+Version 0.4.1 implements these software paths; real model outputs and device
 latency/thermals are unverified. CPU image generation offers 256px previews or
 512px outputs with conservative RAM guards. Fast mid-range-phone generation
 and native full-frame 8K denoising are not promised. Computer tiled refinement
@@ -109,6 +112,8 @@ unrestricted Adult Mode or certified child-safe mode. See the audit for blockers
 
 - [Android packaging and installation](docs/ANDROID_BUILD.md)
 - [Android features: complete code and setup reference](docs/android-features/IMPLEMENTATION.md)
+- [Science Explorer and content sources](docs/SCIENCE_EXPLORER.md)
+- [Complete master-specification coverage](docs/MASTER_SPEC_AUDIT.md)
 - [Current feature status](docs/FEATURE_STATUS.md)
 - [Validation boundary](VALIDATION.md)
 - [Primary sources](docs/android-features/SOURCES.md)

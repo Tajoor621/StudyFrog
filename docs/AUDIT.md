@@ -63,7 +63,7 @@ CI remains configured to fail on lint errors, rather than suppressing findings.
   low storage and actual TalkBack/VoiceOver remain unverified.
 - Full arbitrary raster/mask, boolean vector, typography/print tools remain
   incomplete beyond the current ink/vector layer features.
-- Reviewed medical/science data, semantic zoom chains, CT/MRI and evaluated
+- Broad reviewed medical/science data, AI semantic zoom, CT/MRI and evaluated
   parental controls are missing. No diagnostic or child-safe guarantee.
 - iOS still needs complete Android parity and a demonstrated physical release.
 - Durable Android updates require the owner's original key. Ephemeral CI
@@ -73,3 +73,36 @@ These gaps prevent an honest “10/10” or complete-master-specification claim.
 No paid API/distribution console was added. The supplied icon remains integrated.
 See [VALIDATION.md](../VALIDATION.md) and [LOCAL_MODELS.md](LOCAL_MODELS.md) for
 exact evidence, testing commands and explicit hardware/model limitations.
+
+
+## Science Explorer continuation — 0.4.1
+
+Added an original offline catalog of ten linked views with textbook references,
+readable descriptions, label visibility and prompt-context handoff on both
+platforms. Android study labels survive editable project serialization and can
+be renamed/repositioned. Existing-image replacement requires confirmation.
+Android navigation selection survives recreation. Content contract tests guard
+platform-copy drift, references, graph cycles and geometry bounds.
+
+This replaces the previous hierarchy-only selector for the included example
+paths. It does not establish a complete anatomy atlas, AI semantic zoom,
+independent scientific review, clinical accuracy or iOS editable diagram text.
+See [SCIENCE_EXPLORER.md](SCIENCE_EXPLORER.md) for scope and provenance.
+
+
+## Integration audit — 2026-10-18 (Asia/Dubai)
+
+| Finding | Correction |
+| --- | --- |
+| Native image task can outlive coroutine cancellation and race output deletion | Signal cancellation, join native work in a non-cancellable cleanup section, then delete output; check cancellation after JNI returns |
+| Cached SD pipeline can occupy device memory while LTX loads | Release cached image pipeline and unused CUDA allocations before and after motion jobs; failed CUDA cleanup cannot terminate the worker |
+| SVG text/brush marks omitted alpha; single-point marks omitted pressure | Export opacity on all mark types, pressure-scaled dots and the initial brush point; XML/geometry regression coverage |
+| Benchmark documentation promised a model hash absent from worker report | Include imported model SHA-256 or explicit unknown marker |
+| Interrupted Science Explorer audit/docs were not published | Include current coverage, source references, validation links and updated tree/checksums |
+| Cross-file consistency depended on manual checks | Add automated repository guard for manifest classes, launcher/JNI identities, version pins, ABIs, icons, merge markers, secret-file exclusions and documentation links |
+
+The model handoff deliberately reloads the image model on the next image job;
+this trades warm-cache speed for lower retained GPU memory between image/video
+jobs. Actual GPU memory and native cancellation responsiveness need hardware
+validation. These fixes do not remove the outstanding product requirements.
+See [MASTER_SPEC_AUDIT.md](MASTER_SPEC_AUDIT.md) for the full requirement matrix.

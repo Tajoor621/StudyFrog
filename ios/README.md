@@ -1,4 +1,4 @@
-# StudyForge iOS — 0.4.0
+# StudyForge iOS — 0.4.1
 
 Buildable SwiftUI/PencilKit app with a shared native CPU image runtime, photo
 import, editable layers/projects/drafts, PNG export, onboarding/appearance,
@@ -36,3 +36,9 @@ library access. Notification permission is requested when enabling reminders.
 There is no iOS analytics SDK. Optional computer motion requires consent to
 transfer prompt/photo to a local host, using a memory-only token. The supplied
 artwork remains integrated in icons and in-app assets.
+
+
+Science Explorer includes the same ten bundled conceptual views as Android,
+with source references, descriptions, navigation, label visibility and prompt
+handoff. iOS labels are flattened into the diagram base; PencilKit annotations
+remain independent. See [SCIENCE_EXPLORER.md](../docs/SCIENCE_EXPLORER.md).
