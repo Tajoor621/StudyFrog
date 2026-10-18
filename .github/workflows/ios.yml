@@ -1,4 +1,4 @@
-name: StudyForge iOS simulator
+name: Study Frog iOS simulator
 on:
   push:
     branches: [main]
