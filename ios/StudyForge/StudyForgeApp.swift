@@ -267,7 +267,7 @@ struct ForgeView: View {
                     Button("Explore science · linked levels and labeled diagrams") { showScience = true }.disabled(store.working)
                     PhotosPicker("Import photo",selection: $photo,matching: .images).disabled(store.working)
                     TextField("Folder for new saves · blank means Unfiled",text: $store.folder).textFieldStyle(.roundedBorder).accessibilityLabel("Project folder")
-                    HStack { Button("Save project") { store.save() };Button("Export PNG") { exportData = store.composite()?.pngData() ?? Data();showExport = true } }.disabled(store.image == nil || store.working)
+                    HStack { Button("Save project") { store.save() };Button("Export PNG") { if let data = store.composite()?.pngData() { exportData = data;showExport = true } else { store.message = "Could not render PNG; check the layer settings" } } }.disabled(store.image == nil || store.working)
                     Button("Create 30-second reveal video") { store.video() }.disabled(store.image == nil || store.working)
                     DisclosureGroup("Local computer image generation") {
                         Toggle("Use current image for photo conversion",isOn: $computerUsesPhoto)

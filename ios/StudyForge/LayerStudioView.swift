@@ -24,7 +24,7 @@ private struct LayerMaskPreview: View,Equatable {
         else { Rectangle().fill(.white).frame(width: size.width,height: size.height) }
     }
 }
-struct LayerStudioView: View {
+@MainActor struct LayerStudioView: View {
     @ObservedObject var store: ForgeStore
     @ObservedObject var proxy: CanvasProxy
     @State private var erasing = false

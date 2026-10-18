@@ -6,7 +6,7 @@ import PencilKit
 final class LayerDocumentTests: XCTestCase {
     private func image(_ color: UIColor,size: Int = 200) -> UIImage {
         let format = UIGraphicsImageRendererFormat();format.scale = 1
-        return UIGraphicsImageRenderer(size: CGSize(width: size,height: size),format: format).image { ctx in color.setFill();ctx.fill(CGRect(x: 0,y: 0,width: size,height: size)) }
+        return UIGraphicsImageRenderer(size: CGSize(width: CGFloat(size),height: CGFloat(size)),format: format).image { ctx in color.setFill();ctx.fill(CGRect(x: 0,y: 0,width: CGFloat(size),height: CGFloat(size))) }
     }
     private func mask(_ color: UIColor) -> PKStroke {
         let points = [CGPoint(x: 400,y: 512),CGPoint(x: 624,y: 512)].enumerated().map { index,point in PKStrokePoint(location: point,timeOffset: Double(index)*0.1,size: CGSize(width: 100,height: 100),opacity: 1,force: 1,azimuth: 0,altitude: .pi/2) }
@@ -16,7 +16,7 @@ final class LayerDocumentTests: XCTestCase {
         let cg = try XCTUnwrap(image.cgImage);var bytes = [UInt8](repeating: 0,count: cg.width*cg.height*4)
         let drawn = bytes.withUnsafeMutableBytes { data -> Bool in
             guard let context = CGContext(data: data.baseAddress,width: cg.width,height: cg.height,bitsPerComponent: 8,bytesPerRow: cg.width*4,space: CGColorSpaceCreateDeviceRGB(),bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue) else { return false }
-            context.draw(cg,in: CGRect(x: 0,y: 0,width: cg.width,height: cg.height));return true
+            context.draw(cg,in: CGRect(x: 0,y: 0,width: CGFloat(cg.width),height: CGFloat(cg.height)));return true
         }
         XCTAssertTrue(drawn);let offset = (y*cg.width+x)*4;return Array(bytes[offset..<(offset+4)])
     }
@@ -43,13 +43,13 @@ final class LayerDocumentTests: XCTestCase {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
         let store = try IOSProjectStore(root: root)
-        let layer = IOSInkLayer(name: "Photo",raster: image(.red),mask: PKDrawing(strokes: [mask(.black)]),maskEnabled: false,transform: LayerTransform(x: 0.2,scale: 0.8))
+        let layer = IOSInkLayer(name: "Photo",raster: image(.red),mask: PKDrawing(strokes: [mask(.black)]),maskEnabled: false,visible: false,opacity: 0.5,blend: "multiply",transform: LayerTransform(x: 0.2,scale: 0.8))
         let profile = GenerationProfile(enabled: true,style: "scientific")
         let record = try store.save(title: "Layer test",prompt: "Fern",negative: "blur",image: image(.white),drawings: [layer.drawing],names: [layer.name],folder: "Biology",profile: profile,seed: 7,steps: 30,resolution: 512,strength: 0.4,layerAssets: [layer])
         let reopened = try IOSProjectStore(root: root);let saved = try XCTUnwrap(reopened.list().first)
         let assets = try reopened.loadLayerAssets(saved)
         XCTAssertEqual(try pixel(XCTUnwrap(assets.rasters[0])),[255,0,0,255]);XCTAssertEqual(assets.masks[0].strokes.count,1)
-        XCTAssertEqual(saved.transforms,[layer.transform]);XCTAssertEqual(saved.maskEnabled,[false]);XCTAssertEqual(saved.profile,profile);XCTAssertEqual(saved.steps,30)
+        XCTAssertEqual(saved.visible,[false]);XCTAssertEqual(saved.opacity,[0.5]);XCTAssertEqual(saved.blends,["multiply"]);XCTAssertEqual(saved.transforms,[layer.transform]);XCTAssertEqual(saved.maskEnabled,[false]);XCTAssertEqual(saved.profile,profile);XCTAssertEqual(saved.steps,30)
         try reopened.setFolder(record,folder: "Moved");try reopened.rename(record,title: "Renamed")
         XCTAssertEqual(try reopened.list().first?.folder,"Moved")
         var legacy = record;legacy.assetVersion = nil;legacy.hasRasters = nil;legacy.maskEnabled = nil;legacy.transforms = nil

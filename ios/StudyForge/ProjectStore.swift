@@ -43,7 +43,7 @@ struct IOSProjectStore {
         let assets = layerAssets ?? drawings.indices.map { i in IOSInkLayer(name: names[i],drawing: drawings[i],visible: visible.count == drawings.count ? visible[i] : true,opacity: opacity.count == drawings.count ? opacity[i] : 1,blend: blends.count == drawings.count ? blends[i] : "normal") }
         guard assets.count == drawings.count,assets.map(\.drawing) == drawings,assets.map(\.name) == names else { throw LocalFailure(message: "Layer assets do not match the document") }
         try IOSLayerRenderer.validate(assets)
-        let record = ProjectRecord(id: UUID(),title: String(title.prefix(160)),prompt: prompt,negative: negative,created: Date(),layerNames: names,visible: visible,opacity: opacity,blends: blends,draft: draft,folder: folder,profile: profile,seed: seed,steps: steps,resolution: resolution,strength: strength,assetVersion: 1,hasRasters: assets.map { $0.raster != nil },maskEnabled: assets.map(\.maskEnabled),transforms: assets.map(\.transform))
+        let record = ProjectRecord(id: UUID(),title: String(title.prefix(160)),prompt: prompt,negative: negative,created: Date(),layerNames: names,visible: assets.map(\.visible),opacity: assets.map(\.opacity),blends: assets.map(\.blend),draft: draft,folder: folder,profile: profile,seed: seed,steps: steps,resolution: resolution,strength: strength,assetVersion: 1,hasRasters: assets.map { $0.raster != nil },maskEnabled: assets.map(\.maskEnabled),transforms: assets.map(\.transform))
         let temporary = root.appendingPathComponent("pending-\(record.id.uuidString)",isDirectory: true)
         try FileManager.default.createDirectory(at: temporary,withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: temporary) }
