@@ -20,6 +20,10 @@ struct ProjectRecord: Codable, Identifiable {
     var steps: Int?
     var resolution: Int?
     var strength: Double?
+    var assetVersion: Int?
+    var hasRasters: [Bool]?
+    var maskEnabled: [Bool]?
+    var transforms: [LayerTransform]?
 }
 struct IOSProjectStore {
     let root: URL
@@ -29,19 +33,26 @@ struct IOSProjectStore {
         var dir = self.root; var values = URLResourceValues(); values.isExcludedFromBackup = true; try dir.setResourceValues(values)
     }
     func list() throws -> [ProjectRecord] {
-        try FileManager.default.contentsOfDirectory(at: root,includingPropertiesForKeys: nil).compactMap { directory in
+        try FileManager.default.contentsOfDirectory(at: root,includingPropertiesForKeys: nil).filter { UUID(uuidString: $0.lastPathComponent)?.uuidString == $0.lastPathComponent }.compactMap { directory in
             try? JSONDecoder().decode(ProjectRecord.self,from: Data(contentsOf: directory.appendingPathComponent("project.json")))
         }.filter { $0.draft != true }.sorted { $0.created > $1.created }
     }
-    @discardableResult func save(title: String,prompt: String,negative: String,image: UIImage,drawings: [PKDrawing],names: [String],visible: [Bool] = [],opacity: [Double] = [],blends: [String] = [],draft: Bool = false,folder: String = "",profile: GenerationProfile? = nil,seed: Int64? = nil,steps: Int? = nil,resolution: Int? = nil,strength: Double? = nil) throws -> ProjectRecord {
+    @discardableResult func save(title: String,prompt: String,negative: String,image: UIImage,drawings: [PKDrawing],names: [String],visible: [Bool] = [],opacity: [Double] = [],blends: [String] = [],draft: Bool = false,folder: String = "",profile: GenerationProfile? = nil,seed: Int64? = nil,steps: Int? = nil,resolution: Int? = nil,strength: Double? = nil,layerAssets: [IOSInkLayer]? = nil) throws -> ProjectRecord {
         let folder = try validatedFolder(folder)
-        guard drawings.count == names.count, drawings.count <= 16, let png = image.pngData() else { throw LocalFailure(message: "Invalid project layers") }
-        let record = ProjectRecord(id: UUID(),title: String(title.prefix(160)),prompt: prompt,negative: negative,created: Date(),layerNames: names,visible: visible,opacity: opacity,blends: blends,draft: draft,folder: folder,profile: profile,seed: seed,steps: steps,resolution: resolution,strength: strength)
+        guard drawings.count == names.count, (1...16).contains(drawings.count), let png = image.pngData() else { throw LocalFailure(message: "Invalid project layers") }
+        let assets = layerAssets ?? drawings.indices.map { i in IOSInkLayer(name: names[i],drawing: drawings[i],visible: visible.count == drawings.count ? visible[i] : true,opacity: opacity.count == drawings.count ? opacity[i] : 1,blend: blends.count == drawings.count ? blends[i] : "normal") }
+        guard assets.count == drawings.count,assets.map(\.drawing) == drawings,assets.map(\.name) == names else { throw LocalFailure(message: "Layer assets do not match the document") }
+        try IOSLayerRenderer.validate(assets)
+        let record = ProjectRecord(id: UUID(),title: String(title.prefix(160)),prompt: prompt,negative: negative,created: Date(),layerNames: names,visible: visible,opacity: opacity,blends: blends,draft: draft,folder: folder,profile: profile,seed: seed,steps: steps,resolution: resolution,strength: strength,assetVersion: 1,hasRasters: assets.map { $0.raster != nil },maskEnabled: assets.map(\.maskEnabled),transforms: assets.map(\.transform))
         let temporary = root.appendingPathComponent("pending-\(record.id.uuidString)",isDirectory: true)
         try FileManager.default.createDirectory(at: temporary,withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: temporary) }
         try png.write(to: temporary.appendingPathComponent("base.png"),options: .atomic)
         for (index,drawing) in drawings.enumerated() { try drawing.dataRepresentation().write(to: temporary.appendingPathComponent("ink-\(index).pkdrawing"),options: .atomic) }
+        for (index,layer) in assets.enumerated() {
+            try layer.mask.dataRepresentation().write(to: temporary.appendingPathComponent("mask-\(index).pkdrawing"),options: .atomic)
+            if let raster = layer.raster { guard let data = raster.pngData() else { throw LocalFailure(message: "Could not save raster layer") };try data.write(to: temporary.appendingPathComponent("raster-\(index).png"),options: .atomic) }
+        }
         try JSONEncoder().encode(record).write(to: temporary.appendingPathComponent("project.json"),options: .atomic)
         try FileManager.default.moveItem(at: temporary,to: root.appendingPathComponent(record.id.uuidString,isDirectory: true))
         if draft {
@@ -59,8 +70,33 @@ struct IOSProjectStore {
     }
     func load(_ record: ProjectRecord) throws -> (UIImage,[PKDrawing]) {
         let directory = root.appendingPathComponent(record.id.uuidString,isDirectory: true)
-        guard let image = UIImage(contentsOfFile: directory.appendingPathComponent("base.png").path), record.layerNames.count <= 16 else { throw LocalFailure(message: "Project image is missing") }
-        return (image,try record.layerNames.indices.map { try PKDrawing(data: Data(contentsOf: directory.appendingPathComponent("ink-\($0).pkdrawing"))) })
+        guard (1...16).contains(record.layerNames.count) else { throw LocalFailure(message: "Invalid project layers") }
+        let image = try IOSPhotoDecoder.decode(readLimited(directory.appendingPathComponent("base.png"),limit: 32_000_000))
+        return (image,try record.layerNames.indices.map { try PKDrawing(data: readLimited(directory.appendingPathComponent("ink-\($0).pkdrawing"),limit: 8_000_000)) })
+    }
+    func loadLayerAssets(_ record: ProjectRecord) throws -> (rasters: [UIImage?],masks: [PKDrawing]) {
+        let count = record.layerNames.count
+        guard (1...16).contains(count) else { throw LocalFailure(message: "Invalid layer count") }
+        guard let version = record.assetVersion else { return (Array(repeating: nil,count: count),Array(repeating: PKDrawing(),count: count)) }
+        guard version == 1,record.hasRasters?.count == count,record.maskEnabled?.count == count,record.transforms?.count == count,record.transforms!.allSatisfy(\.valid) else { throw LocalFailure(message: "Unsupported or damaged layer assets") }
+        let directory = root.appendingPathComponent(record.id.uuidString,isDirectory: true)
+        var rasters = [UIImage?](),masks = [PKDrawing](),pixels = 0
+        for i in 0..<count {
+            if record.hasRasters![i] {
+                let file = directory.appendingPathComponent("raster-\(i).png")
+                let data = try readLimited(file,limit: 5_000_000)
+                let image = try IOSPhotoDecoder.decode(data,maxSide: 1024)
+                pixels += image.cgImage!.width*image.cgImage!.height
+                guard pixels <= 8_000_000 else { throw LocalFailure(message: "Raster asset memory limit exceeded") };rasters.append(image)
+            } else { rasters.append(nil) }
+            let data = try readLimited(directory.appendingPathComponent("mask-\(i).pkdrawing"),limit: 8_000_000)
+            guard data.count <= 8_000_000 else { throw LocalFailure(message: "Mask asset exceeds its size limit") };masks.append(try PKDrawing(data: data))
+        }
+        return (rasters,masks)
+    }
+    private func readLimited(_ url: URL,limit: Int) throws -> Data {
+        guard let size = try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber,size.int64Value <= Int64(limit) else { throw LocalFailure(message: "Project asset exceeds its size limit") }
+        return try Data(contentsOf: url,options: .mappedIfSafe)
     }
     private func validatedFolder(_ value: String) throws -> String {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -76,7 +112,8 @@ struct IOSProjectStore {
     func delete(_ id: UUID) throws { try FileManager.default.removeItem(at: root.appendingPathComponent(id.uuidString)) }
     func rename(_ record: ProjectRecord,title: String) throws {
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, title.count <= 160 else { throw LocalFailure(message: "Use a title of 1–160 characters") }
-        var updated = record; updated.title = title
+        let file = root.appendingPathComponent(record.id.uuidString).appendingPathComponent("project.json")
+        var updated = try JSONDecoder().decode(ProjectRecord.self,from: Data(contentsOf: file));updated.title = title
         try JSONEncoder().encode(updated).write(to: root.appendingPathComponent(record.id.uuidString).appendingPathComponent("project.json"),options: .atomic)
     }
 }

@@ -28,31 +28,33 @@ struct DrawingCanvas: UIViewRepresentable {
     let proxy: CanvasProxy
     let erasing: Bool
     let color: UIColor
+    var width: CGFloat = 5
+    var inkType: PKInkingTool.InkType = .pen
+    var begin: ()->Void = {}
     func makeUIView(context: Context) -> PKCanvasView {
         let view = PKCanvasView();view.backgroundColor = .clear;view.isOpaque = false;view.drawingPolicy = .anyInput;view.isScrollEnabled = false;view.delegate = context.coordinator;proxy.canvas = view;return view
     }
     func updateUIView(_ view: PKCanvasView, context: Context) {
         context.coordinator.parent = self
         if view.drawing != drawing { view.drawing = drawing }
-        view.tool = erasing ? PKEraserTool(.bitmap) : PKInkingTool(.pen,color: color,width: 5)
+        view.tool = erasing ? PKEraserTool(.bitmap) : PKInkingTool(inkType,color: color,width: width)
         proxy.canvas = view
     }
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     final class Coordinator: NSObject, PKCanvasViewDelegate {
         var parent: DrawingCanvas
         init(_ parent: DrawingCanvas) { self.parent = parent }
-        func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) { parent.drawing = canvasView.drawing }
+        func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) { parent.begin() }
+        func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) { let value = canvasView.drawing;parent.drawing = value;if parent.drawing != value { canvasView.drawing = parent.drawing } }
     }
 }
 @MainActor final class ForgeStore: ObservableObject {
     @Published var prompt = "A scientific botanical illustration of a fern"
     @Published var negative = "blurry, distorted"
     @Published var image: UIImage?
-    @Published var drawings = [PKDrawing()]
-    @Published var layerNames = ["Ink"]
-    @Published var visible = [true]
-    @Published var opacity = [1.0]
-    @Published var blends = ["normal"]
+    @Published var layers = [IOSInkLayer()]
+    private var history = [LayerHistoryState]()
+    private var future = [LayerHistoryState]()
     @Published var selected = 0
     @Published var records = [ProjectRecord]()
     @Published var folder = ""
@@ -69,28 +71,54 @@ struct DrawingCanvas: UIViewRepresentable {
     var videoTask: Task<Void,Error>?
     var computerJob: (ComputerEngine,String)?
     func refresh() { do { records = try IOSProjectStore().list() } catch { message = error.localizedDescription } }
-    func resetLayers() { drawings = [PKDrawing()];layerNames = ["Ink"];visible = [true];opacity = [1];blends = ["normal"];selected = 0 }
-    func addLayer() { guard drawings.count < 16 else { message = "Maximum 16 layers";return };drawings.append(PKDrawing());layerNames.append("Layer \(drawings.count)");visible.append(true);opacity.append(1);blends.append("normal");selected = drawings.count-1 }
-    func composite() -> UIImage? {
-        guard let image else { return nil }
-        let format = UIGraphicsImageRendererFormat();format.scale = 1
-        return UIGraphicsImageRenderer(size: image.size,format: format).image { _ in
-            image.draw(at: .zero)
-            let canonical = CGRect(x: 0,y: 0,width: 1024,height: 1024*image.size.height/image.size.width)
-            for i in drawings.indices where visible[i] {
-                drawings[i].image(from: canonical,scale: image.size.width/1024).draw(in: CGRect(origin: .zero,size: image.size),blendMode: blends[i] == "multiply" ? .multiply : blends[i] == "screen" ? .screen : .normal,alpha: opacity[i])
-            }
+    func resetLayers() { selected = 0;layers = [IOSInkLayer()];history.removeAll();future.removeAll() }
+    private func trimHistory() {
+        while history.count > 32 || history.reduce(0,{ $0+$1.pointCount }) > 250_000 { history.removeFirst() }
+        func rasterPixels() -> Int {
+            var images = [ObjectIdentifier:UIImage]()
+            for state in history+future+[LayerHistoryState(layers: layers,selected: selected)] { for layer in state.layers { if let image = layer.raster { images[ObjectIdentifier(image)] = image } } }
+            return images.values.reduce(0) { $0+($1.cgImage.map { $0.width*$0.height } ?? 0) }
         }
+        while (!history.isEmpty || !future.isEmpty) && rasterPixels() > 16_000_000 { if !history.isEmpty { history.removeFirst() } else { future.removeFirst() } }
     }
+    func checkpoint() { history.append(LayerHistoryState(layers: layers,selected: selected));future.removeAll();trimHistory() }
+    func undo() { guard let state = history.popLast() else { return };future.append(LayerHistoryState(layers: layers,selected: selected));selected = 0;layers = state.layers;selected = max(0,min(state.selected,layers.count-1));trimHistory() }
+    func redo() { guard let state = future.popLast() else { return };history.append(LayerHistoryState(layers: layers,selected: selected));selected = 0;layers = state.layers;selected = max(0,min(state.selected,layers.count-1));trimHistory() }
+    func addLayer(raster: UIImage? = nil) {
+        guard image != nil,layers.count < 16 else { message = "Create a base image first; maximum 16 layers";return }
+        let layer = IOSInkLayer(name: raster == nil ? "Layer \(layers.count+1)" : "Photo \(layers.count+1)",raster: raster)
+        do { try IOSLayerRenderer.validate(layers+[layer]);checkpoint();layers.append(layer);selected = layers.count-1;trimHistory() } catch { message = error.localizedDescription }
+    }
+    func editLayer(_ id: UUID,checkpoint save: Bool = true,_ change: (inout IOSInkLayer)->Void) {
+        guard let index = layers.firstIndex(where: { $0.id == id }) else { return }
+        var next = layers;change(&next[index])
+        do { try IOSLayerRenderer.validate(next);if save { checkpoint() };layers = next;trimHistory() } catch { message = error.localizedDescription }
+    }
+    func updateDrawing(_ id: UUID,mask: Bool,value: PKDrawing) { editLayer(id,checkpoint: false) { if mask { $0.mask = value } else { $0.drawing = value } } }
+    func deleteLayer() { guard layers.count > 1 else { return };checkpoint();var next = layers;next.remove(at: selected);selected = 0;layers = next;trimHistory() }
+    func moveLayer(_ delta: Int) { let destination = max(0,min(layers.count-1,selected+delta));guard destination != selected else { return };checkpoint();var next = layers;let layer = next.remove(at: selected);next.insert(layer,at: destination);layers = next;selected = destination }
+    func composite() -> UIImage? { guard let image else { return nil };do { return try IOSLayerRenderer.composite(base: image,layers: layers) } catch { message = error.localizedDescription;return nil } }
     func save(draft: Bool = false) {
         guard let image else { return }
-        do { try IOSProjectStore().save(title: String(prompt.prefix(80)),prompt: prompt,negative: negative,image: image,drawings: drawings,names: layerNames,visible: visible,opacity: opacity,blends: blends,draft: draft,folder: folder,profile: profile,seed: seed,steps: inferenceSteps,resolution: resolution,strength: photoStrength);refresh();message = "Editable project saved on this device" }
-        catch { message = error.localizedDescription }
+        let allowance = EditorSaveAllowance();allowance.begin()
+        let snapshot = layers,title = String(prompt.prefix(80)),text = prompt,excluded = negative,folder = folder,profile = profile,seed = seed,steps = inferenceSteps,resolution = resolution,strength = photoStrength
+        Task {
+            defer { allowance.end() }
+            do {
+                _ = try await Task.detached {
+                    try IOSProjectStore().save(title: title,prompt: text,negative: excluded,image: image,drawings: snapshot.map(\.drawing),names: snapshot.map(\.name),visible: snapshot.map(\.visible),opacity: snapshot.map(\.opacity),blends: snapshot.map(\.blend),draft: draft,folder: folder,profile: profile,seed: seed,steps: steps,resolution: resolution,strength: strength,layerAssets: snapshot)
+                }.value
+                refresh();message = "Editable project snapshot saved on this device"
+            } catch { message = error.localizedDescription }
+        }
     }
+
     func open(_ record: ProjectRecord) {
         do {
-            let loaded = try IOSProjectStore().load(record);image = loaded.0;drawings = loaded.1;layerNames = record.layerNames
-            if drawings.isEmpty { resetLayers() } else { visible = record.visible?.count == drawings.count ? record.visible! : Array(repeating: true,count: drawings.count);opacity = record.opacity?.count == drawings.count ? record.opacity! : Array(repeating: 1,count: drawings.count);blends = record.blends?.count == drawings.count ? record.blends! : Array(repeating: "normal",count: drawings.count);selected = 0 }
+            let projectStore = try IOSProjectStore();let loaded = try projectStore.load(record);let assets = try projectStore.loadLayerAssets(record)
+            let count = loaded.1.count
+            let restored = (0..<count).map { i in IOSInkLayer(name: String(record.layerNames[i].prefix(80)).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Layer \(i+1)" : String(record.layerNames[i].prefix(80)),drawing: loaded.1[i],raster: assets.rasters[i],mask: assets.masks[i],maskEnabled: record.maskEnabled?.count == count ? record.maskEnabled![i] : true,visible: record.visible?.count == count ? record.visible![i] : true,opacity: record.opacity?.count == count ? record.opacity![i] : 1,blend: record.blends?.count == count ? record.blends![i] : "normal",transform: record.transforms?.count == count ? record.transforms![i] : LayerTransform()) }
+            try IOSLayerRenderer.validate(restored);image = loaded.0;selected = 0;layers = restored;history.removeAll();future.removeAll()
             prompt = record.prompt;negative = record.negative;folder = record.folder ?? "";profile = record.profile ?? GenerationProfile()
             inferenceSteps = (10...40).contains(record.steps ?? 20) ? (record.steps ?? 20) : 20
             photoStrength = (0.1...1).contains(record.strength ?? 0.65) ? (record.strength ?? 0.65) : 0.65
@@ -219,7 +247,6 @@ struct ForgeView: View {
     private var filteredRecords: [ProjectRecord] { store.records.filter {
         (folderFilter == "\u{0}" || ($0.folder ?? "") == folderFilter) && (query.isEmpty || $0.title.localizedCaseInsensitiveContains(query) || $0.prompt.localizedCaseInsensitiveContains(query))
     } }
-    private func ink(_ i: Int) -> Binding<PKDrawing> { Binding(get: { i < store.drawings.count ? store.drawings[i] : PKDrawing() },set: { if i < store.drawings.count { store.drawings[i] = $0 } }) }
     var body: some View {
         NavigationStack {
             if !onboarded {
@@ -236,29 +263,7 @@ struct ForgeView: View {
                     GenerationControlsView(profile: $store.profile,steps: $store.inferenceSteps,strength: $store.photoStrength,prompt: store.prompt).disabled(store.working)
                     Picker("Generation resolution",selection: $store.resolution) { Text("256px preview · 6 GB RAM").tag(256);Text("512px standard · 8 GB RAM").tag(512) }.disabled(store.working)
                     HStack { Button("Generate on device") { store.generate(photo: false) };Button("Photo conversion") { store.generate(photo: true) } }.buttonStyle(.borderedProminent).disabled(store.working)
-                    if let image = store.image {
-                        GeometryReader { geometry in
-                            ZStack(alignment: .topLeading) {
-                                Image(uiImage: image).resizable().frame(width: 1024,height: 1024*image.size.height/image.size.width)
-                                ForEach(store.drawings.indices,id: \.self) { i in
-                                    if store.visible[i] {
-                                        if i == store.selected {
-                                            DrawingCanvas(drawing: ink(i),proxy: proxy,erasing: erasing,color: UIColor(color)).frame(width: 1024,height: 1024*image.size.height/image.size.width).opacity(store.opacity[i]).blendMode(store.blends[i] == "multiply" ? .multiply : store.blends[i] == "screen" ? .screen : .normal)
-                                        } else {
-                                            Image(uiImage: store.drawings[i].image(from: CGRect(x: 0,y: 0,width: 1024,height: 1024*image.size.height/image.size.width),scale: 1)).frame(width: 1024,height: 1024*image.size.height/image.size.width).opacity(store.opacity[i]).blendMode(store.blends[i] == "multiply" ? .multiply : store.blends[i] == "screen" ? .screen : .normal).allowsHitTesting(false)
-                                        }
-                                    }
-                                }
-                            }.scaleEffect(geometry.size.width/1024,anchor: .topLeading)
-                        }.aspectRatio(image.size,contentMode: .fit).clipped().accessibilityLabel("Editable image and ink canvas")
-                        HStack { Button("Undo") { proxy.canvas?.undoManager?.undo() };Button("Redo") { proxy.canvas?.undoManager?.redo() };Toggle("Eraser",isOn: $erasing);ColorPicker("Ink",selection: $color) }
-                        Picker("Ink layer",selection: $store.selected) { ForEach(store.layerNames.indices,id: \.self) { i in Text(store.layerNames[i]).tag(i) } }
-                        HStack { Button("Add layer") { store.addLayer() };Toggle("Visible",isOn: $store.visible[store.selected]) }
-                        Slider(value: $store.opacity[store.selected],in: 0...1) { Text("Layer opacity") }
-                        TextField("Layer name",text: $store.layerNames[store.selected]).textFieldStyle(.roundedBorder)
-                        Picker("Blend",selection: $store.blends[store.selected]) { Text("Normal").tag("normal");Text("Multiply").tag("multiply");Text("Screen").tag("screen") }
-                        Button("Delete selected ink layer",role: .destructive) { if store.drawings.count > 1 { let index = store.selected;store.selected = 0;store.drawings.remove(at: index);store.layerNames.remove(at: index);store.visible.remove(at: index);store.opacity.remove(at: index);store.blends.remove(at: index) } }.disabled(store.drawings.count <= 1)
-                    }
+                    if store.image != nil { LayerStudioView(store: store,proxy: proxy).disabled(store.working) }
                     Button("Explore science · linked levels and labeled diagrams") { showScience = true }.disabled(store.working)
                     PhotosPicker("Import photo",selection: $photo,matching: .images).disabled(store.working)
                     TextField("Folder for new saves · blank means Unfiled",text: $store.folder).textFieldStyle(.roundedBorder).accessibilityLabel("Project folder")
@@ -286,7 +291,7 @@ struct ForgeView: View {
         .onDisappear { if family.restricted { store.cancel() } }
         .onChange(of: scenePhase) { _,phase in if phase == .background && store.image != nil { store.save(draft: true) } }
         .onChange(of: photo) { _,item in Task {
-            do { guard let data = try await item?.loadTransferable(type: Data.self) else { return };store.image = try IOSPhotoDecoder.decode(data);store.resetLayers();store.message = "Photo imported locally" }
+            do { guard let data = try await item?.loadTransferable(type: Data.self) else { return };guard !store.working,!family.restricted else { throw LocalFailure(message: "Workspace changed during photo import; please retry") };store.image = try IOSPhotoDecoder.decode(data);store.resetLayers();store.message = "Photo imported locally" }
             catch { store.message = error.localizedDescription }
         } }
         .alert("Send an image job to your local computer?",isPresented: $computerImageConsent) {

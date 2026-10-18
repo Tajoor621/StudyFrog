@@ -77,9 +77,12 @@ class MainActivity : ComponentActivity() {
     private fun button(s:String, block:()->Unit) = Button(this).apply { text=s;setOnClickListener { block() } }
     private fun choices(items:List<String>) = Spinner(this).apply {
         adapter=object:ArrayAdapter<String>(this@MainActivity,android.R.layout.simple_spinner_dropdown_item,items) {
-            override fun getView(position:Int,convertView:View?,parent:ViewGroup):View = super.getView(position,convertView,parent).apply {
+            private fun colors(view:View)=view.apply {
                 (this as? TextView)?.setTextColor(if(darkPalette) Color.WHITE else 0xff102033.toInt())
+                setBackgroundColor(if(darkPalette) 0xff0f172a.toInt() else 0xfff7f8fc.toInt())
             }
+            override fun getView(position:Int,convertView:View?,parent:ViewGroup):View = colors(super.getView(position,convertView,parent))
+            override fun getDropDownView(position:Int,convertView:View?,parent:ViewGroup):View = colors(super.getDropDownView(position,convertView,parent))
         }
     }
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -204,7 +207,7 @@ class MainActivity : ComponentActivity() {
             fun recolor(view:View) {
                 if(view is Switch) { view.setTextColor(fg);view.thumbTintList=ColorStateList.valueOf(accent) }
                 else if(view is Button) { view.setTextColor(0xff102033.toInt());view.backgroundTintList=ColorStateList.valueOf(accent) }
-                else if(view is TextView) { view.setTextColor(fg);if(view is EditText) { view.setHintTextColor(if(darkPalette) Color.LTGRAY else Color.DKGRAY);view.backgroundTintList=ColorStateList.valueOf(accent) } }
+                else if(view is TextView) { view.setTextColor(fg);if(view.parent is Spinner) view.setBackgroundColor(bg);if(view is EditText) { view.setHintTextColor(if(darkPalette) Color.LTGRAY else Color.DKGRAY);view.backgroundTintList=ColorStateList.valueOf(accent) } }
                 if(view is AndroidViewGroup) for(i in 0 until view.childCount) recolor(view.getChildAt(i))
             }
             recolor(root)
