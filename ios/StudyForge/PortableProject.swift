@@ -6,7 +6,7 @@ import CryptoKit
 
 /// Local layered raster exchange; native PencilKit projects retain their original strokes.
 struct PortableProject {
-    static let limit = 64_000_000
+    static let limit = 16_000_000
     struct Asset: Codable { var width: Int;var height: Int;var sha256: String;var png: String }
     struct Layer: Codable { var name: String;var visible: Bool;var opacity: Double;var blend: String;var transform: LayerTransform;var image: Asset }
     struct File: Codable {
@@ -31,11 +31,17 @@ struct PortableProject {
         let side = min(1024,Int(sqrt(8_000_000.0/Double(layers.count))))
         let factor = min(1,Double(side)/Double(max(cg.width,cg.height)))
         let size = CGSize(width: CGFloat(max(1,Int(Double(cg.width)*factor))),height: CGFloat(max(1,Int(Double(cg.height)*factor))))
-        let images = try layers.map { layer in
-            Layer(name: try text(layer.name,80),visible: layer.visible,opacity: layer.opacity,blend: layer.blend,transform: layer.transform,image: try asset(IOSLayerRenderer.foreground(layer,size: size)))
+        let baseAsset = try asset(base)
+        var encodedBudget = baseAsset.png.utf8.count+32_000
+        guard encodedBudget <= limit else { throw fail() }
+        let images = try layers.map { layer -> Layer in
+            let image = try asset(IOSLayerRenderer.foreground(layer,size: size))
+            encodedBudget += image.png.utf8.count;guard encodedBudget <= limit else { throw fail() }
+            return Layer(name: try text(layer.name,80),visible: layer.visible,opacity: layer.opacity,blend: layer.blend,transform: layer.transform,image: image)
         }
-        let document = File(title: try text(title,160),prompt: try text(prompt,2000),negative: try text(negative,2000),folder: try text(folder,80),selected: selected,base: try asset(base),layers: images)
-        let data = try JSONEncoder().encode(document);guard data.count <= limit else { throw fail() };return data
+        let document = File(title: try text(title,160),prompt: try text(prompt,2000),negative: try text(negative,2000),folder: try text(folder,80),selected: selected,base: baseAsset,layers: images)
+        let encoder = JSONEncoder();encoder.outputFormatting = [.withoutEscapingSlashes]
+        let data = try encoder.encode(document);guard data.count <= limit else { throw fail() };return data
     }
     static func decode(_ data: Data) throws -> Document {
         guard data.count <= limit else { throw fail() }

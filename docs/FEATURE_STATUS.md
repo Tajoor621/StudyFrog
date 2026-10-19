@@ -1,4 +1,4 @@
-# Feature status — 0.7.0
+# Feature status — 0.8.0
 
 Evidence: [VALIDATION.md](../VALIDATION.md). Implemented code, automated tests and real-model/device evaluation are distinct.
 
@@ -12,7 +12,7 @@ Evidence: [VALIDATION.md](../VALIDATION.md). Implemented code, automated tests a
 | 8K stills | Computer tiled 4K/8K path and Android original-file export; no native-phone 8K denoising or verified model quality/seams |
 | Layers | Both platforms: up to 16 ink/raster layers, reversible masks, transforms, visibility/opacity/blends, ordering, document undo and persistent assets |
 | Graphics tools | Android shapes/text, booleans, SVG, guides/symmetry; iOS PencilKit pen/pencil/marker; full node/typography/print tools and vector parity incomplete |
-| Projects | Android schema 4 ZIP backups and legacy reads; iOS versioned native assets and legacy defaults; folders, search and metadata updates; cross-platform editable interchange missing |
+| Projects | Android schema 4 ZIP backups and legacy reads; iOS versioned native assets and legacy defaults; folders, search and metadata updates; portable layered-raster exchange implemented; lossless native stroke interchange incomplete |
 | Video | Phone still-reveal implementations and optional computer LTX adapter, five chained segments/720 frames/24fps/30sec; physical encoders and actual models untested |
 | Motion detail | LTX denoises at 768×448 before scaling to 1080p; no native 1080p-detail or ultra-realism guarantee |
 | Photo notes | Local Tesseract OCR, editable review and explicit bounded prompt handoff on Android/iOS/web; no factual validation or automatic label placement |

@@ -376,7 +376,7 @@ struct ForgeView: View {
                 }
             }
             Button("Cancel",role: .cancel) {}
-        } message: { Text("Ink, text, shapes and enabled masks become pixels inside separate layers. Layer settings and transforms are preserved. Layer images are limited to 1024px and 8 million pixels total. Save a native project first to retain editable strokes and masks.") }
+        } message: { Text("Ink, text, shapes and enabled masks become pixels inside separate layers. Layer settings and transforms are preserved. Portable files are limited to 16 MB, with layers up to 1024px and 8 million pixels total. Save a native project first to retain editable strokes and masks.") }
         .alert("Open portable layered project?",isPresented: $portableImportConsent) {
             Button("Choose file") { portablePicker = true };Button("Cancel",role: .cancel) {}
         } message: { Text("Save current work first. Import opens a separate local project and replaces the canvas. Portable layers contain pixels, not editable ink or text nodes.") }

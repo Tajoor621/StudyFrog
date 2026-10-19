@@ -49,9 +49,18 @@ class PortableProjectTest {
             val json=JSONObject(fixture()).also(change).toString()
             assertTrue(runCatching { decode(json).also { recycle(it.snapshot) } }.isFailure)
         }
+        val oversized=object:java.io.InputStream() {
+            var remaining=16_000_001
+            override fun read():Int = if(remaining-- > 0) 32 else -1
+            override fun read(buffer:ByteArray,offset:Int,length:Int):Int {
+                if(remaining<=0) return -1
+                val count=minOf(length,remaining);buffer.fill(32.toByte(),offset,offset+count);remaining-=count;return count
+            }
+        }
+        assertTrue(runCatching { PortableProject.decode(oversized) }.isFailure)
         assertTrue(runCatching { decode("[".repeat(17)+"]".repeat(17)) }.isFailure)
     }
-    @Test fun exportingBakesInkAndMaskButDoesNotMutateOriginalDocument() {
+    @Test fun exportingBakesInkButDoesNotMutateOriginalDocument() {
         val source=decode(fixture());val layer=source.snapshot.layers[1]
         val stroke=ForgeCanvas.Stroke(mutableListOf(ForgeCanvas.Point(.5f,.5f)),Color.RED,.05f,layer.id)
         val snapshot=source.snapshot.copy(strokes=listOf(stroke))

@@ -177,7 +177,7 @@ class MainActivity : ComponentActivity() {
         root.addView(button("Export PNG") { exportPng() })
         root.addView(button("Export portable layers · Android / iOS") {
             if(canvas.image==null) say("Create an image first") else AlertDialog.Builder(this).setTitle("Export layered raster copy?")
-                .setMessage("Ink, text, shapes and enabled masks become pixels inside separate layers. Layer order, visibility, opacity, blend and transforms are preserved. Layer images are limited to 1024px and 8 million pixels total. Native projects keep their original editable ink; save one first.")
+                .setMessage("Ink, text, shapes and enabled masks become pixels inside separate layers. Layer order, visibility, opacity, blend and transforms are preserved. Portable files are limited to 16 MB, with layers up to 1024px and 8 million pixels total. Native projects keep their original editable ink; save one first.")
                 .setPositiveButton("Export copy") { _,_ ->
                     val snapshot=canvas.snapshot();val meta=metadata()
                     background { val file=File(cacheDir,"portable-${UUID.randomUUID()}.json");try { file.writeText(com.scenio.mth.editor.PortableProject.encode(snapshot,meta));ui { export(file,"application/json","StudyForge.sfgx.json") } } catch(e:Exception) { file.delete();throw e } }

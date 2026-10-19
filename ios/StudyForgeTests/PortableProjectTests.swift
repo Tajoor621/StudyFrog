@@ -42,6 +42,7 @@ final class PortableProjectTests: XCTestCase {
             { var layers = $0["layers"] as! [[String:Any]];var transform = layers[0]["transform"] as! [String:Any];transform["scale"] = 0;layers[0]["transform"] = transform;$0["layers"] = layers }
         ]
         for change in changes { var json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String:Any]);change(&json);XCTAssertThrowsError(try PortableProject.decode(JSONSerialization.data(withJSONObject: json))) }
+        XCTAssertThrowsError(try PortableProject.decode(Data(repeating: 32,count: PortableProject.limit+1)))
         XCTAssertThrowsError(try PortableProject.decode(Data((String(repeating: "[",count: 17)+String(repeating: "]",count: 17)).utf8)))
     }
     func testExportCreatesRasterCopyAndRetainsOriginalPencilKitInk() throws {

@@ -16,7 +16,7 @@ import kotlin.math.sqrt
 
 /** Versioned, local-only layered raster exchange. Native ink documents remain unchanged. */
 object PortableProject {
-    private const val LIMIT = 64_000_000
+    private const val LIMIT = 16_000_000
     data class Document(val snapshot: ForgeCanvas.Snapshot, val metadata: JSONObject)
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun text(value: String, limit: Int): String {
@@ -36,27 +36,33 @@ object PortableProject {
         val side = minOf(1024,sqrt(8_000_000.0/snapshot.layers.size).toInt())
         val factor = minOf(1.0,side.toDouble()/maxOf(base.width,base.height))
         val width = maxOf(1,(base.width*factor).toInt());val height = maxOf(1,(base.height*factor).toInt())
+        val baseAsset=asset(base)
+        var encodedBudget=baseAsset.getString("png").length.toLong()+32_000
+        require(encodedBudget<=LIMIT) { "Portable project exceeds 16 MB; reduce image or layer detail" }
         val doc = JSONObject().put("format","studyforge-layered-raster").put("version",1)
             .put("title",text(metadata.optString("title",metadata.optString("prompt").take(160)),160))
             .put("prompt",text(metadata.optString("prompt"),2000)).put("negative",text(metadata.optString("negative"),2000))
             .put("folder",text(metadata.optString("folder"),80)).put("selected",snapshot.layers.indexOfFirst { it.id == snapshot.activeLayer }.coerceAtLeast(0))
-            .put("base",asset(base))
+            .put("base",baseAsset)
         doc.put("layers",JSONArray().apply {
             snapshot.layers.forEach { layer ->
                 val raster = Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
                 try {
                     val untransformed = layer.copy(visible=true,opacity=1f,blend="normal",offsetX=0f,offsetY=0f,scale=1f,rotation=0f)
                     LayerRenderer.draw(Canvas(raster),snapshot.copy(base=null,layers=listOf(untransformed)),RectF(0f,0f,width.toFloat(),height.toFloat()))
+                    val image=asset(raster)
+                    encodedBudget+=image.getString("png").length
+                    require(encodedBudget<=LIMIT) { "Portable project exceeds 16 MB; reduce image or layer detail" }
                     put(JSONObject().put("name",text(layer.name,80)).put("visible",layer.visible).put("opacity",layer.opacity).put("blend",layer.blend)
-                        .put("transform",JSONObject().put("x",layer.offsetX).put("y",layer.offsetY).put("scale",layer.scale).put("rotation",layer.rotation)).put("image",asset(raster)))
+                        .put("transform",JSONObject().put("x",layer.offsetX).put("y",layer.offsetY).put("scale",layer.scale).put("rotation",layer.rotation)).put("image",image))
                 } finally { raster.recycle() }
             }
         })
-        return doc.toString().also { require(it.toByteArray(Charsets.UTF_8).size <= LIMIT) { "Portable project exceeds 64 MB" } }
+        return doc.toString().also { require(it.toByteArray(Charsets.UTF_8).size <= LIMIT) { "Portable project exceeds 16 MB" } }
     }
     fun decode(input: InputStream): Document {
         val bytes = ByteArrayOutputStream()
-        input.use { source -> val buffer=ByteArray(8192);while(true) { val count=source.read(buffer);if(count<0) break;require(bytes.size().toLong()+count<=LIMIT) { "Portable project exceeds 64 MB" };bytes.write(buffer,0,count) } }
+        input.use { source -> val buffer=ByteArray(8192);while(true) { val count=source.read(buffer);if(count<0) break;require(bytes.size().toLong()+count<=LIMIT) { "Portable project exceeds 16 MB" };bytes.write(buffer,0,count) } }
         val json = Charsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(bytes.toByteArray())).toString()
         var depth=0;var quoted=false;var escaped=false
         json.forEach { c ->
