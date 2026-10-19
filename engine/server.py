@@ -134,6 +134,11 @@ def diffusion(job):
     from diffusers import StableDiffusionImg2ImgPipeline
     from image_guidance import cache_key, load_pipeline, condition
     mode=job.get("control","none");key=cache_key(model,mode)
+    source=None
+    if mode in ("depth_photo","pose_photo"):
+        release_image_pipeline()
+        source=condition(decode_image(job["image"]),mode,job["width"],job["height"])
+        checkpoint(job)
     if PIPE_KEY!=key: release_image_pipeline()
     if PIPE is None:
         dtype=torch.float16 if torch.cuda.is_available() else torch.float32
@@ -147,7 +152,7 @@ def diffusion(job):
     args=dict(prompt=job["prompt"],negative_prompt=job["negative"],num_inference_steps=job["steps"],generator=generator,
         guidance_scale=job.get("guidance",7.5),callback_on_step_end=lambda pipe,step,timestep,kwargs: (checkpoint(job),kwargs)[1])
     if mode!="none":
-        source=condition(decode_image(job["image"]),mode,job["width"],job["height"])
+        if source is None: source=condition(decode_image(job["image"]),mode,job["width"],job["height"])
         if mode=="reference":
             PIPE.set_ip_adapter_scale(job.get("control_scale",.7))
             result=PIPE(ip_adapter_image=source,width=job["width"],height=job["height"],**args)
@@ -268,11 +273,19 @@ class Handler(BaseHTTPRequestHandler):
             try: self.reply(200,cancel_job(self.path.split("/")[2]))
             except (ValueError,FileNotFoundError): self.reply(404,{"error":"Not found"})
             return
-        if self.path!="/jobs": self.reply(404,{"error":"Not found"});return
+        if self.path not in ("/jobs","/ocr"): self.reply(404,{"error":"Not found"});return
         try:
             n=int(self.headers.get("Content-Length","0"))
             if not 0<n<=13_000_000: raise ValueError("Invalid body size")
-            job=validate(json.loads(self.rfile.read(n)))
+            body=json.loads(self.rfile.read(n))
+            if self.path=="/ocr":
+                from study_ocr import extract, BusyError
+                if not isinstance(body,dict) or not isinstance(body.get("image"),str) or len(body["image"])>12_000_000: raise ValueError("Provide a photo up to 12 MB encoded")
+                try: self.reply(200,extract(decode_image(body["image"]),body.get("language","eng")))
+                except BusyError: self.reply(429,{"error":"OCR is busy; retry shortly"})
+                except RuntimeError as exc: self.reply(503,{"error":str(exc)[:200]})
+                return
+            job=validate(body)
             job.update(id=uuid.uuid4().hex,status="queued",created=time.time())
             save(job)
             try: JOBS.put_nowait(job)
@@ -293,7 +306,7 @@ class Handler(BaseHTTPRequestHandler):
                     except (OSError,ValueError): continue
                 self.reply(200,{"jobs":items});return
             if self.path=="/health":
-                self.reply(200,{"local_only":True,"model_configured":Path(os.environ.get("STUDYFORGE_MODEL","/__unconfigured__")).is_dir(),"video":"30-second reveal; optional LTX motion model", "motion_configured":Path(os.environ.get("STUDYFORGE_VIDEO_MODEL","/__unconfigured__")).is_dir(), "image_guidance":__import__("image_guidance").capabilities()});return
+                self.reply(200,{"local_only":True,"model_configured":Path(os.environ.get("STUDYFORGE_MODEL","/__unconfigured__")).is_dir(),"video":"30-second reveal; optional LTX motion model", "motion_configured":Path(os.environ.get("STUDYFORGE_VIDEO_MODEL","/__unconfigured__")).is_dir(), "image_guidance":__import__("image_guidance").capabilities(), "ocr_available":bool(shutil.which("tesseract"))});return
             prefix,job_id=self.path.strip("/").split("/",1)
             if prefix not in ("jobs","results"): raise ValueError("Unknown route")
             job=read(job_id)

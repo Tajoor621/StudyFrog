@@ -179,8 +179,11 @@ class MainActivity : ComponentActivity() {
         root.addView(text("Optional local computer engine • USB connection • no cloud"))
         token=EditText(this).apply { hint="Engine token (kept in memory only)";inputType=129;setTextColor(Color.WHITE) };root.addView(token)
         root.addView(text("Computer image guidance · imported local model required"))
-        controlMode=choices(listOf("No extra guidance","ControlNet Canny edges from photo","ControlNet prepared depth map","ControlNet prepared OpenPose map","IP-Adapter reference photo"));root.addView(controlMode)
+        controlMode=choices(listOf("No extra guidance","ControlNet Canny edges from photo","ControlNet prepared depth map","ControlNet prepared OpenPose map","IP-Adapter reference photo","ControlNet estimate depth from photo","ControlNet detect body pose from photo"));root.addView(controlMode)
         root.addView(text("Image guidance strength · 0 to 100 percent"));controlStrength=SeekBar(this).apply { max=100;progress=70;contentDescription="Computer image guidance strength" };root.addView(controlStrength)
+        root.addView(button("Extract photo text · local computer") {
+            AlertDialog.Builder(this).setTitle("Send canvas photo to your computer for OCR?").setMessage("Text recognition uses free Tesseract on your own computer. Your image is transient and is not saved by OCR. Review every label before study use. Choose an installed language.").setItems(arrayOf("English · eng","Urdu · urd","Arabic · ara")) { _,index -> extractStudyText(listOf("eng","urd","ara")[index]) }.setNegativeButton("Cancel",null).show()
+        })
         root.addView(button("Generate with local model") { submit("image") })
         root.addView(button("Generate 30-second AI motion video (local computer)") { submit("motion") })
         root.addView(button("30-second 1080p reveal video") { submit("video") })
@@ -482,6 +485,36 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    private fun encodeCanvas(snapshot:ForgeCanvas.Snapshot,maxSide:Int):String {
+        val bitmap=ForgeCanvas.render(snapshot)
+        val ratio=minOf(1f,maxSide.toFloat()/maxOf(bitmap.width,bitmap.height))
+        val upload=if(ratio<1f) Bitmap.createScaledBitmap(bitmap,maxOf(1,(bitmap.width*ratio).toInt()),maxOf(1,(bitmap.height*ratio).toInt()),true) else bitmap
+        return try {
+            val bytes=java.io.ByteArrayOutputStream().use { out -> check(upload.compress(Bitmap.CompressFormat.PNG,100,out));out.toByteArray() }
+            Base64.encodeToString(bytes,Base64.NO_WRAP)
+        } finally { if(upload!==bitmap) upload.recycle();bitmap.recycle() }
+    }
+    private fun extractStudyText(language:String) {
+        if(com.scenio.mth.family.FamilyPolicy.restricted(this)) return
+        val auth=token.text.toString();if(auth.isBlank()) { say("Enter your local engine token first");return }
+        val snapshot=canvas.snapshot();if(snapshot.base==null) { say("Import a clear photo of your notes first");return }
+        say("Reading photo text on your computer…")
+        background {
+            val body=JSONObject().put("image",encodeCanvas(snapshot,2400)).put("language",language)
+            val value=JSONObject(String(api("/ocr",auth,body))).getString("text")
+            ui {
+                if(value.isBlank()) { say("No text found. Try a clearer cropped photo.");return@ui }
+                val editor=EditText(this).apply { setText(value);minLines=5;maxLines=12;inputType=android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE;contentDescription="Review and correct extracted study notes" }
+                val dialog=AlertDialog.Builder(this).setTitle("Review extracted notes").setMessage("OCR can misread scientific terms. Correct the text and shorten it to fit a 2000-character prompt. Your current prompt changes only when you apply these notes.").setView(editor).setPositiveButton("Use reviewed notes",null).setNegativeButton("Cancel",null).create()
+                dialog.setOnShowListener { dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    val notes=editor.text.toString().trim();val combined="Create a clearly labeled educational illustration from these reviewed notes:\n$notes"
+                    if(notes.isBlank()) editor.error="Enter reviewed notes"
+                    else if(combined.length>2000) editor.error="Shorten notes; combined prompt is ${combined.length} characters (maximum 2000)"
+                    else { prompt.setText(combined);dialog.dismiss();say("Reviewed notes added to prompt; choose a generation engine when ready") }
+                } };dialog.show()
+            }
+        }
+    }
     private fun submit(kind:String,width:Int=768,height:Int=432) {
         if(com.scenio.mth.family.FamilyPolicy.restricted(this)) return
         val auth=token.text.toString();if(auth.isBlank()) { say("Start the local engine and enter its token first");return }
@@ -489,7 +522,7 @@ class MainActivity : ComponentActivity() {
         if(value==null || value<0) { say("Seed must be between 0 and 2147483647");return }
         if(prompt.text.isBlank() || prompt.length()>2000 || negative.length()>2000) { say("Write a prompt of 1–2000 characters; negative prompt maximum 2000");return }
         val effective=runCatching { generationProfile.apply(prompt.text.toString()) }.getOrElse { say(it.message ?: "Invalid visual directions");return }
-        val control=if(kind=="image") listOf("none","canny","depth","pose","reference")[controlMode.selectedItemPosition] else "none"
+        val control=if(kind=="image") listOf("none","canny","depth","pose","reference","depth_photo","pose_photo")[controlMode.selectedItemPosition] else "none"
         val body=JSONObject().put("control",control).put("control_scale",controlStrength.progress/100.0).put("kind",kind).put("prompt",effective).put("negative",negative.text.toString())
             .put("steps",steps.progress+10).put("seed",value).put("strength",(strength.progress+10)/100.0).put("width",width).put("height",height)
         val photo=control!="none" || kind in listOf("video","motion","refine") || mode.selectedItem.toString()=="Photo Converter"
@@ -497,15 +530,7 @@ class MainActivity : ComponentActivity() {
         if(photo && snapshot?.base==null) { say("Import or generate an image first");return }
         say("Submitting to your local engine…")
         background {
-            if(snapshot!=null) {
-                val bitmap=ForgeCanvas.render(snapshot)
-                val ratio=minOf(1f,1024f/maxOf(bitmap.width,bitmap.height))
-                val upload=if(ratio<1f) Bitmap.createScaledBitmap(bitmap,(bitmap.width*ratio).toInt(),(bitmap.height*ratio).toInt(),true) else bitmap
-                try {
-                    val bytes=java.io.ByteArrayOutputStream().use { out -> check(upload.compress(Bitmap.CompressFormat.PNG,100,out));out.toByteArray() }
-                    body.put("image",Base64.encodeToString(bytes,Base64.NO_WRAP))
-                } finally { if(upload!==bitmap) upload.recycle();bitmap.recycle() }
-            }
+            if(snapshot!=null) body.put("image",encodeCanvas(snapshot,1024))
             val job=JSONObject(String(api("/jobs",auth,body)))
             ui { latestJob=job.getString("id");progress("generation:${job.getString("id")}",1,2);prefs.edit().putString("latestJob",latestJob).apply();say("Job queued • seed $value. Check the job to see progress.") }
         }

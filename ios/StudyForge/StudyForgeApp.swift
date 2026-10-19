@@ -239,6 +239,10 @@ struct ForgeView: View {
     @State private var imageGuidance = "none"
     @State private var imageGuidanceScale = 0.7
     @State private var computerUsesPhoto = false
+    @State private var ocrConsent = false
+    @State private var ocrReview = false
+    @State private var ocrText = ""
+    @State private var ocrLanguage = "eng"
     @State private var deleteRecord: ProjectRecord?
     @State private var folderFilter = "\u{0}"
     @State private var moveRecord: ProjectRecord?
@@ -247,6 +251,21 @@ struct ForgeView: View {
     private var filteredRecords: [ProjectRecord] { store.records.filter {
         (folderFilter == "\u{0}" || ($0.folder ?? "") == folderFilter) && (query.isEmpty || $0.title.localizedCaseInsensitiveContains(query) || $0.prompt.localizedCaseInsensitiveContains(query))
     } }
+    private var ocrPrompt: String { "Create a clearly labeled educational illustration from these reviewed notes:\n"+ocrText.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private func recognizeNotes() {
+        guard !store.working,!family.restricted,let source = store.composite() else { return }
+        let engine = ComputerEngine(host: computerHost,token: computerToken),language = ocrLanguage
+        store.working = true;store.message = "Reading photo text on your computer…"
+        store.job = Task {
+            defer { store.working = false }
+            do {
+                let result = try await engine.recognize(image: source,language: language)
+                try Task.checkCancellation();guard !family.restricted else { return }
+                guard !result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { store.message = "No text found; try a sharper cropped photo";return }
+                ocrText = result;ocrReview = true;store.message = "Review the extracted notes before use"
+            } catch { store.message = error.localizedDescription }
+        }
+    }
     var body: some View {
         NavigationStack {
             if !onboarded {
@@ -271,10 +290,15 @@ struct ForgeView: View {
                     Button("Create 30-second reveal video") { store.video() }.disabled(store.image == nil || store.working)
                     DisclosureGroup("Local computer image generation") {
                         Toggle("Use current image for photo conversion",isOn: $computerUsesPhoto)
-                        Picker("Image guidance",selection: $imageGuidance) { Text("None").tag("none");Text("ControlNet Canny edges from photo").tag("canny");Text("ControlNet prepared depth map").tag("depth");Text("ControlNet prepared OpenPose map").tag("pose");Text("IP-Adapter reference photo").tag("reference") }
+                        Picker("Image guidance",selection: $imageGuidance) { Text("None").tag("none");Text("ControlNet Canny edges from photo").tag("canny");Text("ControlNet prepared depth map").tag("depth");Text("ControlNet prepared OpenPose map").tag("pose");Text("IP-Adapter reference photo").tag("reference");Text("ControlNet estimate depth from photo").tag("depth_photo");Text("ControlNet detect body pose from photo").tag("pose_photo") }
                         Slider(value: $imageGuidanceScale,in: 0...1) { Text("Image guidance strength") }
-                        Text("Requires your own computer and separately prepared local SD 1.x guidance weights. Depth and pose modes expect prepared maps.").font(.footnote)
+                        Text("Requires your own computer and separately prepared local SD 1.x guidance weights. Prepared-map modes use your map directly. Photo depth/pose modes need local estimator models; body pose has no hand/face landmarks.").font(.footnote)
                         Button("Generate image with local computer") { computerImageConsent = true }.disabled(store.working)
+                    }
+                    DisclosureGroup("Photo notes to reviewed study prompt") {
+                        Picker("Installed OCR language",selection: $ocrLanguage) { Text("English").tag("eng");Text("Urdu").tag("urd");Text("Arabic").tag("ara") }
+                        Button("Read canvas photo text on local computer") { ocrConsent = true }.disabled(store.image == nil || store.working)
+                        Text("Free Tesseract reads text on your own computer. Correct scientific terms and labels before using the result.").font(.footnote)
                     }
                     Button("Generate AI motion video on local computer") { motionConsent = true }.disabled(store.image == nil || store.working)
                     if let video = store.videoURL { ShareLink("Share video",item: video) }
@@ -294,6 +318,20 @@ struct ForgeView: View {
             do { guard let data = try await item?.loadTransferable(type: Data.self) else { return };guard !store.working,!family.restricted else { throw LocalFailure(message: "Workspace changed during photo import; please retry") };store.image = try IOSPhotoDecoder.decode(data);store.resetLayers();store.message = "Photo imported locally" }
             catch { store.message = error.localizedDescription }
         } }
+        .sheet(isPresented: $ocrReview) {
+            NavigationStack {
+                Form {
+                    Text("OCR can misread scientific terms. Review and correct every label. Applying notes replaces your current prompt; generation remains a separate action.")
+                    TextEditor(text: $ocrText).frame(minHeight: 220).accessibilityLabel("Review extracted study notes")
+                    Text("Combined prompt: \(ocrPrompt.count)/2000 characters")
+                    Button("Use reviewed notes") { store.prompt = ocrPrompt;ocrReview = false }
+                        .disabled(ocrText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || ocrPrompt.count > 2000 || family.restricted)
+                }.navigationTitle("Review study notes").toolbar { Button("Cancel") { ocrReview = false } }
+            }
+        }
+        .alert("Send canvas photo for local OCR?",isPresented: $ocrConsent) {
+            Button("Read text") { recognizeNotes() };Button("Cancel",role: .cancel) {}
+        } message: { Text("Your canvas goes to your computer over the configured local network. Tesseract uses transient files and does not save this OCR job. No cloud or paid API is used.") }
         .alert("Send an image job to your local computer?",isPresented: $computerImageConsent) {
             Button("Generate") { store.computerImage(host: computerHost,token: computerToken,control: imageGuidance,scale: imageGuidanceScale,photo: computerUsesPhoto) }
             Button("Cancel",role: .cancel) {}

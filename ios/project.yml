@@ -9,8 +9,8 @@ settings:
     DEVELOPMENT_TEAM: ''
     CODE_SIGNING_ALLOWED: NO
     GENERATE_INFOPLIST_FILE: YES
-    CURRENT_PROJECT_VERSION: 7
-    MARKETING_VERSION: 0.6.0
+    CURRENT_PROJECT_VERSION: 8
+    MARKETING_VERSION: 0.7.0
     INFOPLIST_KEY_CFBundleDisplayName: Study Frog
     INFOPLIST_KEY_UILaunchScreen_Generation: YES
     INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
