@@ -78,6 +78,7 @@ el('engineGenerate').onclick=async()=>{
   const width=Number(el('engineWidth').value),height=Number(el('engineHeight').value),steps=Number(el('engineSteps').value),seed=Number(el('engineSeed').value);
   if(![width,height,steps,seed].every(Number.isInteger)||width<256||width>1024||height<256||height>1024||width%8||height%8||steps<10||steps>40||seed<0||seed>2147483647)throw Error('Check dimensions (multiples of 8), steps (10–40) and seed.');
   if(el('engineBackend').value==='ollama'){
+   if(negative.trim())throw Error('Ollama image bridge has no negative conditioning. Choose StudyForge to use your negative prompt.');
    if(el('engineKind').value!=='image'||el('engineControl').value!=='none'||el('enginePhoto').checked)throw Error('This Ollama bridge supports text-to-image only. Choose StudyForge for guidance, photos, refinement or video.');
    const model=el('engineModel').value;if(!model)throw Error('Connect and select an installed image model.');
    status('Generating on your computer…');const data=await json('/generate',{model,prompt,width,height,steps});

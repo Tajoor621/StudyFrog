@@ -30,7 +30,7 @@ targets:
       path: StudyForge/Info.plist
       properties:
         UILaunchScreen: {}
-        NSLocalNetworkUsageDescription: Connect to your own computer engine only when you request local image or motion-video generation.
+        NSLocalNetworkUsageDescription: Connect to your own computer only when you request local image generation, motion video or photo text recognition.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         UISupportedInterfaceOrientations:

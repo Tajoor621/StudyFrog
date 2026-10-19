@@ -21,7 +21,7 @@ def parse_tsv(tsv,width,height):
             confidence=float(row["conf"]);x,y,w,h=(int(row[key]) for key in ("left","top","width","height"))
             key=tuple(int(row[k]) for k in ("page_num","block_num","par_num","line_num"))
         except (KeyError,TypeError,ValueError): continue
-        text="".join(c for c in row.get("text","") if c.isprintable()).strip()
+        text="".join(c for c in (row.get("text") or "") if c.isprintable()).strip()
         if not text or not math.isfinite(confidence) or confidence<0: continue
         if not (0<=x<width and 0<=y<height and w>0 and h>0 and x+w<=width and y+h<=height): continue
         words+=1

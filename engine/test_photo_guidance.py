@@ -31,3 +31,45 @@ class PhotoGuidanceTests(unittest.TestCase):
             self.assertEqual(prepare.call_args.args[0].size,(256,512));self.assertEqual(prepare.call_args.args[1],"depth_photo")
         self.assertEqual(image_guidance.base_mode("depth_photo"),"depth");self.assertEqual(image_guidance.base_mode("pose_photo"),"pose")
         self.assertEqual(image_guidance.base_mode("pose"),"pose")
+
+class EstimatorFlowTests(unittest.TestCase):
+    def test_local_cpu_depth_and_person_pose_loaders_use_only_local_safetensors(self):
+        import contextlib
+        import sys
+        import tempfile
+        import types
+        from pathlib import Path
+        calls=[]
+        class Tensor:
+            def __init__(self,value): self.value=np.asarray(value)
+            def detach(self): return self
+            def cpu(self): return self
+            def numpy(self): return self.value
+            def tolist(self): return self.value.tolist()
+            def __getitem__(self,index): return Tensor(self.value[index])
+        class Processor:
+            @classmethod
+            def from_pretrained(cls,path,**kwargs): calls.append((cls.__name__,path,kwargs));return cls()
+            def __call__(self,**kwargs): return {"pixel_values":kwargs["images"]}
+            def post_process_object_detection(self,*args,**kwargs): return [dict(labels=Tensor([0]),boxes=Tensor([[4,4,124,124]]))]
+            def post_process_pose_estimation(self,*args,**kwargs):
+                self.boxes=kwargs["boxes"]
+                return [[dict(keypoints=Tensor([[20+i*4,20+i*5] for i in range(17)]),scores=Tensor(np.ones(17)))]]
+        class PoseProcessor(Processor): pass
+        class Depth:
+            @classmethod
+            def from_pretrained(cls,path,**kwargs): calls.append((cls.__name__,path,kwargs));return cls()
+            def eval(self): return self
+            def __call__(self,**kwargs): return types.SimpleNamespace(predicted_depth=Tensor([[[0,1],[2,3]]]))
+        class Detector(Depth):
+            config=types.SimpleNamespace(id2label={0:"person"})
+            def __call__(self,**kwargs): return object()
+        class Pose(Depth):
+            def __call__(self,**kwargs): return object()
+        transformers=types.SimpleNamespace(AutoImageProcessor=Processor,VitPoseImageProcessor=PoseProcessor,AutoModelForDepthEstimation=Depth,RTDetrForObjectDetection=Detector,VitPoseForPoseEstimation=Pose)
+        with tempfile.TemporaryDirectory() as temp,patch.dict(sys.modules,{"torch":types.SimpleNamespace(inference_mode=contextlib.nullcontext),"transformers":transformers}),patch.dict(os.environ,{name:temp for names in photo_guidance.ENV.values() for name in names}):
+            for mode in photo_guidance.ENV:
+                result=photo_guidance.prepare(Image.new("RGB",(128,128)),mode);self.assertEqual(result.size,(128,128));self.assertIsNotNone(result.getbbox())
+        self.assertTrue(all(kwargs["local_files_only"] and kwargs["trust_remote_code"] is False for _,_,kwargs in calls))
+        self.assertTrue(all(kwargs["use_safetensors"] for name,_,kwargs in calls if name in ("Depth","Detector","Pose")))
+        self.assertIn("PoseProcessor",[name for name,_,_ in calls])

@@ -47,6 +47,8 @@ const server=spawn(process.env.PYTHON||'python3',[path.join(root,'web/local-engi
   await page.locator('#engineKind').selectOption('motion');await page.locator('#engineGenerate').click();await page.getByText(/Guidance applies to image generation/).waitFor();
   await page.locator('#engineJobs').click();await page.getByText(/image · done/).waitFor();
   page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Delete from computer',exact:true}).click();await page.getByText('No computer jobs yet.').waitFor();
+  await page.locator('#engineBackend').selectOption('ollama');await page.locator('#negative').fill('blur');
+  await page.locator('#engineGenerate').click();await page.getByText(/Ollama image bridge has no negative conditioning/).waitFor();
   assert.deepEqual(errors,[]);assert.ok(await page.locator('#canvas').isVisible());
   console.log('Browser integration passed: connection, image guidance payload, original export, canvas undo, OCR review/bounds, video validation, job deletion; engine fixtures, no real inference.');
  }finally{if(browser)await browser.close();server.kill('SIGTERM');}

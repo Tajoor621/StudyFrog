@@ -43,3 +43,35 @@ class StudyOCRTests(unittest.TestCase):
         result=study_ocr.extract(image)
         self.assertIn("CELL WALL",result["text"]);self.assertIn("DNA AND PROTEIN",result["text"])
         self.assertTrue(result["lines"])
+
+class OCRHTTPTests(unittest.TestCase):
+    def test_authenticated_endpoint_returns_review_text_without_saving_jobs(self):
+        import base64
+        import json
+        import threading
+        import urllib.request
+        import urllib.error
+        import server
+        output=io.BytesIO();Image.new("RGB",(20,20),"white").save(output,format="PNG")
+        body=json.dumps({"image":base64.b64encode(output.getvalue()).decode(),"language":"eng"}).encode()
+        http=server.Server(("127.0.0.1",0),server.Handler);thread=threading.Thread(target=http.serve_forever,daemon=True);thread.start()
+        before=set(server.ROOT.iterdir())
+        try:
+            url=f"http://127.0.0.1:{http.server_port}/ocr"
+            def request(auth=True):
+                headers={"Content-Type":"application/json"}
+                if auth: headers["Authorization"]="Bearer "+server.TOKEN
+                return urllib.request.urlopen(urllib.request.Request(url,data=body,headers=headers),timeout=5)
+            with self.assertRaises(urllib.error.HTTPError) as error: request(False)
+            self.assertEqual(error.exception.code,401)
+            with patch.object(study_ocr,"extract",return_value={"text":"DNA","review_required":True}):
+                with request() as response:
+                    self.assertEqual(json.load(response)["text"],"DNA");self.assertEqual(response.headers["Cache-Control"],"no-store")
+            with patch.object(study_ocr,"extract",side_effect=study_ocr.BusyError("busy")):
+                with self.assertRaises(urllib.error.HTTPError) as error: request()
+                self.assertEqual(error.exception.code,429)
+            with patch.object(study_ocr,"extract",side_effect=RuntimeError("Install free Tesseract")):
+                with self.assertRaises(urllib.error.HTTPError) as error: request()
+                self.assertEqual(error.exception.code,503)
+            self.assertEqual(set(server.ROOT.iterdir()),before)
+        finally: http.shutdown();http.server_close();thread.join()
