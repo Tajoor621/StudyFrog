@@ -33,9 +33,11 @@ const server=spawn(process.env.PYTHON||'python3',[path.join(root,'web/local-engi
   await page.goto('http://127.0.0.1:8766/');
   await page.locator('#engineConnect').click();await page.getByText(/Local engine connected/).waitFor();
   await page.locator('#prompt').fill('Botanical leaf illustration');
+  await page.locator('#style').selectOption('Realistic');
+  assert.equal(await page.locator('#enginePromptPreview').inputValue(),'Botanical leaf illustration\nVisual direction: Realistic.');
   await page.locator('#engineControl').selectOption('depth_photo');
   await page.locator('#engineGenerate').click();await page.getByText(/Result ready/).waitFor();
-  assert.equal(submitted.control,'depth_photo');assert.equal(submitted.prompt,'Botanical leaf illustration');assert.ok(submitted.image.length>100);
+  assert.equal(submitted.control,'depth_photo');assert.equal(submitted.prompt,'Botanical leaf illustration\nVisual direction: Realistic.');assert.ok(submitted.image.length>100);
   assert.equal(await page.locator('#engineDownload').getAttribute('download'),'studyfrog-original.png');
   assert.deepEqual(await page.locator('#canvas').evaluate(c=>Array.from(c.getContext('2d').getImageData(480,270,1,1).data)),[0,255,0,255]);
   await page.locator('#undo').click();await page.getByText('Undone.',{exact:true}).waitFor();

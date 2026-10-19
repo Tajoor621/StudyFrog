@@ -65,12 +65,14 @@ class Handler(SimpleHTTPRequestHandler):
     def proxy(self,method,path):
         token=os.environ.get("STUDYFORGE_TOKEN","")
         if not token: return self.reply(503,{"error":"Set STUDYFORGE_TOKEN to the same token as your local SD engine, then restart the bridge"})
+        started=False
         try:
             body=self.body(13_000_000)[0] if method=="POST" else None
             request=Request(ENGINE+path,data=body,method=method,headers={"Authorization":"Bearer "+token,"Content-Type":"application/json"})
             with OPENER.open(request,timeout=35) as response:
                 size=int(response.headers.get("Content-Length","0"));maximum=256_000_000 if path.startswith("/results/") else 1_000_000
                 if not 0<size<=maximum: raise ValueError("Invalid engine response size")
+                started=True
                 self.send_response(response.status);self.send_header("Content-Type",response.headers.get("Content-Type","application/octet-stream"))
                 self.send_header("Content-Length",str(size));self.send_header("Cache-Control","no-store");self.end_headers()
                 while size:
@@ -84,8 +86,10 @@ class Handler(SimpleHTTPRequestHandler):
                 except (ValueError,AttributeError): message="Local engine request failed"
                 self.reply(exc.code,{"error":str(message)[:300]})
             else: self.reply(502,{"error":"Engine redirect rejected"})
-        except ValueError as exc: self.reply(400,{"error":str(exc)[:200]})
-        except OSError: self.reply(502,{"error":"Local SD engine unavailable; check port 8765 and token"})
+        except ValueError as exc:
+            if not started: self.reply(400,{"error":str(exc)[:200]})
+        except OSError:
+            if not started: self.reply(502,{"error":"Local SD engine unavailable; check port 8765 and token"})
     def do_HEAD(self):
         if not self.allowed(): return self.reply(403,{"error":"Private local app only"})
         path=unquote(urlsplit(self.path).path)
@@ -129,6 +133,7 @@ class Handler(SimpleHTTPRequestHandler):
                 raw=response.read(24_000_001)
                 if len(raw)>24_000_000: raise ValueError("Generated image exceeds response limit")
                 result=json.loads(raw)
+            if not isinstance(result,dict): raise ValueError("Invalid local engine response")
             images=result.get("images") or ([result["image"]] if result.get("image") else [])
             if not images: return self.reply(502,{"error":"Model returned no image. Use a compatible image model."})
             self.reply(200,{"image":images[0]})
