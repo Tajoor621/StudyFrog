@@ -190,6 +190,7 @@ jobs:
     - main
     paths:
     - 'app/**'
+    - '!app/src/androidTest/**'
     - 'engine/**'
     - 'web/**'
     - 'sw.js'
