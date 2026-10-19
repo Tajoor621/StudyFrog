@@ -86,3 +86,8 @@ class ImageGuidanceTests(unittest.TestCase):
             self.assertEqual(calls,["reference","pose"]);self.assertIsNone(old())
             self.assertEqual(conditions[-1]["controlnet_conditioning_scale"],.3)
             self.assertEqual(conditions[-1]["image"].size,(768,432))
+
+    def test_empty_model_settings_do_not_claim_a_configured_engine(self):
+        with patch.dict(os.environ,{"STUDYFORGE_MODEL":"","STUDYFORGE_VIDEO_MODEL":""}):
+            self.assertFalse(server.configured_model("STUDYFORGE_MODEL"));self.assertFalse(server.configured_model("STUDYFORGE_VIDEO_MODEL"))
+        with patch.dict(os.environ,{"STUDYFORGE_MODEL":str(self.folder)}): self.assertTrue(server.configured_model("STUDYFORGE_MODEL"))

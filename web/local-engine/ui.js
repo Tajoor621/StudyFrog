@@ -4,6 +4,7 @@ panel.innerHTML=`<h2>Free local generation</h2>
 <label for="engineBackend">Local engine</label><select id="engineBackend"><option value="sd">StudyForge SD / ControlNet / LTX</option><option value="ollama">Ollama compatible image model</option></select>
 <button id="engineConnect">Check local engine</button>
 <label for="engineModel">Installed Ollama image model</label><select id="engineModel" disabled><option value="">Connect to list models</option></select>
+<label for="enginePromptPreview">Prompt sent to computer</label><textarea id="enginePromptPreview" rows="4" readonly aria-label="Effective generation prompt"></textarea>
 <label for="engineKind">Output</label><select id="engineKind"><option value="image">Image</option><option value="refine4k">4K tiled refinement of canvas</option><option value="refine8k">8K tiled refinement of canvas</option><option value="video">30-second still reveal · 1080p/24fps</option><option value="motion">30-second AI motion · local LTX/CUDA</option></select>
 <label for="enginePhoto"><input id="enginePhoto" type="checkbox"> Use current canvas for photo conversion</label>
 <label for="engineControl">Image guidance</label><select id="engineControl"><option value="none">None</option><option value="canny">Canny edges from canvas</option><option value="depth_photo">Estimate depth from canvas photo</option><option value="pose_photo">Detect body pose from canvas photo</option><option value="depth">Prepared depth map on canvas</option><option value="pose">Prepared OpenPose body map on canvas</option><option value="reference">IP-Adapter reference photo</option></select>
@@ -25,6 +26,12 @@ panel.innerHTML=`<h2>Free local generation</h2>
 document.querySelector('#studio .grid > .panel').append(panel);
 const el=id=>document.getElementById(id),status=text=>el('engineStatus').textContent=text;
 let busy=false,job=null,resultURL=null;
+function effectivePrompt(){
+ const text=el('prompt').value.trim(),style=el('style').value;
+ return style?`${text}\nVisual direction: ${style}.`:text;
+}
+function previewPrompt(){el('enginePromptPreview').value=effectivePrompt();}
+el('prompt').addEventListener('input',previewPrompt);el('style').addEventListener('change',previewPrompt);window.addEventListener('studyforge-prompt-changed',previewPrompt);previewPrompt();
 function base(){
  if(['127.0.0.1','localhost'].includes(location.hostname)||location.protocol==='https:'&&location.hostname.endsWith('.ts.net'))return location.origin;
  throw Error('Open the local bridge URL on your computer, or your private HTTPS Tailscale Serve URL.');
@@ -37,6 +44,7 @@ async function json(path,body,method=body?'POST':'GET'){
 function picture(){return el('canvas').toDataURL('image/png').split(',')[1];}
 function original(blob,name){
  if(resultURL)URL.revokeObjectURL(resultURL);resultURL=URL.createObjectURL(blob);
+ if(blob.type==='image/png'){el('engineVideo').pause();el('engineVideo').removeAttribute('src');el('engineVideo').load();el('engineVideo').hidden=true;}
  const anchor=el('engineDownload');anchor.href=resultURL;anchor.download=name;anchor.hidden=false;
 }
 el('engineBackend').onchange=()=>{el('engineModel').disabled=el('engineBackend').value!=='ollama';};
@@ -73,8 +81,8 @@ async function deliver(id,video){
 el('engineGenerate').onclick=async()=>{
  if(busy)return;setBusy(true);
  try{
-  const prompt=el('prompt').value.trim(),negative=el('negative').value;
-  if(!prompt||prompt.length>2000||negative.length>2000)throw Error('Use a prompt of 1–2000 characters and negative prompt up to 2000.');
+  const prompt=effectivePrompt(),negative=el('negative').value;previewPrompt();
+  if(!el('prompt').value.trim()||prompt.length>2000||negative.length>2000)throw Error('Use a prompt of 1–2000 characters including the selected visual direction, and negative prompt up to 2000.');
   const width=Number(el('engineWidth').value),height=Number(el('engineHeight').value),steps=Number(el('engineSteps').value),seed=Number(el('engineSeed').value);
   if(![width,height,steps,seed].every(Number.isInteger)||width<256||width>1024||height<256||height>1024||width%8||height%8||steps<10||steps>40||seed<0||seed>2147483647)throw Error('Check dimensions (multiples of 8), steps (10–40) and seed.');
   if(el('engineBackend').value==='ollama'){
@@ -112,7 +120,7 @@ el('engineOCR').onclick=async()=>{
 el('ocrUse').onclick=()=>{
  const notes=el('ocrReview').value.trim(),prompt='Create a clearly labeled educational illustration from these reviewed notes:\n'+notes;
  if(!notes)return status('Extract or enter notes first.');if(prompt.length>2000)return status('Shorten the reviewed notes to fit the 2000-character prompt limit.');
- el('prompt').value=prompt;status('Reviewed notes copied to the prompt. Choose a generation engine when ready.');
+ el('prompt').value=prompt;previewPrompt();status('Reviewed notes copied to the prompt. Choose a generation engine when ready.');
 };
 window.addEventListener('pagehide',()=>{if(resultURL)URL.revokeObjectURL(resultURL);});
 

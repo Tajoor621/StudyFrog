@@ -313,110 +313,43 @@ class Handler(BaseHTTPRequestHandler):
             if self.path=="/health":
                 self.reply(200,{"local_only":True,"model_configured":configured_model("STUDYFORGE_MODEL"),"video":"30-second reveal; optional LTX motion model", "motion_configured":configured_model("STUDYFORGE_VIDEO_MODEL"), "image_guidance":__import__("image_guidance").capabilities(), "ocr_available":bool(shutil.which("tesseract"))});return
             prefix,job_id=self.path.strip("/").split("/",1)
-            if prefix not in ("jobs","results"): raise ValueError("UnknownPOST':'GET'){
- const response=await fetch(base()+path,{method,headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,cache:'no-store'});
- const data=await response.json();if(!response.ok)throw Error(data.error||'Local request failed');return data;
-}
-function picture(){return el('canvas').toDataURL('image/png').split(',')[1];}
-function original(blob,name){
- if(resultURL)URL.revokeObjectURL(resultURL);resultURL=URL.createObjectURL(blob);
- if(blob.type==='image/png'){el('engineVideo').pause();el('engineVideo').removeAttribute('src');el('engineVideo').load();el('engineVideo').hidden=true;}
- const anchor=el('engineDownload');anchor.href=resultURL;anchor.download=name;anchor.hidden=false;
-}
-el('engineBackend').onchange=()=>{el('engineModel').disabled=el('engineBackend').value!=='ollama';};
-el('engineConnect').onclick=async()=>{
- if(busy)return;setBusy(true);
- try{
-  status('Checking your computer…');
-  if(el('engineBackend').value==='sd'){
-   const health=await json('/engine/health');
-   const ready=Object.entries(health.image_guidance||{}).filter(([,value])=>value).map(([name])=>name).join(', ')||'none';
-   status(`Local engine connected. Image model: ${health.model_configured?'configured':'missing'}. Motion: ${health.motion_configured?'configured':'missing'}. OCR: ${health.ocr_available?'installed':'missing'}. Guidance: ${ready}. Configuration does not prove model compatibility.`);
-  }else{
-   const data=await json('/health');el('engineModel').replaceChildren();
-   for(const name of data.models||[]){const option=document.createElement('option');option.value=name;option.textContent=name;el('engineModel').append(option);}
-   status('Connected. Choose an installed compatible image model.');
-  }
- }catch(error){status(error.message);}finally{setBusy(false);}
-};
-el('engineCancel').onclick=async()=>{
- if(!job)return;
- try{await json(`/engine/jobs/${job}/cancel`,{});status('Cancellation requested; waiting for the next safe processing step.');}
- catch(error){status(error.message);}
-};
-async function deliver(id,video){
- const response=await fetch(base()+`/engine/results/${id}`,{cache:'no-store'});
- if(!response.ok)throw Error('Result download failed');
- const length=Number(response.headers.get('Content-Length'));if(!Number.isFinite(length)||length<=0||length>256000000)throw Error('Result exceeds download limit');
- const blob=await response.blob();original(blob,video?'studyfrog-30s.mp4':'studyfrog-original.png');
- el('engineVideo').hidden=!video;
- if(video){el('engineVideo').src=resultURL;}
- else{const image=new Image();image.src=resultURL;await image.decode();window.dispatchEvent(new CustomEvent('studyforge-image',{detail:image}));}
- status('Result ready. Download the original to preserve its full resolution. Review before study use.');
-}
-el('engineGenerate').onclick=async()=>{
- if(busy)return;setBusy(true);
- try{
-  const prompt=effectivePrompt(),negative=el('negative').value;previewPrompt();
-  if(!el('prompt').value.trim()||prompt.length>2000||negative.length>2000)throw Error('Use a prompt of 1–2000 characters including the selected visual direction, and negative prompt up to 2000.');
-  const width=Number(el('engineWidth').value),height=Number(el('engineHeight').value),steps=Number(el('engineSteps').value),seed=Number(el('engineSeed').value);
-  if(![width,height,steps,seed].every(Number.isInteger)||width<256||width>1024||height<256||height>1024||width%8||height%8||steps<10||steps>40||seed<0||seed>2147483647)throw Error('Check dimensions (multiples of 8), steps (10–40) and seed.');
-  if(el('engineBackend').value==='ollama'){
-   if(negative.trim())throw Error('Ollama image bridge has no negative conditioning. Choose StudyForge to use your negative prompt.');
-   if(el('engineKind').value!=='image'||el('engineControl').value!=='none'||el('enginePhoto').checked)throw Error('This Ollama bridge supports text-to-image only. Choose StudyForge for guidance, photos, refinement or video.');
-   const model=el('engineModel').value;if(!model)throw Error('Connect and select an installed image model.');
-   status('Generating on your computer…');const data=await json('/generate',{model,prompt,width,height,steps});
-   if(typeof data.image!=='string'||data.image.length>24000000)throw Error('Invalid image response');
-   const bytes=Uint8Array.from(atob(data.image),character=>character.charCodeAt(0));original(new Blob([bytes],{type:'image/png'}),'studyfrog-original.png');
-   const image=new Image();image.src=resultURL;await image.decode();window.dispatchEvent(new CustomEvent('studyforge-image',{detail:image}));status('Image ready. Download the original result.');return;
-  }
-  const selected=el('engineKind').value,kind=selected.startsWith('refine')?'refine':selected,control=el('engineControl').value;
-  if(control!=='none'&&kind!=='image')throw Error('Guidance applies to image generation. Choose None for refinement/video.');
-  const body={kind,prompt,negative,width,height,steps,seed,control,control_scale:Number(el('engineScale').value),strength:Number(el('engineStrength').value)};
-  if(selected==='refine4k'){body.width=3840;body.height=2160;}
-  if(selected==='refine8k'){body.width=7680;body.height=4320;}
-  if(el('enginePhoto').checked||control!=='none'||kind!=='image')body.image=picture();
-  status('Sending your prompt and selected canvas to your computer…');
-  const queued=await json('/engine/jobs',body);if(!/^[0-9a-f]{32}$/.test(queued.id))throw Error('Invalid job identifier');
-  job=queued.id;el('engineCancel').disabled=false;
-  for(;;){
-   const state=await json(`/engine/jobs/${job}`);
-   if(state.status==='done'){await deliver(job,['video','motion'].includes(kind));break;}
-   if(['failed','cancelled'].includes(state.status))throw Error(state.error||'Job cancelled');
-   status(`Computer job: ${state.status}${state.progress!==undefined?' · '+state.progress+'%':''}. Keep this page open.`);
-   await new Promise(resolve=>setTimeout(resolve,2000));
-  }
- }catch(error){status(error.message);}finally{job=null;setBusy(false);}
-};
-el('engineOCR').onclick=async()=>{
- if(busy)return;setBusy(true);
- try{status('Reading text on your computer…');const data=await json('/engine/ocr',{image:picture(),language:el('ocrLanguage').value.trim()});el('ocrReview').value=data.text||'';status(data.text?'Review and correct the extracted text before using it. Nothing was added to your prompt.':'No text found. Try a sharper, cropped photo.');}
- catch(error){status(error.message);}finally{setBusy(false);}
-};
-el('ocrUse').onclick=()=>{
- const notes=el('ocrReview').value.trim(),prompt='Create a clearly labeled educational illustration from these reviewed notes:\n'+notes;
- if(!notes)return status('Extract or enter notes first.');if(prompt.length>2000)return status('Shorten the reviewed notes to fit the 2000-character prompt limit.');
- el('prompt').value=prompt;previewPrompt();status('Reviewed notes copied to the prompt. Choose a generation engine when ready.');
-};
-window.addEventListener('pagehide',()=>{if(resultURL)URL.revokeObjectURL(resultURL);});
+            if prefix not in ("jobs","results"): raise ValueError("Unknown route")
+            job=read(job_id)
+            if prefix=="jobs": self.reply(200,{k:v for k,v in job.items() if k!="image"});return
+            if job["status"]!="done": self.reply(409,{"error":"Result not ready"});return
+            result=ROOT/(job_id+(".mp4" if job["kind"] in ("video","motion") else ".png"))
+            self.send_response(200);self.send_header("Content-Type","video/mp4" if job["kind"] in ("video","motion") else "image/png");self.send_header("Content-Length",str(result.stat().st_size));self.send_header("Cache-Control","no-store");self.end_headers()
+            with result.open("rb") as source: shutil.copyfileobj(source,self.wfile)
+        except (ValueError,FileNotFoundError): self.reply(404,{"error":"Not found"})
 
-el('engineJobs').onclick=async()=>{
- try{
-  const data=await json('/engine/jobs'),list=el('engineJobList');list.replaceChildren();
-  for(const item of data.jobs||[]){
-   if(!/^[0-9a-f]{32}$/.test(item.id))continue;
-   const row=document.createElement('div'),label=document.createElement('p');label.textContent=`${item.kind} · ${item.status} · ${item.id}`;row.append(label);
-   const active=['queued','running','cancelling'].includes(item.status);
-   const button=document.createElement('button');button.textContent=active?'Cancel':'Delete from computer';
-   button.onclick=async()=>{
-    if(!active&&!confirm('Delete this result and prompt history from your computer? Exported files remain available.'))return;
-    try{await json(`/engine/jobs/${item.id}${active?'/cancel':''}`,active?{}:undefined,active?'POST':'DELETE');status(active?'Cancellation requested. Refresh jobs to check completion.':'Deleted computer job.');el('engineJobs').click();}catch(error){status(error.message);}
-   };row.append(button);
-   if(item.status==='done'){
-    const download=document.createElement('button');download.textContent='Open result';download.onclick=()=>deliver(item.id,['video','motion'].includes(item.kind)).catch(error=>status(error.message));row.append(download);
-   }
-   list.append(row);
-  }
-  if(!list.children.length)list.textContent='No computer jobs yet.';
- }catch(error){status(error.message);}
-};
+    def do_DELETE(self):
+        if not self.authorized(): return
+        try:
+            prefix,job_id=self.path.strip("/").split("/",1)
+            if prefix!="jobs": raise ValueError("Unknown route")
+            delete_job(job_id);self.reply(200,{"id":job_id,"status":"deleted"})
+        except (ValueError,FileNotFoundError): self.reply(404,{"error":"Not found"})
+        except RuntimeError as exc: self.reply(409,{"error":str(exc)})
+
+class Server(ThreadingHTTPServer):
+    daemon_threads=True
+    def get_request(self):
+        connection,address=super().get_request();connection.settimeout(30);return connection,address
+
+def main():
+    # Never silently treat jobs interrupted by a restart as completed.
+    for file in ROOT.glob("*.json"):
+        try: job=json.loads(file.read_text());path_for(job["id"])
+        except (ValueError,KeyError,OSError): continue
+        if job.get("status") in ("queued","running","cancelling"):
+            job.update(status="failed",error="Engine restarted; resubmit this job");job.pop("image",None);save(job)
+    threading.Thread(target=work,daemon=True).start()
+    bind=os.environ.get("STUDYFORGE_BIND","127.0.0.1")
+    address=ipaddress.ip_address(bind)
+    if address.is_unspecified or address.is_multicast or not (address.is_loopback or address.is_private): raise ValueError("Bind only to loopback or your explicit private LAN address")
+    if address.version!=4: raise ValueError("This server uses an IPv4 loopback/private LAN address")
+    print(f"StudyForge local engine http://{bind}:8765",flush=True)
+    print("Session token:",TOKEN,flush=True)
+    Server((bind,8765),Handler).serve_forever()
+
+if __name__=="__main__": main()
