@@ -33,7 +33,7 @@ jobs:
         run: |
           device=$(xcrun simctl list devices available -j | python3 -c 'import json,sys;d=json.load(sys.stdin);print(next(x["udid"] for group in d["devices"].values() for x in group if "iPhone" in x["name"]))')
           xcodebuild -project ios/StudyForge.xcodeproj -scheme StudyForge -destination "platform=iOS Simulator,id=$device" -derivedDataPath build/ios-derived -resultBundlePath build/ios-tests.xcresult CODE_SIGNING_ALLOWED=NO test
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: studyforge-ios-simulator

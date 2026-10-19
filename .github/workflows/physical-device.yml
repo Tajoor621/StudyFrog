@@ -63,7 +63,7 @@ jobs:
             adb exec-out run-as com.scenio.mth cat files/device-test/stress.json > device-evidence/stress.json || rm -f device-evidence/stress.json
             python3 -c 'import json,os,pathlib; p=pathlib.Path("device-evidence/stress.json"); valid=p.exists() and json.loads(p.read_text()).get("run_id")==os.environ["GITHUB_RUN_ID"]; p.unlink(missing_ok=True) if not valid else None'
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always() && inputs.uploadEvidence
         with:
           name: physical-device-evidence
