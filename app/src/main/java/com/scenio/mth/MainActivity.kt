@@ -448,8 +448,9 @@ class MainActivity : ComponentActivity() {
         val label=text("Opening local model…")
         val bar=ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal).apply { isIndeterminate=true;max=100;contentDescription="Model import progress" }
         val form=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL;setPadding(32,24,32,24);addView(label);addView(bar) }
-        modelImportDialog=AlertDialog.Builder(this).setTitle("Importing local model").setView(form).setCancelable(false)
+        val dialog=AlertDialog.Builder(this).setTitle("Importing local model").setView(form).setCancelable(false)
             .setNegativeButton("Cancel import") { _,_ -> cancel.set(true) }.show()
+        modelImportDialog=dialog
         background {
             var last=0L
             try {
@@ -464,9 +465,17 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-                ui { say("Model imported: $description") }
-            } finally { modelImportCancel=null;ui { modelImportDialog?.dismiss();modelImportDialog=null } }
+                ui { modelImportResult(dialog,"Model imported",description+"\nChoose Generate on this device for a 256px preview to check model compatibility.") }
+            } catch(error:Exception) {
+                ui { modelImportResult(dialog,if(error is java.util.concurrent.CancellationException) "Import cancelled" else "Model import failed",error.message ?: "Cannot import this file. Check model status before retrying.") }
+            } finally { modelImportCancel=null;ui { dialog.dismiss();if(modelImportDialog===dialog) modelImportDialog=null } }
         }
+    }
+    private fun modelImportResult(progress:AlertDialog,title:String,message:String) {
+        progress.dismiss();say(message)
+        val result=AlertDialog.Builder(this).setTitle(title).setMessage(message).setPositiveButton("Close",null).create()
+        modelImportDialog=result
+        result.setOnDismissListener { if(modelImportDialog===result) modelImportDialog=null };result.show()
     }
     private fun localGenerate() {
         if(com.scenio.mth.family.FamilyPolicy.restricted(this)) return

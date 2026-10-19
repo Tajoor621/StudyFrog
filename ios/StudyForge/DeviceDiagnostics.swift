@@ -21,7 +21,7 @@ struct DeviceDiagnostics {
     }
     static func record(started: TimeInterval,before: [String:Any],size: Int,steps: Int,seed: Int64,photo: Bool,success: Bool) {
         let hash = (try? String(contentsOf: IOSModelStore.directory.appendingPathComponent("sha256.txt"),encoding: .utf8)) ?? "unknown"
-        let value: [String:Any] = ["schema":1,"platform":"ios","build_version":Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown","elapsed_ms":(ProcessInfo.processInfo.systemUptime-started)*1000,"before":before,"after":snapshot(),"model_sha256":hash,"size":size,"steps":steps,"seed":seed,"photo":photo,"success":success,"quality_assessed":false]
+        let value: [String:Any] = ["schema":1,"platform":"ios","build_version":Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown","elapsed_ms":(ProcessInfo.processInfo.systemUptime-started)*1000,"before":before,"after":snapshot(),"model_sha256":hash,"model_sha256_source":"cached import receipt, not rehashed for this call","size":size,"steps":steps,"seed":seed,"photo":photo,"success":success,"quality_assessed":false]
         guard let data = try? JSONSerialization.data(withJSONObject: value,options: [.sortedKeys]) else { return }
         try? data.write(to: report,options: .atomic)
         var file = report;var values = URLResourceValues();values.isExcludedFromBackup = true;try? file.setResourceValues(values)

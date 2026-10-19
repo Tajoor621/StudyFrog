@@ -23,6 +23,9 @@ class ModelStore(private val context:Context) {
         require(expected.isEmpty() || expected.matches(Regex("[0-9a-f]{64}"))) { "Use a complete 64-character SHA-256 checksum or leave it blank" }
         fun checkCancelled() { if(cancelled() || Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("Model import cancelled; previous model retained") }
         checkCancelled()
+        root.listFiles().orEmpty().filter { file -> file.isFile && file.extension=="part" && (file.name=="import.part" || runCatching { UUID.fromString(file.nameWithoutExtension) }.isSuccess) && Uri.fromFile(file)!=uri }.forEach {
+            check(it.delete()) { "Cannot clean an interrupted model import; previous model retained" }
+        }
         val declared=runCatching { context.contentResolver.query(uri,arrayOf(OpenableColumns.SIZE),null,null,null)?.use { c -> if(c.moveToFirst() && !c.isNull(0)) c.getLong(0).takeIf { it>=0 } else null } }.getOrNull()
         require(declared==null || declared in 32_000_000..4_294_967_296L) { "Choose a complete model between 32 MB and 4 GB" }
         require(root.usableSpace>(declared ?: 32_000_000L)+64_000_000L) { "Free space for the model plus 64 MB before importing" }

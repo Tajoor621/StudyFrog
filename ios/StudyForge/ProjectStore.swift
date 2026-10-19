@@ -118,6 +118,7 @@ struct IOSProjectStore {
     }
 }
 struct IOSModelStore {
+    private static let importLock = NSLock()
     static var directory: URL { FileManager.default.urls(for: .applicationSupportDirectory,in: .userDomainMask)[0].appendingPathComponent("Models",isDirectory: true) }
     static var model: URL { directory.appendingPathComponent("image.gguf") }
     static func status() -> String {
@@ -128,11 +129,14 @@ struct IOSModelStore {
         let expected = expectedSHA256.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard expected.isEmpty || (expected.count == 64 && expected.allSatisfy({ "0123456789abcdef".contains($0) })) else { throw LocalFailure(message: "Use a complete 64-character SHA-256 or leave it blank") }
         func checkCancelled() throws { try Task.checkCancellation();if cancelled() { throw CancellationError() } }
-        try checkCancelled()
+        try checkCancelled();importLock.lock();defer { importLock.unlock() };try checkCancelled()
         let access = url.startAccessingSecurityScopedResource();defer { if access { url.stopAccessingSecurityScopedResource() } }
         let declared = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init)
         guard declared == nil || (32_000_000...4_294_967_296).contains(declared!) else { throw LocalFailure(message: "Choose a complete model between 32 MB and 4 GB") }
         try FileManager.default.createDirectory(at: directory,withIntermediateDirectories: true)
+        for file in try FileManager.default.contentsOfDirectory(at: directory,includingPropertiesForKeys: nil) where file.pathExtension == "part" && UUID(uuidString: file.deletingPathExtension().lastPathComponent) != nil && file.standardizedFileURL != url.standardizedFileURL {
+            try FileManager.default.removeItem(at: file)
+        }
         func freeSpace() throws -> Int64 { (try FileManager.default.attributesOfFileSystem(forPath: directory.path)[.systemFreeSize] as? NSNumber)?.int64Value ?? 0 }
         guard try freeSpace() > (declared ?? 32_000_000)+64_000_000 else { throw LocalFailure(message: "Free space for the model plus 64 MB before importing") }
         let source = try FileHandle(forReadingFrom: url);defer { try? source.close() }

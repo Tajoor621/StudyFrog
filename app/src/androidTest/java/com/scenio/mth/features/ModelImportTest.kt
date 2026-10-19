@@ -34,7 +34,8 @@ class ModelImportTest {
         val digest=MessageDigest.getInstance("SHA-256");source.inputStream().use { input -> val buffer=ByteArray(1_048_576);while(true) { val n=input.read(buffer);if(n<0) break;digest.update(buffer,0,n) } }
         val hash=digest.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
         store.model.writeText("existing")
-        assertTrue(runCatching { store.import(Uri.fromFile(source),"0".repeat(64)) }.isFailure);assertEquals("existing",store.model.readText())
+        val interrupted=File(store.model.parentFile,"${UUID.randomUUID()}.part").apply { writeText("abandoned staged copy") }
+        assertTrue(runCatching { store.import(Uri.fromFile(source),"0".repeat(64)) }.isFailure);assertEquals("existing",store.model.readText());assertFalse(interrupted.exists())
         var staged=0L
         assertTrue(runCatching { store.import(Uri.fromFile(source),hash,cancelled={staged>2_000_000},progress={bytes,_-> staged=bytes}) }.isFailure)
         assertEquals("existing",store.model.readText())

@@ -61,6 +61,7 @@ class LocalGenerationWorker(context:Context,params:WorkerParameters):CoroutineWo
         try {
             task.awaitGeneration { NativeEngine.cancelRequest(requestToken) }
             val report=JSONObject().put("schema",1).put("platform","android").put("before",before).put("after",DeviceDiagnostics.snapshot(applicationContext)).put("quality_assessed",false).put("elapsed_ms",SystemClock.elapsedRealtime()-started).put("sampled_peak_native_heap_bytes",peakNativeBytes)
+                .put("model_sha256_source","cached import receipt, not rehashed for this call")
                 .put("model_sha256",runCatching { JSONObject(models.metadata.readText()).getString("sha256") }.getOrDefault("unknown"))
                 .put("sdk",Build.VERSION.SDK_INT).put("device",Build.MODEL).put("abi",Build.SUPPORTED_ABIS.firstOrNull()).put("size",size).put("steps",steps).put("runtime_commit","f0aac524d3f29140e60ba78f3cfb16d6acea87db")
             File(output.parentFile,"benchmark-latest.json").writeText(report.toString(2))

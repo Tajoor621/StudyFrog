@@ -95,6 +95,9 @@ and repeat; retain `.xcresult` files and export the JSON attachments from Xcode.
 For encoder/layer stress enable `STUDYFORGE_RUN_DEVICE_STRESS=1` and run
 `PhysicalDeviceTests.testRepeatedEncoderAndLayerStress`. All these tests skip
 when the explicit flags are absent and reject the simulator when enabled.
+Known orphan staging files from interrupted imports are cleaned on the next
+valid import attempt. App diagnostic hashes come from import receipts; the
+opt-in benchmark separately rehashes actual installed bytes before measurement.
 The normal app can export its latest local-generation diagnostic JSON. Resident
 memory snapshots differ from XCTest peak metrics; do not label them equivalent.
 Native generation observes serious thermal state and critical memory-pressure
