@@ -69,6 +69,9 @@ struct DrawingCanvas: UIViewRepresentable {
     @Published var profile = GenerationProfile()
     var job: Task<Void,Never>?
     var videoTask: Task<Void,Error>?
+    var importTask: Task<String,Error>?
+    @Published var modelStatus = IOSModelStore.status()
+    @Published var indeterminateProgress = false
     var computerJob: (ComputerEngine,String)?
     func refresh() { do { records = try IOSProjectStore().list() } catch { message = error.localizedDescription } }
     func resetLayers() { selected = 0;layers = [IOSInkLayer()];history.removeAll();future.removeAll() }
@@ -142,9 +145,28 @@ struct DrawingCanvas: UIViewRepresentable {
             } catch { message = error.localizedDescription }
         }
     }
-    func install(_ url: URL) {
-        working = true
-        job = Task { do { let hash = try await Task.detached { try IOSModelStore.install(url) }.value;message = "Model imported · SHA-256 \(hash.prefix(16))" } catch { message = error.localizedDescription };working = false }
+    func install(_ url: URL,expectedSHA256: String = "") {
+        guard !working,!FamilyAccess.shared.restricted else { return }
+        working = true;percent = 0;indeterminateProgress = true;message = "Importing model · Cancel is available; old model stays until verification"
+        job = Task {
+            defer { working = false;importTask = nil;indeterminateProgress = false;modelStatus = IOSModelStore.status() }
+            do {
+                try Task.checkCancellation()
+                let task = Task.detached { try IOSModelStore.install(url,expectedSHA256: expectedSHA256) { copied,total in
+                    if copied%8_388_608 < 1_048_576 || copied == total {
+                        Task { @MainActor in
+                            guard self.importTask != nil else { return }
+                            self.indeterminateProgress = total == nil
+                            self.percent = total.map { Int(min(100,copied*100/max(1,$0))) } ?? 0
+                            self.message = "Importing model: \(copied/1_048_576) MiB"+(total.map { " / \($0/1_048_576) MiB" } ?? " · size unknown")
+                        }
+                    }
+                } }
+                importTask = task;let hash = try await task.value
+                message = "Model imported · SHA-256 \(hash.prefix(16)) · compatibility is checked during generation"
+            } catch is CancellationError { message = "Import cancelled; previous model retained" }
+            catch { message = error.localizedDescription }
+        }
     }
     func generate(photo: Bool) {
         guard !FamilyAccess.shared.restricted else { message = "Generation is locked by family controls";return }
@@ -227,7 +249,7 @@ struct DrawingCanvas: UIViewRepresentable {
             } catch { message = error.localizedDescription }
         }
     }
-    func cancel() { sf_cancel();videoTask?.cancel();if let (engine,id) = computerJob { Task { try? await engine.cancel(id) } };job?.cancel();message = "Cancellation requested" }
+    func cancel() { importTask?.cancel();sf_cancel();videoTask?.cancel();if let (engine,id) = computerJob { Task { try? await engine.cancel(id) } };job?.cancel();message = "Cancellation requested" }
 }
 struct ForgeView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -238,6 +260,7 @@ struct ForgeView: View {
     @AppStorage("studyReminders") private var reminders = false
     @State private var photo: PhotosPickerItem?
     @State private var showModelPicker = false
+    @State private var modelChecksum = ""
     @State private var showExport = false
     @State private var exportData = Data()
     @State private var exportType = UTType.png
@@ -293,6 +316,7 @@ struct ForgeView: View {
                     Image("StudyFrogBrand").resizable().scaledToFit().accessibilityLabel("StudyFrog brand artwork")
                     Text("Create and study privately").font(.largeTitle).accessibilityAddTraits(.isHeader)
                     Text("Your projects and imported models stay on this device. No account, subscription or paid API is required. Generated science visuals require review. This app does not claim a certified child-safe mode.")
+                    Text("1. Start with bundled science diagrams or import a photo. 2. Optionally import a trusted SD 1.x GGUF in the studio. 3. Generate a 256px preview, then edit and export. Models are not bundled or downloaded automatically. 256px needs 6 GB RAM; 512px needs 8 GB. A local computer is optional for larger work.")
                     Button("Get started") { onboarded = true }.buttonStyle(.borderedProminent)
                 }.padding() }
             } else {
@@ -300,6 +324,7 @@ struct ForgeView: View {
                     TextEditor(text: $store.prompt).frame(minHeight: 120).overlay(RoundedRectangle(cornerRadius: 10).stroke(.secondary)).accessibilityLabel("Generation prompt").disabled(store.working)
                     TextField("Negative prompt",text: $store.negative).textFieldStyle(.roundedBorder).disabled(store.working)
                     GenerationControlsView(profile: $store.profile,steps: $store.inferenceSteps,strength: $store.photoStrength,prompt: store.prompt).disabled(store.working)
+                    ModelSetupView(store: store,checksum: $modelChecksum) { showModelPicker = true }
                     Picker("Generation resolution",selection: $store.resolution) { Text("256px preview · 6 GB RAM").tag(256);Text("512px standard · 8 GB RAM").tag(512) }.disabled(store.working)
                     HStack { Button("Generate on device") { store.generate(photo: false) };Button("Photo conversion") { store.generate(photo: true) } }.buttonStyle(.borderedProminent).disabled(store.working)
                     if store.image != nil { LayerStudioView(store: store,proxy: proxy).disabled(store.working) }
@@ -307,6 +332,10 @@ struct ForgeView: View {
                     PhotosPicker("Import photo",selection: $photo,matching: .images).disabled(store.working)
                     TextField("Folder for new saves · blank means Unfiled",text: $store.folder).textFieldStyle(.roundedBorder).accessibilityLabel("Project folder")
                     HStack { Button("Save project") { store.save() };Button("Export PNG") { if let data = store.composite()?.pngData() { exportData = data;exportType = .png;showExport = true } else { store.message = "Could not render PNG; check the layer settings" } } }.disabled(store.image == nil || store.working)
+                    Button("Export latest on-device benchmark") {
+                        do { exportData = try Data(contentsOf: DeviceDiagnostics.report);exportType = .json;showExport = true }
+                        catch { store.message = "Generate on this device first to record a benchmark" }
+                    }.disabled(store.working)
                     Button("Export portable layers · Android / iOS") { portableExportConsent = true }.disabled(store.image == nil || store.working)
                     Button("Import portable layers · Android / iOS") { portableImportConsent = true }.disabled(store.working)
                     Button("Create 30-second reveal video") { store.video() }.disabled(store.image == nil || store.working)
@@ -324,7 +353,7 @@ struct ForgeView: View {
                     }
                     Button("Generate AI motion video on local computer") { motionConsent = true }.disabled(store.image == nil || store.working)
                     if let video = store.videoURL { ShareLink("Share video",item: video) }
-                    if store.working { ProgressView(value: Double(store.percent),total: 100);Button("Cancel") { store.cancel() } }
+                    if store.working { if store.indeterminateProgress { ProgressView() } else { ProgressView(value: Double(store.percent),total: 100) };Button("Cancel") { store.cancel() } }
                     Text(store.message).font(.footnote).accessibilityAddTraits(.updatesFrequently)
                     Text("On-device CPU inference uses a memory-saving 256px preview and needs a compatible GGUF and a sufficiently capable device. Keep the app open. Realistic AI motion video requires the optional local computer engine.").font(.footnote).foregroundStyle(.secondary)
                 }.padding() }
@@ -381,7 +410,7 @@ struct ForgeView: View {
             Button("Choose file") { portablePicker = true };Button("Cancel",role: .cancel) {}
         } message: { Text("Save current work first. Import opens a separate local project and replaces the canvas. Portable layers contain pixels, not editable ink or text nodes.") }
         .fileImporter(isPresented: $portablePicker,allowedContentTypes: [.json]) { result in do { store.importPortable(try result.get()) } catch { store.message = error.localizedDescription } }
-        .fileImporter(isPresented: $showModelPicker,allowedContentTypes: [.data]) { result in do { store.install(try result.get()) } catch { store.message = error.localizedDescription } }
+        .fileImporter(isPresented: $showModelPicker,allowedContentTypes: [.data]) { result in do { store.install(try result.get(),expectedSHA256: modelChecksum) } catch { store.message = error.localizedDescription } }
         .fileExporter(isPresented: $showExport,document: ExportDocument(data: exportData),contentType: exportType,defaultFilename: exportType == .json ? "StudyForge.sfgx" : "StudyForge") { result in if case .failure(let error) = result { store.message = error.localizedDescription } }
         .sheet(isPresented: $showScience) { StudyExplorerView(hasExistingImage: store.image != nil) { image,prompt in store.prompt = prompt;if let image { store.image = image;store.resetLayers() };store.message = "Study view selected; model-generated refinements require review" } }
         .sheet(isPresented: $showFamilyControls) { FamilyControlsView() }
@@ -422,5 +451,19 @@ struct ForgeView: View {
                 Button("Cancel",role: .cancel) { deleteRecord = nil }
             }
         } }
+    }
+}
+
+private struct ModelSetupView: View {
+    @ObservedObject var store: ForgeStore
+    @Binding var checksum: String
+    var choose: ()->Void
+    var body: some View {
+        DisclosureGroup("Offline model setup · optional") {
+            Text(store.modelStatus).accessibilityLabel("Model status: \(store.modelStatus)")
+            Text("Use a complete SD 1.x GGUF v2/v3 converted for this runtime, 32 MB–4 GB. LLM, SDXL and FLUX files are incompatible. Keep the license/source and reserve space for the file plus 64 MB. The old model stays until verification. A signature does not prove compatibility or model safety.")
+            TextField("Optional publisher SHA-256",text: $checksum).textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityLabel("Optional expected model SHA-256 checksum")
+            Button("Choose local GGUF model",action: choose).disabled(store.working)
+        }
     }
 }

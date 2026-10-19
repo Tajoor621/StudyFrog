@@ -70,6 +70,7 @@ class MainActivity : ComponentActivity() {
     private val prefs by lazy { getSharedPreferences("forge",MODE_PRIVATE) }
     private var latestJob: String? = null
     private var busy = false
+    private var modelImportCancel:java.util.concurrent.atomic.AtomicBoolean?=null
     private var localDialog:AlertDialog? = null
     private var localActive = false
     private var loadedLocalResult:String? = null
@@ -120,8 +121,11 @@ class MainActivity : ComponentActivity() {
         session.snapshot?.let { canvas.restore(it);dirty=false }
         mode.setSelection(session.mode);level.setSelection(session.level)
         root.addView(button("Import on-device image model (GGUF)") {
-            if(localActive) say("Cancel local generation before changing the model") else startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type="*/*";addCategory(Intent.CATEGORY_OPENABLE) },13)
+            if(localActive || busy) say("Finish the current operation first") else AlertDialog.Builder(this).setTitle("Set up offline generation")
+                .setMessage("Optional: photo editing and bundled science work now without a model. For local AI choose an SD 1.x GGUF v2/v3 converted for this runtime, 32 MB–4 GB. LLM, SDXL and FLUX GGUF files are incompatible. Keep its license/source and publisher SHA-256. 256px inference needs 6 GB device RAM; 512px needs 8 GB. No download or account is required.")
+                .setPositiveButton("Choose local GGUF") { _,_ -> startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type="*/*";addCategory(Intent.CATEGORY_OPENABLE) },13) }.setNegativeButton("Use without a model",null).show()
         })
+        root.addView(button("Cancel model import") { val active=modelImportCancel;if(active==null) say("No model import is running") else { active.set(true);say("Import cancellation requested; the old model stays until replacement is verified") } })
         root.addView(button("On-device model information / remove") {
             AlertDialog.Builder(this).setTitle("Offline SD 1.x model").setMessage(ModelStore(applicationContext).description()+"\nImport a complete SD 1.x GGUF. Keep its license. Models are not bundled and may require several GB of memory.")
                 .setPositiveButton("Close",null).setNegativeButton("Remove model") { _,_ -> if(localActive) say("Cancel generation first") else background { ModelStore(applicationContext).remove();ui { say("Local model removed") } } }.show()
@@ -424,11 +428,30 @@ class MainActivity : ComponentActivity() {
                     ui { say("Export saved") }
                 } finally { file.delete() } }
             }
-            13 -> background { val description=ModelStore(applicationContext).import(uri);ui { say("Model imported: $description") } }
+            13 -> confirmModelImport(uri)
             12 -> background { val id=contentResolver.openInputStream(uri)?.use { projects.importArchive(it) } ?: throw IOException("Cannot open backup")
                 val loaded=projects.load(id);ui { applyProject(loaded);say("Editable backup imported") }
             }
         }
+    }
+    private fun confirmModelImport(uri:android.net.Uri) {
+        if(localActive || busy) { say("Finish the current operation first");return }
+        val checksum=EditText(this).apply { hint="Optional publisher SHA-256 · 64 hex characters";contentDescription=hint;maxLines=3 }
+        AlertDialog.Builder(this).setTitle("Verify and import model").setView(checksum)
+            .setMessage("The existing model remains until this copy is complete and verified. Reserve space for the whole file plus 64 MB. GGUF signature verification does not prove SD 1.x compatibility or model safety. Import only a source/license you trust.")
+            .setPositiveButton("Import") { _,_ ->
+                val expected=checksum.text.toString();val cancel=java.util.concurrent.atomic.AtomicBoolean(false);modelImportCancel=cancel
+                background {
+                    var last=0L
+                    try {
+                        val description=ModelStore(applicationContext).import(uri,expected,{ cancel.get() }) { copied,total ->
+                            val now=android.os.SystemClock.elapsedRealtime()
+                            if(now-last>=1000 || copied==total) { last=now;ui { say("Importing model: ${copied/1_048_576} MiB"+(total?.let { " / ${it/1_048_576} MiB" } ?: " · size unknown")+" · Cancel model import is available") } }
+                        }
+                        ui { say("Model imported: $description") }
+                    } finally { modelImportCancel=null }
+                }
+            }.setNegativeButton("Cancel",null).show()
     }
     private fun localGenerate() {
         if(com.scenio.mth.family.FamilyPolicy.restricted(this)) return
@@ -604,5 +627,5 @@ class MainActivity : ComponentActivity() {
         if(::canvas.isInitialized && dirty && canvas.image!=null) { projects.autosave(canvas.snapshot(),metadata());dirty=false }
         super.onStop()
     }
-    override fun onDestroy() { localDialog?.dismiss();worker.shutdownNow();super.onDestroy() }
+    override fun onDestroy() { modelImportCancel?.set(true);localDialog?.dismiss();worker.shutdownNow();super.onDestroy() }
 }

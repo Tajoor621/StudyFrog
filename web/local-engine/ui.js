@@ -1,6 +1,10 @@
 const panel=document.createElement('section');panel.className='panel';
 panel.innerHTML=`<h2>Free local generation</h2>
 <p>Your own computer runs the models. Open this app through the local bridge, or your private HTTPS Tailscale Serve URL. GitHub Pages provides the editor and cannot run the computer engine.</p>
+<details><summary>First run · choose your setup</summary>
+<p>Start with the editor, import a photo, or use bundled study content without an AI model. Nothing is downloaded automatically.</p>
+<ol><li>On Windows, run scripts/start-windows.ps1 -Mode Check from your checkout, then start Engine and Web in two terminals using the same private session token.</li><li>For image generation, configure your own local SD 1.x Diffusers folder with safetensors and its safety checker. A phone GGUF file is a different model format and cannot be used by this computer adapter.</li><li>Open http://127.0.0.1:8766 and check the engine. Keep the source/license of each model. Missing video/OCR tools only disable their own features.</li></ol>
+</details>
 <label for="engineBackend">Local engine</label><select id="engineBackend"><option value="sd">StudyForge SD / ControlNet / LTX</option><option value="ollama">Ollama compatible image model</option></select>
 <button id="engineConnect">Check local engine</button>
 <label for="engineModel">Installed Ollama image model</label><select id="engineModel" disabled><option value="">Connect to list models</option></select>

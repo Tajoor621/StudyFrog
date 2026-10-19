@@ -6,6 +6,7 @@
 .github/workflows/android.yml
 .github/workflows/ios.yml
 .github/workflows/physical-device.yml
+.github/workflows/windows.yml
 .gitignore
 LICENSE
 NOTICE
@@ -17,8 +18,10 @@ app/build.gradle.kts
 app/src/androidTest/assets/portable-project-v1.json
 app/src/androidTest/java/com/scenio/mth/features/AccessibilityTest.kt
 app/src/androidTest/java/com/scenio/mth/features/AdvancedEditorTest.kt
+app/src/androidTest/java/com/scenio/mth/features/DeviceStressTest.kt
 app/src/androidTest/java/com/scenio/mth/features/FamilyPolicyTest.kt
 app/src/androidTest/java/com/scenio/mth/features/LayerDocumentTest.kt
+app/src/androidTest/java/com/scenio/mth/features/ModelImportTest.kt
 app/src/androidTest/java/com/scenio/mth/features/NativeBoundaryTest.kt
 app/src/androidTest/java/com/scenio/mth/features/OnboardingTest.kt
 app/src/androidTest/java/com/scenio/mth/features/PortableProjectTest.kt
@@ -26,6 +29,7 @@ app/src/androidTest/java/com/scenio/mth/features/ProgressDatabaseTest.kt
 app/src/androidTest/java/com/scenio/mth/features/ProjectBackupTest.kt
 app/src/androidTest/java/com/scenio/mth/features/RealModelDeviceTest.kt
 app/src/androidTest/java/com/scenio/mth/features/ReminderWorkerTest.kt
+app/src/androidTest/java/com/scenio/mth/features/SetupScreenTest.kt
 app/src/androidTest/java/com/scenio/mth/features/StudioStateTest.kt
 app/src/androidTest/java/com/scenio/mth/features/StudyCatalogTest.kt
 app/src/androidTest/java/com/scenio/mth/features/StudyExplorerTest.kt
@@ -64,6 +68,7 @@ app/src/main/java/com/scenio/mth/features/ui/SettingsScreen.kt
 app/src/main/java/com/scenio/mth/features/ui/StudyForgeTheme.kt
 app/src/main/java/com/scenio/mth/generation/GenerationProfile.kt
 app/src/main/java/com/scenio/mth/generation/ProfileCodec.kt
+app/src/main/java/com/scenio/mth/inference/DeviceDiagnostics.kt
 app/src/main/java/com/scenio/mth/inference/GenerationAwait.kt
 app/src/main/java/com/scenio/mth/inference/LocalGenerationWorker.kt
 app/src/main/java/com/scenio/mth/inference/ModelStore.kt
@@ -112,11 +117,13 @@ content/portable-project-v1.json
 content/study-catalog.json
 docs/ANDROID_BUILD.md
 docs/AUDIT.md
+docs/DEVICE_VALIDATION.md
 docs/EDITOR.md
 docs/ENGINE.md
 docs/FAMILY_ACCESS.md
 docs/FEATURE_STATUS.md
 docs/GENERATION_CONTROLS.md
+docs/INDEPENDENT_REVIEW.md
 docs/LOCAL_MODELS.md
 docs/MASTER_SPEC_AUDIT.md
 docs/PHOTO_STUDY_WORKFLOW.md
@@ -124,10 +131,12 @@ docs/PORTABLE_PROJECTS.md
 docs/REMAINING_GAPS.md
 docs/SCIENCE_EXPLORER.md
 docs/SOURCES.md
+docs/WINDOWS.md
 docs/XXHDPI.md
 docs/android-features/IMPLEMENTATION.md
 docs/android-features/MERGE.md
 docs/android-features/SOURCES.md
+engine/benchmark.py
 engine/image_guidance.py
 engine/motion_video.py
 engine/photo_guidance.py
@@ -136,6 +145,7 @@ engine/requirements-test.txt
 engine/requirements.txt
 engine/server.py
 engine/study_ocr.py
+engine/test_benchmark.py
 engine/test_engine.py
 engine/test_image_guidance.py
 engine/test_model_lifecycle.py
@@ -172,6 +182,7 @@ ios/StudyForge/Assets.xcassets/Contents.json
 ios/StudyForge/Assets.xcassets/StudyFrogBrand.imageset/Contents.json
 ios/StudyForge/Assets.xcassets/StudyFrogBrand.imageset/studyfrog.png
 ios/StudyForge/ComputerEngine.swift
+ios/StudyForge/DeviceDiagnostics.swift
 ios/StudyForge/FamilyAccess.swift
 ios/StudyForge/GenerationProfile.swift
 ios/StudyForge/LayerDocument.swift
@@ -188,6 +199,8 @@ ios/StudyForge/StudyExplorerView.swift
 ios/StudyForge/StudyForgeApp.swift
 ios/StudyForgeTests/FamilyAccessTests.swift
 ios/StudyForgeTests/LayerDocumentTests.swift
+ios/StudyForgeTests/ModelImportTests.swift
+ios/StudyForgeTests/PhysicalDeviceTests.swift
 ios/StudyForgeTests/PortableProjectTests.swift
 ios/StudyForgeTests/ProjectStoreTests.swift
 ios/StudyForgeTests/Resources/portable-project-v1.json
@@ -197,12 +210,16 @@ manifest.webmanifest
 scripts/audit_repository.py
 scripts/build-apks.sh
 scripts/build-ios-native.sh
+scripts/check-windows.ps1
 scripts/check_repository.py
 scripts/device-smoke.sh
 scripts/generate_branding.py
 scripts/manifest_attributes.py
+scripts/release_readiness.py
+scripts/start-windows.ps1
 scripts/test_manifest_attributes.py
 scripts/test_portable_project.py
+scripts/test_release_readiness.py
 scripts/test_study_catalog.py
 scripts/verify-release.sh
 scripts/verify_splits.py
@@ -213,6 +230,8 @@ shared/runtime.cmake
 shared/sf_engine.cpp
 shared/sf_engine.h
 sw.js
+validation/device-session.schema.json
+validation/release-evidence.json
 web/README.md
 web/app.js
 web/local-engine/ANDROID_SECURE_CONNECTION.md

@@ -61,6 +61,7 @@ jobs:
           '
         if-no-files-found: ignore
   device-tests:
+    if: github.event_name != 'push'
     needs: checks
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -114,6 +115,8 @@ jobs:
       FIREBASE_ENABLED: ${{ inputs.firebaseEnabled }}
     steps:
     - uses: actions/checkout@v4
+    - name: Require current physical-device and independent-review evidence
+      run: python3 scripts/release_readiness.py --require-ready
     - uses: actions/setup-java@v5
       with:
         distribution: temurin
@@ -171,6 +174,7 @@ jobs:
       run: |
         python ../scripts/check_repository.py
         python ../scripts/audit_repository.py
+        python ../scripts/release_readiness.py
         python -m unittest discover -s ../scripts -p 'test_*.py' -v
         python -m unittest -v
         python -m unittest discover -s ../web/tests -v

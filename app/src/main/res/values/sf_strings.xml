@@ -1,8 +1,8 @@
 <resources>
     <string name="sf_app_name">StudyForge</string>
     <string name="sf_welcome">Welcome to StudyForge</string>
-    <string name="sf_onboarding_body">Create, learn and keep your study progress on this device. Your existing studio remains available.</string>
-    <string name="sf_onboarding_privacy">Reminders, analytics and crash sharing are off until you choose them in Settings. You can use the app without signing in.</string>
+    <string name="sf_onboarding_body">Start now with bundled science diagrams, photo editing and annotations. No model or account is needed for these tools. Optional on-device AI requires your own compatible SD 1.x GGUF model; import it later in the studio.</string>
+    <string name="sf_onboarding_privacy">Reminders, analytics and crash sharing start off. On-device AI needs 6 GB RAM for a 256px preview or 8 GB for 512px. On smaller phones, use the optional engine on your own computer. Model downloads and scientific review remain your choice.</string>
     <string name="sf_get_started">Get started</string>
     <string name="sf_settings">Settings</string>
     <string name="sf_theme">Appearance</string>

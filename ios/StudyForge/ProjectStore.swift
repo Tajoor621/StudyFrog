@@ -120,28 +120,48 @@ struct IOSProjectStore {
 struct IOSModelStore {
     static var directory: URL { FileManager.default.urls(for: .applicationSupportDirectory,in: .userDomainMask)[0].appendingPathComponent("Models",isDirectory: true) }
     static var model: URL { directory.appendingPathComponent("image.gguf") }
-    static func install(_ url: URL) throws -> String {
-        let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }
+    static func status() -> String {
+        guard let size = try? model.resourceValues(forKeys: [.fileSizeKey]).fileSize else { return "No model imported · photo editing and bundled science work without one" }
+        return "Local GGUF · \(size/1_048_576) MiB · compatibility is checked during generation"
+    }
+    static func install(_ url: URL,directory: URL = Self.directory,expectedSHA256: String = "",cancelled: @Sendable ()->Bool = { false },progress: @Sendable (Int64,Int64?)->Void = { _,_ in }) throws -> String {
+        let expected = expectedSHA256.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard expected.isEmpty || (expected.count == 64 && expected.allSatisfy({ "0123456789abcdef".contains($0) })) else { throw LocalFailure(message: "Use a complete 64-character SHA-256 or leave it blank") }
+        func checkCancelled() throws { try Task.checkCancellation();if cancelled() { throw CancellationError() } }
+        try checkCancelled()
+        let access = url.startAccessingSecurityScopedResource();defer { if access { url.stopAccessingSecurityScopedResource() } }
+        let declared = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init)
+        guard declared == nil || (32_000_000...4_294_967_296).contains(declared!) else { throw LocalFailure(message: "Choose a complete model between 32 MB and 4 GB") }
         try FileManager.default.createDirectory(at: directory,withIntermediateDirectories: true)
-        let source = try FileHandle(forReadingFrom: url); defer { try? source.close() }
-        let header = try source.read(upToCount: 4) ?? Data()
-        guard header == Data("GGUF".utf8) else { throw LocalFailure(message: "Choose a complete SD 1.x GGUF model") }
+        func freeSpace() throws -> Int64 { (try FileManager.default.attributesOfFileSystem(forPath: directory.path)[.systemFreeSize] as? NSNumber)?.int64Value ?? 0 }
+        guard try freeSpace() > (declared ?? 32_000_000)+64_000_000 else { throw LocalFailure(message: "Free space for the model plus 64 MB before importing") }
+        let source = try FileHandle(forReadingFrom: url);defer { try? source.close() }
+        let header = try source.read(upToCount: 8) ?? Data()
+        guard header.count == 8,header.prefix(4) == Data("GGUF".utf8) else { throw LocalFailure(message: "Choose an SD 1.x GGUF v2/v3, not an LLM, SDXL or FLUX model") }
+        let version = header.dropFirst(4).enumerated().reduce(UInt32(0)) { $0 | UInt32($1.element) << ($1.offset*8) }
+        guard (2...3).contains(version) else { throw LocalFailure(message: "Unsupported GGUF version") }
         let temporary = directory.appendingPathComponent(UUID().uuidString+".part")
         FileManager.default.createFile(atPath: temporary.path,contents: nil)
         defer { try? FileManager.default.removeItem(at: temporary) }
-        let destination = try FileHandle(forWritingTo: temporary); defer { try? destination.close() }
-        var hash = SHA256(); hash.update(data: header); try destination.write(contentsOf: header); var total = header.count
-        while let block = try source.read(upToCount: 1_048_576), !block.isEmpty {
-            total += block.count; guard total <= 4_294_967_296 else { throw LocalFailure(message: "Model exceeds 4 GB") }
-            hash.update(data: block); try destination.write(contentsOf: block)
+        let destination = try FileHandle(forWritingTo: temporary);defer { try? destination.close() }
+        var hash = SHA256();hash.update(data: header);try destination.write(contentsOf: header);var total = Int64(header.count);progress(total,declared)
+        while let block = try source.read(upToCount: 1_048_576),!block.isEmpty {
+            try checkCancelled();total += Int64(block.count)
+            guard total <= 4_294_967_296,try freeSpace() > 65_048_576 else { throw LocalFailure(message: "Model exceeds 4 GB or storage is low; previous model retained") }
+            hash.update(data: block);try destination.write(contentsOf: block);progress(total,declared)
         }
-        guard total >= 32_000_000 else { throw LocalFailure(message: "Incomplete model file") }
-        try destination.synchronize()
-        if FileManager.default.fileExists(atPath: model.path) { _ = try FileManager.default.replaceItemAt(model,withItemAt: temporary) }
-        else { try FileManager.default.moveItem(at: temporary,to: model) }
-        var folder = directory; var values = URLResourceValues(); values.isExcludedFromBackup = true; try folder.setResourceValues(values)
+        try checkCancelled()
+        guard total >= 32_000_000,declared == nil || total == declared else { throw LocalFailure(message: "Incomplete model; previous model retained") }
         let digest = hash.finalize().map { String(format: "%02x",$0) }.joined()
-        try Data(digest.utf8).write(to: directory.appendingPathComponent("sha256.txt"),options: .atomic)
-        return digest
+        guard expected.isEmpty || expected == digest else { throw LocalFailure(message: "Checksum mismatch; previous model retained") }
+        try destination.synchronize();try destination.close();try checkCancelled()
+        var folder = directory;var values = URLResourceValues();values.isExcludedFromBackup = true;try folder.setResourceValues(values)
+        // Invalidate the old receipt before replacement so a crash cannot pair it with new bytes.
+        let checksum = directory.appendingPathComponent("sha256.txt")
+        if FileManager.default.fileExists(atPath: checksum.path) { try FileManager.default.removeItem(at: checksum) }
+        let target = directory.appendingPathComponent("image.gguf")
+        if FileManager.default.fileExists(atPath: target.path) { _ = try FileManager.default.replaceItemAt(target,withItemAt: temporary) }
+        else { try FileManager.default.moveItem(at: temporary,to: target) }
+        try Data(digest.utf8).write(to: checksum,options: .atomic);progress(total,total);return digest
     }
 }

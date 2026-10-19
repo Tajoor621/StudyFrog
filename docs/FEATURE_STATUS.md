@@ -1,4 +1,4 @@
-# Feature status — 0.8.0
+# Feature status — 0.9.0
 
 Evidence: [VALIDATION.md](../VALIDATION.md). Implemented code, automated tests and real-model/device evaluation are distinct.
 
@@ -22,7 +22,7 @@ Evidence: [VALIDATION.md](../VALIDATION.md). Implemented code, automated tests a
 | Foundations | Room/DataStore, onboarding, Material 3, reminders, default-off optional Firebase, accessibility semantics, tests and signing config; configured Firebase/physical accessibility evaluation pending |
 | Packaging | AAB density/ABI splits, JNI, extractNativeLibs and binary-manifest verification |
 | Cost/privacy | No paid inference/backend/distribution console; local storage, manual model import and explicit optional computer transfers |
-| CI | Platform-input push filters and a full emulator workflow for test-only updates; full PR/manual runs; Android lint/JVM/assembly/split/emulator and iOS simulator checks |
+| CI | Parallel emulator checks for Android-input pushes; full PR/manual runs; Android lint/JVM/assembly/split/emulator and iOS simulator checks |
 
 See [FAMILY_ACCESS.md](FAMILY_ACCESS.md), [GENERATION_CONTROLS.md](GENERATION_CONTROLS.md), [EDITOR.md](EDITOR.md) and [MASTER_SPEC_AUDIT.md](MASTER_SPEC_AUDIT.md) for exact boundaries.
 
@@ -35,3 +35,17 @@ layer ordering/settings/transforms and checksummed PNG assets. Export disclosure
 explain rasterized strokes/text/masks and bounded resolution; original native
 projects remain editable. Lossless native stroke/vector/mask-path interchange
 is still incomplete. See [Portable projects](PORTABLE_PROJECTS.md).
+
+## 0.9.0 validation and setup
+
+Onboarding explains model-free tools and hardware needs. Android/iOS imports
+validate GGUF version, optional publisher digest, size/storage and cancellation
+before replacement, and expose progress. Signature validation does not prove
+model compatibility. Runtime diagnostics and opt-in physical benchmarks/stress
+tests are implemented; real hardware/model execution is still pending.
+
+Windows remains the web companion with PowerShell launch/preflight and an
+opt-in local Diffusers benchmark; there is no native Windows shell.
+Independent science/family review records remain empty. The owner-signed release
+job requires current version-bound physical evidence and source-bound human
+review records; ordinary development builds remain available.

@@ -19,3 +19,7 @@ split-inspection/
 *.b64
 ios/NativeBuild/
 ios/*.xcodeproj/
+
+# Physical-device / model benchmark evidence is local unless explicitly reviewed.
+device-evidence/
+benchmark-output/

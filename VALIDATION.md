@@ -1,3 +1,14 @@
+# Validation — 0.9.0 work in progress
+
+New source adds Android/iOS setup/import safeguards, runtime diagnostics,
+opt-in physical tests, a Windows companion workflow and review evidence gates.
+Local script/content tests (15), benchmark-tool tests (3), repository audit and
+whitespace checks pass. Native and Windows CI verification is pending.
+Physical model/device tests and independent reviews have not been executed.
+The previous 0.8.0 validation below is historical and does not verify this code.
+
+## Previous verified release
+
 # Validation — 0.8.0, 2026-10-19
 
 Verified application/test source: `92e785db39ad305a99b0336cb5c400a23da6121a`.

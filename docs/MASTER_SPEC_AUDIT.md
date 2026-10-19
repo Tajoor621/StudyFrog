@@ -1,6 +1,6 @@
 # Master specification coverage — 2026-10-19 (Asia/Dubai)
 
-The requested product is **not fully implemented**. Study Frog 0.8.0 has working
+The requested product is **not fully implemented**. Study Frog 0.9.0 has working
 Android/iOS builds and a substantial offline foundation. A passing build is not
 proof of model quality, medical accuracy, device performance or complete scope.
 The tested source and exact results are recorded in [VALIDATION.md](../VALIDATION.md).
@@ -110,3 +110,8 @@ for content scope and provenance.
 A “10/10” rating or claim of all requested features would be unsupported today.
 
 Version 0.8.0 exchange scope and limits: [Portable projects](PORTABLE_PROJECTS.md).
+
+0.9.0 adds [physical validation tooling](DEVICE_VALIDATION.md), safer model setup,
+[independent-review tracking](INDEPENDENT_REVIEW.md) and a documented
+[Windows web-companion decision](WINDOWS.md). These are implementation/readiness
+improvements, not completed physical testing, peer review or model certification.

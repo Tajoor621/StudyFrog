@@ -1,0 +1,21 @@
+name: Study Frog Windows companion
+on:
+  push:
+    branches: [main]
+    paths: ['scripts/*windows.ps1', 'engine/benchmark.py', 'engine/test_benchmark.py', 'web/local-engine/**', 'web/tests/**', '.github/workflows/windows.yml']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify companion and benchmark tooling on Windows
+        shell: pwsh
+        run: ./scripts/check-windows.ps1

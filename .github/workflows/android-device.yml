@@ -1,10 +1,16 @@
-name: Study Frog Android test updates
+name: Study Frog Android emulator checks
 'on':
   push:
     branches:
     - main
     paths:
-    - app/src/androidTest/**
+    - app/**
+    - shared/**
+    - gradle/**
+    - gradlew
+    - gradlew.bat
+    - '*.gradle.kts'
+    - gradle.properties
     - .github/workflows/android-device.yml
   workflow_dispatch: null
 permissions:

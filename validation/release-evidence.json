@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "subjects": {
+    "science": [
+      "content/study-catalog.json",
+      "app/src/main/java/com/scenio/mth/science/StudyCatalog.kt",
+      "ios/StudyForge/StudyCatalog.swift"
+    ],
+    "family": [
+      "app/src/main/java/com/scenio/mth/family/FamilyPolicy.kt",
+      "app/src/main/java/com/scenio/mth/family/FamilyControlsActivity.kt",
+      "ios/StudyForge/FamilyAccess.swift",
+      "app/src/main/java/com/scenio/mth/family/FamilyHomeActivity.kt",
+      "app/src/main/java/com/scenio/mth/features/FeaturesActivity.kt",
+      "app/src/main/java/com/scenio/mth/MainActivity.kt",
+      "app/src/main/java/com/scenio/mth/inference/LocalGenerationWorker.kt",
+      "ios/StudyForge/StudyForgeApp.swift"
+    ]
+  },
+  "models": [],
+  "benchmarks": [],
+  "device_sessions": [],
+  "science_reviews": [],
+  "family_reviews": []
+}

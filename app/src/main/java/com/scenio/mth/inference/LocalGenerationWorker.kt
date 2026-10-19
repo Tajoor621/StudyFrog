@@ -33,6 +33,7 @@ class LocalGenerationWorker(context:Context,params:WorkerParameters):CoroutineWo
         val size=data.optInt("size",256);val steps=data.optInt("steps",20)
         val requestToken=(id.mostSignificantBits xor id.leastSignificantBits).let { if(it==0L) 1L else it }
         val started=SystemClock.elapsedRealtime()
+        val before=DeviceDiagnostics.snapshot(applicationContext)
         var peakNativeBytes=0L
         val output=File(applicationContext.filesDir,"generated/$id.png").apply { parentFile?.mkdirs() }
         val task=async(Dispatchers.IO) {
@@ -54,10 +55,12 @@ class LocalGenerationWorker(context:Context,params:WorkerParameters):CoroutineWo
         }
         val monitor=launch { while(isActive) {
             if(com.scenio.mth.family.FamilyPolicy.restricted(applicationContext)) { NativeEngine.cancelRequest(requestToken);task.cancel();break }
+            val state=DeviceDiagnostics.snapshot(applicationContext)
+            if(state.getBoolean("os_low_memory") || state.optInt("thermal_status",0)>=3) { NativeEngine.cancelRequest(requestToken);task.cancel(CancellationException("Device memory or thermal limit reached"));break }
             peakNativeBytes=maxOf(peakNativeBytes,android.os.Debug.getNativeHeapAllocatedSize());setProgress(workDataOf("percent" to NativeEngine.progress()));delay(500) } }
         try {
             task.awaitGeneration { NativeEngine.cancelRequest(requestToken) }
-            val report=JSONObject().put("elapsed_ms",SystemClock.elapsedRealtime()-started).put("sampled_peak_native_heap_bytes",peakNativeBytes)
+            val report=JSONObject().put("schema",1).put("platform","android").put("before",before).put("after",DeviceDiagnostics.snapshot(applicationContext)).put("quality_assessed",false).put("elapsed_ms",SystemClock.elapsedRealtime()-started).put("sampled_peak_native_heap_bytes",peakNativeBytes)
                 .put("model_sha256",runCatching { JSONObject(models.metadata.readText()).getString("sha256") }.getOrDefault("unknown"))
                 .put("sdk",Build.VERSION.SDK_INT).put("device",Build.MODEL).put("abi",Build.SUPPORTED_ABIS.firstOrNull()).put("size",size).put("steps",steps).put("runtime_commit","f0aac524d3f29140e60ba78f3cfb16d6acea87db")
             File(output.parentFile,"benchmark-latest.json").writeText(report.toString(2))

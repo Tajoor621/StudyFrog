@@ -9,7 +9,17 @@ struct LocalFailure: LocalizedError {
 struct NativeDiffusion {
     static func generate(model: URL, prompt: String, negative: String, size: Int, steps: Int, seed: Int64, initial: UIImage?,strength: Double = 0.65) throws -> UIImage {
         guard strength.isFinite,(0.1...1).contains(strength),!prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, prompt.count <= 2000, negative.count <= 2000, !prompt.contains("\0"), !negative.contains("\0"), [256,512].contains(size), (1...40).contains(steps) else { throw LocalFailure(message: "Invalid prompt or inference parameters") }
+        try Task.checkCancellation()
         guard ProcessInfo.processInfo.physicalMemory >= (size == 512 ? 7_500_000_000 : 5_500_000_000) else { throw LocalFailure(message: "This resolution requires 6 GB (256px) or 8 GB (512px) device memory") }
+        guard ProcessInfo.processInfo.thermalState.rawValue < 2 else { throw LocalFailure(message: "Device is too warm; cool it before generating") }
+        let thermal = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
+        thermal.schedule(deadline: .now(),repeating: .milliseconds(500));thermal.setEventHandler { if ProcessInfo.processInfo.thermalState.rawValue >= 2 { sf_cancel() } };thermal.resume()
+        let pressure = DispatchSource.makeMemoryPressureSource(eventMask: [.critical],queue: DispatchQueue.global(qos: .utility))
+        pressure.setEventHandler { sf_cancel() };pressure.resume()
+        defer { thermal.cancel();pressure.cancel() }
+        let started = ProcessInfo.processInfo.systemUptime,before = DeviceDiagnostics.snapshot()
+        var succeeded = false
+        defer { DeviceDiagnostics.record(started: started,before: before,size: size,steps: steps,seed: seed,photo: initial != nil,success: succeeded) }
         var input = [UInt8]()
         if let initial {
             let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
@@ -39,6 +49,6 @@ struct NativeDiffusion {
         guard ok != 0, let output else { throw LocalFailure(message: error.map { String(cString: $0) } ?? "Local model failed") }
         let data = Data(bytes: output,count: size*size*3)
         guard let provider = CGDataProvider(data: data as CFData), let image = CGImage(width: size,height: size,bitsPerComponent: 8,bitsPerPixel: 24,bytesPerRow: size*3,space: CGColorSpaceCreateDeviceRGB(),bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),provider: provider,decode: nil,shouldInterpolate: true,intent: .defaultIntent) else { throw LocalFailure(message: "Invalid generated image") }
-        return UIImage(cgImage: image)
+        succeeded = true;return UIImage(cgImage: image)
     }
 }

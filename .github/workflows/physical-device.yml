@@ -1,6 +1,23 @@
 name: StudyForge physical Android validation
 on:
   workflow_dispatch:
+    inputs:
+      modelSha256:
+        description: Actual imported SD 1.x GGUF SHA-256 (64 lowercase hex)
+        type: string
+        required: true
+      benchmarkSize:
+        type: choice
+        options: ['256', '512']
+        default: '256'
+      stress:
+        description: Also run repeated 30s encoder and bounded layer stress
+        type: boolean
+        default: false
+      uploadEvidence:
+        description: Upload diagnostic JSON and test reports after reviewing privacy
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -8,30 +25,46 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: [self-hosted, studyforge-device]
     environment: physical-device
-    timeout-minutes: 45
+    timeout-minutes: 90
+    env:
+      EXPECTED_MODEL_SHA256: ${{ inputs.modelSha256 }}
+      BENCHMARK_SIZE: ${{ inputs.benchmarkSize }}
+      RUN_STRESS: ${{ inputs.stress }}
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Require an explicitly connected device
+      - name: Require one dedicated physical test phone and a valid digest
         run: |
+          python3 -c 'import os,re,subprocess; assert re.fullmatch("[0-9a-f]{64}",os.environ["EXPECTED_MODEL_SHA256"]); rows=[r for r in subprocess.check_output(["adb","devices"],text=True).splitlines()[1:] if r.strip()]; assert len(rows)==1 and rows[0].split()[1]=="device", "Connect exactly one authorized dedicated test phone"'
           adb get-state
-          adb shell getprop ro.product.model
-          adb shell getprop ro.build.version.sdk
           adb shell getprop ro.kernel.qemu | python3 -c 'import sys; assert sys.stdin.read().strip() != "1", "Use a physical phone, not an emulator"'
-      - name: Build and install debug app without removing existing user data
+      - name: Build and install without uninstalling or erasing user data
         run: |
           ./gradlew --no-daemon assembleDebug -PfirebaseEnabled=false
           adb install -r app/build/outputs/apk/debug/app-debug.apk
-      - name: Run real-model inference and persistence tests
-        run: |
           adb shell run-as com.scenio.mth test -f no_backup/models/image.gguf
-          ./gradlew --no-daemon connectedDebugAndroidTest -PfirebaseEnabled=false -Pandroid.testInstrumentationRunnerArguments.runRealInference=true
-          mkdir -p device-evidence
-          adb exec-out run-as com.scenio.mth cat files/device-test/report.json > device-evidence/report.json
-          adb exec-out run-as com.scenio.mth cat files/device-test/image.png > device-evidence/image.png
-      - uses: actions/upload-artifact@v4
+      - name: Run fingerprint-bound measurements and optional stress
+        run: |
+          ./gradlew --no-daemon connectedDebugAndroidTest -PfirebaseEnabled=false \
+            -Pandroid.testInstrumentationRunnerArguments.class=com.scenio.mth.features.RealModelDeviceTest,com.scenio.mth.features.DeviceStressTest \
+            -Pandroid.testInstrumentationRunnerArguments.runRealInference=true \
+            -Pandroid.testInstrumentationRunnerArguments.validationRunId="$GITHUB_RUN_ID" \
+            -Pandroid.testInstrumentationRunnerArguments.expectedModelSha256="$EXPECTED_MODEL_SHA256" \
+            -Pandroid.testInstrumentationRunnerArguments.benchmarkSize="$BENCHMARK_SIZE" \
+            -Pandroid.testInstrumentationRunnerArguments.runDeviceStress="$RUN_STRESS"
+      - name: Collect diagnostic JSON even when a measurement fails
         if: always()
+        run: |
+          mkdir -p device-evidence
+          adb exec-out run-as com.scenio.mth cat files/device-test/report.json > device-evidence/report.json || rm -f device-evidence/report.json
+          python3 -c 'import json,os,pathlib; p=pathlib.Path("device-evidence/report.json"); valid=p.exists() and json.loads(p.read_text()).get("run_id")==os.environ["GITHUB_RUN_ID"]; p.unlink(missing_ok=True) if not valid else None'
+          if [ "$RUN_STRESS" = true ]; then
+            adb exec-out run-as com.scenio.mth cat files/device-test/stress.json > device-evidence/stress.json || rm -f device-evidence/stress.json
+            python3 -c 'import json,os,pathlib; p=pathlib.Path("device-evidence/stress.json"); valid=p.exists() and json.loads(p.read_text()).get("run_id")==os.environ["GITHUB_RUN_ID"]; p.unlink(missing_ok=True) if not valid else None'
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always() && inputs.uploadEvidence
         with:
           name: physical-device-evidence
           retention-days: 7
