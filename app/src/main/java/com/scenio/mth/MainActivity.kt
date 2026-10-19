@@ -71,6 +71,7 @@ class MainActivity : ComponentActivity() {
     private var latestJob: String? = null
     private var busy = false
     private var modelImportCancel:java.util.concurrent.atomic.AtomicBoolean?=null
+    private var modelImportDialog:AlertDialog?=null
     private var localDialog:AlertDialog? = null
     private var localActive = false
     private var loadedLocalResult:String? = null
@@ -439,19 +440,33 @@ class MainActivity : ComponentActivity() {
         val checksum=EditText(this).apply { hint="Optional publisher SHA-256 · 64 hex characters";contentDescription=hint;maxLines=3 }
         AlertDialog.Builder(this).setTitle("Verify and import model").setView(checksum)
             .setMessage("The existing model remains until this copy is complete and verified. Reserve space for the whole file plus 64 MB. GGUF signature verification does not prove SD 1.x compatibility or model safety. Import only a source/license you trust.")
-            .setPositiveButton("Import") { _,_ ->
-                val expected=checksum.text.toString();val cancel=java.util.concurrent.atomic.AtomicBoolean(false);modelImportCancel=cancel
-                background {
-                    var last=0L
-                    try {
-                        val description=ModelStore(applicationContext).import(uri,expected,{ cancel.get() }) { copied,total ->
-                            val now=android.os.SystemClock.elapsedRealtime()
-                            if(now-last>=1000 || copied==total) { last=now;ui { say("Importing model: ${copied/1_048_576} MiB"+(total?.let { " / ${it/1_048_576} MiB" } ?: " · size unknown")+" · Cancel model import is available") } }
+            .setPositiveButton("Import") { _,_ -> beginModelImport(uri,checksum.text.toString()) }.setNegativeButton("Cancel",null).show()
+    }
+    private fun beginModelImport(uri:android.net.Uri,expected:String) {
+        if(localActive || busy || pendingExport!=null) { say("Finish the current operation first");return }
+        val cancel=java.util.concurrent.atomic.AtomicBoolean(false);modelImportCancel=cancel
+        val label=text("Opening local model…")
+        val bar=ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal).apply { isIndeterminate=true;max=100;contentDescription="Model import progress" }
+        val form=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL;setPadding(32,24,32,24);addView(label);addView(bar) }
+        modelImportDialog=AlertDialog.Builder(this).setTitle("Importing local model").setView(form).setCancelable(false)
+            .setNegativeButton("Cancel import") { _,_ -> cancel.set(true) }.show()
+        background {
+            var last=0L
+            try {
+                val description=ModelStore(applicationContext).import(uri,expected,{ cancel.get() || com.scenio.mth.family.FamilyPolicy.restricted(applicationContext) }) { copied,total ->
+                    val now=android.os.SystemClock.elapsedRealtime()
+                    if(now-last>=1000 || copied==total) {
+                        last=now;ui {
+                            val message="${copied/1_048_576} MiB"+(total?.let { " / ${it/1_048_576} MiB" } ?: " · size unknown")
+                            label.text=message;bar.isIndeterminate=total==null
+                            if(total!=null) bar.progress=(copied*100/total.coerceAtLeast(1)).toInt().coerceIn(0,100)
+                            say("Importing model: $message")
                         }
-                        ui { say("Model imported: $description") }
-                    } finally { modelImportCancel=null }
+                    }
                 }
-            }.setNegativeButton("Cancel",null).show()
+                ui { say("Model imported: $description") }
+            } finally { modelImportCancel=null;ui { modelImportDialog?.dismiss();modelImportDialog=null } }
+        }
     }
     private fun localGenerate() {
         if(com.scenio.mth.family.FamilyPolicy.restricted(this)) return
@@ -627,5 +642,5 @@ class MainActivity : ComponentActivity() {
         if(::canvas.isInitialized && dirty && canvas.image!=null) { projects.autosave(canvas.snapshot(),metadata());dirty=false }
         super.onStop()
     }
-    override fun onDestroy() { modelImportCancel?.set(true);localDialog?.dismiss();worker.shutdownNow();super.onDestroy() }
+    override fun onDestroy() { modelImportCancel?.set(true);modelImportDialog?.dismiss();localDialog?.dismiss();worker.shutdownNow();super.onDestroy() }
 }

@@ -36,7 +36,7 @@ aec4852aea4f1b21ee97d81c96ee65dfd08f700c1d03dfdeb0fc1fd695f6bdc5  app/src/main/A
 6ec6eed0912733b9d40d5a425099153b064f04c066788188a8d996616d959681  app/src/main/cpp/local-engine.cpp
 1bdbb28edf7df50e15b10d8745bf16f6e9b8a86214a73864f2330710e50eef3f  app/src/main/cpp/native-lib.cpp
 2f8a3f2d83c74a3ffa30911d03e4b51085cef6577d6ece0cebcf580daab11b24  app/src/main/java/com/scenio/mth/ForgeCanvas.kt
-5549f31d7dcfc237ef1640899a924ff3f5af2854323c9fd7221242ed49003ca2  app/src/main/java/com/scenio/mth/MainActivity.kt
+7049dc2decd4ad8fc4dbee3e87637ced247649ef4307de712cadaf9ef22376f6  app/src/main/java/com/scenio/mth/MainActivity.kt
 9a189562bdece3a235b4e55d40c54e1c02b66c06df2744657306072b66ef43a7  app/src/main/java/com/scenio/mth/RevealVideo.kt
 fcf65ee61d9e3305634ff9b71c29f4f9ffd79f9fc552f119949d2da803dd146a  app/src/main/java/com/scenio/mth/editor/CanvasGeometry.kt
 7de214e03f7ee72b833b6da6b0daf0419a4dffbff74e82513ca9338eeb3e9080  app/src/main/java/com/scenio/mth/editor/DocumentCodec.kt
