@@ -104,7 +104,7 @@ app/device/crash information; review the in-app disclosure before enabling them.
 
 ## Implementation limits
 
-Version 0.7.0 implements these software paths; real model outputs and device
+Version 0.8.0 implements these software paths; real model outputs and device
 latency/thermals are unverified. CPU image generation offers 256px previews or
 512px outputs with conservative RAM guards. Fast mid-range-phone generation
 and native full-frame 8K denoising are not promised. Computer tiled refinement

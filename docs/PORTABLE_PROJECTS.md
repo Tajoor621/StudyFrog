@@ -19,12 +19,14 @@ their original formats and remain supported.
 - Layer names, visibility, opacity, normal/multiply/screen, translation, uniform
   scale and rotation, plus the selected layer when opening the exchange file.
 - Visible ink, shapes, text, erasures and enabled masks become transparent PNG
-  pixels within each layer. These can be painted over, erased and masked again.
+  pixels within each layer. These can be painted over, transformed and masked again.
 
 This is **layered raster interchange**, not lossless vector/PencilKit interchange.
 Individual strokes, text nodes, disabled masks, original mask paths, guides,
 undo history and generation profiles/seeds/settings do not transfer. Native
-projects remain the source for those edits. Reopening an imported native iOS
+projects remain the source for those edits. Hidden pixels removed by a baked
+mask cannot be restored from the exchange file. The iOS PencilKit eraser affects
+new ink; use a layer mask to hide imported raster pixels. Reopening an imported native iOS
 project selects the first layer, as with existing native projects.
 
 Files are capped at 16 MB to limit JSON/Base64 memory overhead. Export checks
