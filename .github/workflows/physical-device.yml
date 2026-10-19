@@ -31,7 +31,7 @@ jobs:
       BENCHMARK_SIZE: ${{ inputs.benchmarkSize }}
       RUN_STRESS: ${{ inputs.stress }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Require one dedicated physical test phone and a valid digest

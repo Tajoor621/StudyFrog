@@ -19,7 +19,7 @@ jobs:
     runs-on: macos-14
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build shared offline inference framework
         run: bash scripts/build-ios-native.sh
       - name: Obtain pinned free XcodeGen
