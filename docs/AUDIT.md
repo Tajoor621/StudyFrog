@@ -147,3 +147,26 @@ safety, physical stylus feel or complete original-specification delivery.
 - Push CI filters relevant platform inputs; full PR/manual checks remain. No build/test checks were removed.
 
 See [FAMILY_ACCESS.md](FAMILY_ACCESS.md), [GENERATION_CONTROLS.md](GENERATION_CONTROLS.md), [EDITOR.md](EDITOR.md) and current [VALIDATION.md](../VALIDATION.md). Real models, physical devices, deliberate bypass testing and independent medical review remain outstanding.
+
+
+## 0.7.0 follow-up — 2026-10-19
+
+- Repaired literal backslash-newline characters that made the previously committed
+  local bridge fail Python parsing. CI now imports/tests that module.
+- Replaced unrestricted repository serving with an explicit static-asset allowlist,
+  preventing access to engine result files, Git metadata and source/config files.
+- Replaced the service worker's arbitrary-success-response cache with a static
+  allowlist. Generated media, OCR and job history bypass caching; old app caches
+  are removed without deleting unrelated applications' caches.
+- Tightened Tailscale access to one configured exact hostname and same-origin
+  requests. Redirects are rejected before any bearer token could leave loopback.
+- Added bounded transient Tesseract OCR, review-first prompt handoff and optional
+  local CPU photo depth/body-pose adapters. No pretrained model evaluation or
+  scientific fact checking is claimed.
+- Added web SD/ControlNet/LTX, original download and job-management controls;
+  generated images enter the editor's existing Undo history.
+
+See [photo/OCR setup](PHOTO_STUDY_WORKFLOW.md), [web setup](../web/local-engine/README.md)
+and [validation](../VALIDATION.md) for implementation and test boundaries.
+
+The first API 35 suite exposed a pre-existing Science Explorer window-focus failure before its first click. The UI test now initializes automation, wakes/unlocks the test device and binds every interaction to the current scenario decor, including after recreation. No assertions are skipped or retried. A dedicated test-only push workflow runs the full emulator suite without rebuilding the already verified release; application-source, PR and manual release validation retain the existing pipeline.

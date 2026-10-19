@@ -1,4 +1,4 @@
-# StudyForge iOS — 0.6.0
+# Study Frog iOS — 0.7.0
 
 Buildable SwiftUI/PencilKit app with a shared native CPU image runtime, photo
 import, editable layers/projects/drafts, PNG export, onboarding/appearance,
@@ -36,7 +36,7 @@ and encoders remain unverified. Simulator compilation is not a phone benchmark.
 
 Models/projects are private and backup-excluded. PhotoPicker avoids broad
 library access. Notification permission is requested when enabling reminders.
-There is no iOS analytics SDK. Optional computer motion requires consent to
+There is no iOS analytics SDK. Optional computer image/motion/OCR actions require consent to
 transfer prompt/photo to a local host, using a memory-only token. The supplied
 artwork remains integrated in icons and in-app assets.
 
@@ -50,3 +50,5 @@ remain independent. See [SCIENCE_EXPLORER.md](../docs/SCIENCE_EXPLORER.md).
 Family access uses Keychain-backed PIN/cooldown and a study-only root workspace; see [FAMILY_ACCESS.md](../docs/FAMILY_ACCESS.md). Prompt controls, saved inference settings and optional computer image/guidance jobs accompany motion; see [GENERATION_CONTROLS.md](../docs/GENERATION_CONTROLS.md).
 
 The editor now supports photo layers, black/white masks, opacity/blend, transforms, ordering/deletion and document undo. Assets save independently off the main thread and legacy records remain readable; see [EDITOR.md](../docs/EDITOR.md). Actual Keychain/signing, physical encoders/accessibility and real weights remain unverified.
+
+Version 0.7 adds computer-local photo depth/body-pose preparation and Tesseract OCR with editable review before prompt replacement. Native OCR controls use the existing local-network permission and add no SDK or broad photo permission; see [photo study workflow](../docs/PHOTO_STUDY_WORKFLOW.md). Estimators run on the computer, not the phone, and scientific correctness still requires review.

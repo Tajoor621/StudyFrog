@@ -1,111 +1,123 @@
-# Validation — 2026-10-18 (Asia/Dubai), version 0.6.0
+# Validation — 2026-10-19 (Asia/Dubai), version 0.7.0
 
-Application/test source: `52abc98916e9edd48499fe447e047348af35feff`.
-Android/engine verified source: `43ac0b3e1053f481a6075bf55a23ebd9b61c6755`.
-The 120 Android/engine input files are identical between those trees. Android
-verification job definitions are unchanged; only push trigger paths were scoped.
-The later changes are iOS-only. Final documentation/integrity publication changes
-no application/test code.
+Production application/engine/web source: `637c5fe24bafbc3654ca8b66cd0dda86724c7136`.
+Android UI-test/CI follow-up: `0cb8b9bf5928ec7439dd1fb236ed12be212cc50f`.
+iOS verified source: `6a6bebe6b25a8ee504f22484b871824a2bdc51dd`.
+The seven files changed after the iOS build are engine/web files; all iOS/shared
+native/build inputs are identical. The entire 211-file source tree was compared
+with the local tested Git tree and matched `41199bd9957397bf2b4e8a0c0723e5f563933f0a`.
+After this source snapshot, only the Science Explorer instrumentation test and
+Android test-only CI routing changed (tree `7cc77576480f08e0cfd99c0d961c4009b39eba55`,
+212 files). Production application, engine, web, iOS and shared runtime inputs
+are unchanged. Final documentation/inventory publication adds the photo guide
+and does not modify application or test code.
+A transfer-corrupted intermediate commit was repaired and every repaired file
+was read back and verified before this source comparison. No claim is based on
+that intermediate commit's checks.
 
-## Passing workflows
+## Workflow results
 
-| Workflow | Verified result |
+| Workflow | Result |
 | --- | --- |
-| [Android 39121050440](https://github.com/Tajoor621/StudyFrog/actions/runs/39121050440) | Lint, JVM tests, test-APK compilation, release APK/AAB assembly, generated split inspection, repository guard, Python checks and API 35 emulator suite pass |
-| [iOS 39121520515](https://github.com/Tajoor621/StudyFrog/actions/runs/39121520515) | Shared CPU framework/app compile and all 12 XCTest tests pass |
+| [Android 39243506413](https://github.com/Tajoor621/StudyFrog/actions/runs/39243506413) | Release/lint/JVM/engine/browser/split checks passed; initial emulator attempt found one window-focus test failure |
+| [Android UI 39247095254](https://github.com/Tajoor621/StudyFrog/actions/runs/39247095254) | Complete 25-case API 35 suite: 24 passed, one opt-in model test skipped, zero failures/errors |
+| [iOS 39242551700](https://github.com/Tajoor621/StudyFrog/actions/runs/39242551700) | Shared native framework/app compile, all 12 XCTest tests pass |
+| [Pages 39247094971](https://github.com/Tajoor621/StudyFrog/actions/runs/39247094971) | Build/deploy succeeded |
 
-**80 automated tests passed; one opt-in real-model test was skipped.**
-Counts: 12 JVM, 24 Android instrumentation, 24 engine, four manifest-parser,
-four study-content and 12 iOS tests. Android starts 25 instrumentation cases and
-reports one real-model skip/zero failures. The protected signed-release job is
-intentionally skipped without owner secrets and explicit dispatch. Configured
-Firebase-enabled builds remain unverified.
+**96 automated tests passed; one opt-in real-model test was skipped.**
+Browser integration and service-worker privacy check scripts also passed.
 
-Android pins JDK 17, SDK 35, NDK 27.2.12479018, CMake 3.22.1, Gradle 8.9 and
-AGP 8.7.3, with arm64-v8a/x86_64 inference. iOS uses Xcode/macOS, XcodeGen 2.42.0
-and the same pinned native runtime. Upstream C++ and native-packaging advisory
-warnings remain visible; lint errors are not suppressed.
+Verified test groups: 12 JVM; 24 Android instrumentation with one opt-in
+real-model case skipped; 35 engine; eight manifest/content; 12 iOS; five bridge
+HTTP tests. Service-worker privacy and browser integration are two additional
+check scripts, not extra individual unit-test counts. Owner-signed release and
+configured Firebase builds are not verified by the default workflow.
 
-## Evidence covered
+The first emulator attempt reported 23 passes, one focus failure and one model
+skip. Downloaded XML/logcat located the failure on the first Science Explorer
+interaction, before recreation. The follow-up initializes UI automation, wakes
+and dismisses the test-device keyguard, and targets the current scenario decor
+on every interaction, including after recreation. All assertions remain intact;
+no retry or exclusion masks the failure. Test-only pushes now run the full
+emulator suite separately; production-source, PR and manual release checks keep
+the existing lint/JVM/release/engine/device pipeline.
 
-- Actual bundletool manifests contain density split config.xxhdpi,
-  splitTypes=base__density and hasCode=false; the base contains
-  extractNativeLibs=true. Native libraries are packaged and the density split has
-  no DEX. Source manifests do not hardcode generated split/Play metadata.
-- JVM tests cover geometry, progress/preferences, cancellation cleanup,
-  six-digit PIN/digest behavior and visual-direction bounds/prompt preservation.
-- Android tests cover onboarding/recreation/font scaling, Room, reminders, JNI
-  bounds, linked science views, layered rendering/legacy reads, raster ZIP
-  persistence, full-action undo, transforms, masks, symmetry, boolean shapes,
-  SVG/multiply and atomic metadata recovery.
-- New Android policy tests use isolated private files to check PIN changes,
-  failed-attempt cooldown, persistence and corrupt-record fail-closed behavior.
-  They do not establish physical bypass resistance.
-- iOS tests cover project/settings/folder persistence, legacy records, native
-  invalid-input rejection, study renders/context, PIN vault/cooldown and prompt
-  controls. Vault tests use isolated memory storage; actual Keychain/device
-  entitlement behavior still needs physical evaluation.
-- Four iOS layer tests exercise actual Core Image mask hide/restore/disable,
-  immutable photo pixels, transforms/multiply/invalid bounds, raster/mask/settings
-  persistence, stale folder/title updates, legacy defaults and document undo.
-- Engine tests cover auth, validation, queue/history/cancellation, missing-model
-  failure, tiling, image/video memory handoff and fixture video mechanics.
-  Six guidance tests cover actual CPU Canny, prepared maps, missing weights,
-  local-only loader arguments, cache replacement/reuse and strength propagation.
-  Loader/model execution uses stubs, not real weights.
-- Actual FFmpeg/ffprobe fixture output verifies 720 frames, 24fps, 1920×1080 and
-  30 seconds. No real LTX denoising or temporal-quality evaluation is exercised.
-- Engine CI passed 357 structural repository assertions at its source snapshot.
-  Final file inventory, changed-source digests, unchanged blob identities and
-  documentation links are checked against the published repository tree.
-  Eight parser/content tests and all six guidance tests also passed locally
-  before publication, including the real OpenCV edge-map check.
+## New evidence
 
-Artifacts contain Android lint/test reports, AAB/packaging-test APK set and the
-iOS simulator app/results. Packaging-test certificates are disposable. They do
-not replace the owner's update key; simulator output is not a signed iPhone
-release. Push CI now filters platform inputs to avoid redundant native builds;
-pull-request and manual checks remain full.
+- Actual Tesseract 5 recognizes rendered CELL WALL / DNA AND PROTEIN fixture
+  text. Tests exercise TSV line bounds/confidence, invalid language rejection,
+  missing-tool errors, concurrency limits, subprocess timeout/temporary-file
+  cleanup, authenticated HTTP success, unauthorized/busy/missing-tool responses,
+  and absence of saved OCR jobs. This is not a handwriting/medical accuracy study.
+- Local CPU estimator adapters are exercised with explicit model stubs: local-only,
+  no-remote-code and safetensors arguments; relative-depth normalization and
+  invalid values; COCO body-to-OpenPose skeleton/confidence; prepared-map and
+  photo-mode routing. No pretrained depth, RT-DETR, ViTPose, SD or LTX weights
+  were evaluated in this environment.
+- Real OpenCV Canny edges and existing engine job lifecycle/cancellation,
+  model handoff, tiled rendering and FFmpeg container-mechanics tests pass.
+- Bridge tests start real loopback HTTP servers, checking static-file isolation,
+  exact Host/Origin/Tailscale rules, forwarding of the computer-held token,
+  fixed routes, no-store results and redirect rejection.
+- Chromium browser integration uses explicit engine fixtures. It checks connection,
+  style/effective-prompt preview and request payload, image download/preview/Undo,
+  review-before-OCR-prompt replacement and length limits, video/guidance validation,
+  negative-conditioning rejection for Ollama and computer job deletion. It does
+  not establish physical Samsung-to-computer networking or real model generation.
+- The service-worker script verifies static-only caching, bypass of media/job/OCR
+  requests and cleanup scoped to this application's caches.
+- New Android/iOS OCR controls compile in the platform builds. Native OCR dialogs,
+  network permission interactions and real handwriting still need physical testing.
+- Downloaded JVM XML reports independently confirm 12 tests with zero failures,
+  errors or skips. Downloaded final emulator XML confirms 25 cases, zero failures/
+  errors and one opt-in model skip, including the corrected Science Explorer test.
+  Generated binary manifests report config.xxhdpi, base__density,
+  hasCode=false and extractNativeLibs=true; the density split contains no DEX.
+- Repository guards check package/component/JNI resolution, version/toolchain
+  agreement, native/density packaging, no source hardcoded split/Play metadata,
+  icons, local documentation links and absence of tracked signing/config secrets.
+  Structural assertion counts are not additional functional tests.
 
-## Boundaries and remaining work
+## Existing coverage retained
 
-No real SD/LTX/guidance weights, CUDA GPU or connected ARM64/iPhone device were
-available. Real output quality/adherence, scientific correctness, 8K seams,
-motion continuity, RAM/VRAM, latency, battery/thermals, physical encoders, stylus
-feel and physical 16 KB-page-size behavior remain unverified. The opt-in physical
-workflow was not dispatched.
+Room/DataStore persistence, onboarding/recreation/font scaling, reminders,
+JNI input bounds, science content/hierarchy, PIN digest/cooldown/corruption,
+project/layer/raster/mask/transform/undo persistence, SVG and metadata recovery
+remain covered by the platform suites. iOS PIN storage tests use memory fixtures,
+not a physical Keychain validation. Real TalkBack/VoiceOver, 16 KB runtime devices,
+physical encoders, low-memory/process-death/storage behavior and owner signing
+remain outside this result.
 
-Native inference remains 256/512px. LTX denoises at 768×448 before scaling to
-1080p; frame/container tests do not establish ultra-realism or native 1080p
-detail. Depth/pose guidance consumes prepared maps, not automatic detections.
-PIN controls do not certify child safety or OS-level restrictions; content and
-bypass review, accessibility, process-death/low-memory/storage behavior and
-actual signing/Keychain evaluation remain outstanding.
+Android pins JDK 17, SDK 35, AGP 8.7.3, Gradle 8.9, NDK 27.2.12479018 and CMake
+3.22.1. iOS uses the shared pinned CPU runtime and XcodeGen 2.42.0. Native builds
+retain visible upstream advisory warnings; no lint errors are suppressed.
 
-iOS now has core raster/mask/transform/document-undo parity. iOS ports of Android's vector,
-SVG/text/boolean and guide tools, cross-platform editable interchange, advanced
-typography/print workflows, broad reviewed medical atlas/validated imaging,
-OCR/factual verification and consistent semantic zoom are still incomplete.
+The existing FFmpeg fixture checks a 30-second, 720-frame, 24fps, 1920×1080
+container. LTX denoising remains at 768×448 before scaling; container dimensions
+are not proof of native detail, temporal coherence or ultra-realism. Computer
+8K tiled output allocation is not a real-model quality/seam benchmark. Native
+phone image inference remains bounded to 256/512px.
 
-See [FAMILY_ACCESS.md](docs/FAMILY_ACCESS.md),
-[GENERATION_CONTROLS.md](docs/GENERATION_CONTROLS.md),
-[EDITOR.md](docs/EDITOR.md), [FEATURE_STATUS.md](docs/FEATURE_STATUS.md),
-[MASTER_SPEC_AUDIT.md](docs/MASTER_SPEC_AUDIT.md) and
-[LOCAL_MODELS.md](docs/LOCAL_MODELS.md). No complete-master-specification or
-“10/10” claim is made.
+## Repeat checks
 
-No production signing key, real token, Firebase configuration, user project or
-model weight is committed. Preserve original signing identity and Room history.
-The previous 0.5.0 baseline recorded 61 passing tests; this delivery adds 19.
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r engine/requirements-test.txt
+python scripts/check_repository.py
+python scripts/audit_repository.py
+python -m unittest discover -s scripts -v
+(cd engine && python -m unittest -v)
+python -m unittest discover -s web/tests -v
+node --check web/app.js
+node --check web/local-engine/ui.js
+node web/tests/service-worker.test.cjs
+./gradlew --no-daemon lintDebug testDebugUnitTest assembleDebugAndroidTest assembleRelease bundleRelease -PfirebaseEnabled=false
+./gradlew --no-daemon connectedDebugAndroidTest -PfirebaseEnabled=false
+```
 
-## Independently checked GitHub Actions runs — 2026-10-18
-
-The following GitHub run metadata, job conclusions and available artifacts were checked directly after the original 0.6.0 report was published:
-
-| Run | Source commit | GitHub job conclusions | Artifacts |
-| --- | --- | --- | --- |
-| [Android 39121050440](https://github.com/Tajoor621/StudyFrog/actions/runs/39121050440) | `43ac0b3e1053f481a6075bf55a23ebd9b61c6755` | `engine-tests`, `checks`, `device-tests`: success; `signed-release`: skipped | `device-test-reports`, `validation-reports`, `studyforge-packaging-test` |
-| [iOS 39121520515](https://github.com/Tajoor621/StudyFrog/actions/runs/39121520515) | `52abc98916e9edd48499fe447e047348af35feff` | `ios`: success, including shared framework build and simulator build-and-test step | `studyforge-ios-simulator` |
-| [GitHub Pages 39139518000](https://github.com/Tajoor621/StudyFrog/actions/runs/39139518000) | `1cd1b342814e07e3abbec19e4cc3c7d80fbe4724` | `build`, `deploy`, `report-build-status`: success | `github-pages` |
-
-All listed artifacts were unexpired at inspection time. These checks verify workflow and job outcomes, **not** a fresh build of every platform against the latest documentation commit. The Android and iOS builds used different commits, whose source consistency is discussed above. The 80-test figure is reported by the existing validation evidence; the workflow metadata alone does not independently prove the individual test count. A signed Android release and real physical-device/model evaluation remain outstanding. No application source or build configuration was changed by this evidence update.
+Install free FFmpeg/Tesseract/English data and DejaVu fonts for all integration
+cases. Browser CI installs pinned Playwright 1.58.2 and uses runner Chrome. See
+[photo/OCR setup](docs/PHOTO_STUDY_WORKFLOW.md), [web setup](web/local-engine/README.md),
+[Android packaging](docs/ANDROID_BUILD.md), and [coverage gaps](docs/MASTER_SPEC_AUDIT.md).
+The local workflow remains available independent of provider-controlled CI quotas.

@@ -2,6 +2,7 @@
 
 ```text
 .github/dependabot.yml
+.github/workflows/android-device.yml
 .github/workflows/android.yml
 .github/workflows/ios.yml
 .github/workflows/physical-device.yml
@@ -114,6 +115,8 @@ docs/FEATURE_STATUS.md
 docs/GENERATION_CONTROLS.md
 docs/LOCAL_MODELS.md
 docs/MASTER_SPEC_AUDIT.md
+docs/PHOTO_STUDY_WORKFLOW.md
+docs/REMAINING_GAPS.md
 docs/SCIENCE_EXPLORER.md
 docs/SOURCES.md
 docs/XXHDPI.md
@@ -122,19 +125,24 @@ docs/android-features/MERGE.md
 docs/android-features/SOURCES.md
 engine/image_guidance.py
 engine/motion_video.py
+engine/photo_guidance.py
 engine/requirements-models.txt
 engine/requirements-test.txt
 engine/requirements.txt
 engine/server.py
+engine/study_ocr.py
 engine/test_engine.py
 engine/test_image_guidance.py
 engine/test_model_lifecycle.py
 engine/test_motion_video.py
+engine/test_photo_guidance.py
+engine/test_study_ocr.py
 gradle.properties
 gradle/wrapper/gradle-wrapper.jar
 gradle/wrapper/gradle-wrapper.properties
 gradlew
 gradlew.bat
+index.html
 ios/README.md
 ios/StudyForge/Assets.xcassets/AppIcon.appiconset/Contents.json
 ios/StudyForge/Assets.xcassets/AppIcon.appiconset/icon-ios-marketing-1024@1x.png
@@ -177,6 +185,7 @@ ios/StudyForgeTests/LayerDocumentTests.swift
 ios/StudyForgeTests/ProjectStoreTests.swift
 ios/StudyForgeTests/StudyCatalogTests.swift
 ios/project.yml
+manifest.webmanifest
 scripts/audit_repository.py
 scripts/build-apks.sh
 scripts/build-ios-native.sh
@@ -194,4 +203,15 @@ shared/THIRD_PARTY_NOTICES.txt
 shared/runtime.cmake
 shared/sf_engine.cpp
 shared/sf_engine.h
+sw.js
+web/README.md
+web/app.js
+web/local-engine/ANDROID_SECURE_CONNECTION.md
+web/local-engine/README.md
+web/local-engine/bridge.py
+web/local-engine/ui.js
+web/styles.css
+web/tests/browser.cjs
+web/tests/service-worker.test.cjs
+web/tests/test_bridge.py
 ```

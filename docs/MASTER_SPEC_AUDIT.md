@@ -1,6 +1,6 @@
-# Master specification coverage — 2026-10-18 (Asia/Dubai)
+# Master specification coverage — 2026-10-19 (Asia/Dubai)
 
-The requested product is **not fully implemented**. StudyForge 0.6.0 has working
+The requested product is **not fully implemented**. Study Frog 0.7.0 has working
 Android/iOS builds and a substantial offline foundation. A passing build is not
 proof of model quality, medical accuracy, device performance or complete scope.
 The tested source and exact results are recorded in [VALIDATION.md](../VALIDATION.md).
@@ -17,8 +17,8 @@ The tested source and exact results are recorded in [VALIDATION.md](../VALIDATIO
 | Negative prompts | Passed to image/video adapters; actual adherence unverified |
 | Whole → system → organ → tissue → cell | Five linked conceptual views and context-preserving prompt handoff; no broad, model-consistent semantic atlas |
 | Science diagrams and labels | Ten original referenced concept views, including five mitosis phases; no independent scientific peer review |
-| Convert arbitrary notes/photos into accurately labeled study materials | General img2img/prompt path only; reliable OCR, label layout and factual validation incomplete |
-| ControlNet, IP-Adapter, OpenPose, depth maps | Computer-local Canny/depth/pose ControlNet and IP-Adapter paths and both-platform clients; depth/pose require prepared maps; automatic detectors, native-phone guidance and real-weight evaluation remain incomplete |
+| Convert arbitrary notes/photos into accurately labeled study materials | Local Tesseract transcription, review/correction and explicit bounded prompt handoff on all clients; automatic label layout and factual validation incomplete |
+| ControlNet, IP-Adapter, OpenPose, depth maps | Computer-local Canny/depth/pose ControlNet and IP-Adapter paths and both-platform clients; prepared maps remain supported; photo modes add local CPU relative depth and RT-DETR/ViTPose body pose adapters; native-phone guidance and real-weight evaluation remain incomplete |
 | 8K still output | Optional computer tiled refinement can allocate 7680×4320; real-model quality/seams unverified; native phone inference limited to 256/512px |
 | Fast mid-range-phone generation | Not established; CPU runtime, RAM guards and benchmark export exist; phone thermal/battery/latency tests pending |
 | Layers/masks/blending | Android/iOS base plus up to 16 ink/raster layers, reversible hide/restore masks, transforms, opacity/visibility, normal/multiply/screen and full-action undo; resource limits documented in EDITOR.md; advanced vector/guide/export parity and editable interchange incomplete |
@@ -83,6 +83,8 @@ tracked private-key payloads and signing/configuration secret files.
 Run `python3 scripts/audit_repository.py`. It is also part of the engine CI job.
 Its count includes individual structural assertions, not additional model or UI
 tests. It does not prove that every branch in every file is conflict-free.
+
+The 0.7.0 [photo/OCR workflow](PHOTO_STUDY_WORKFLOW.md) and [web engine guide](../web/local-engine/README.md) add local preprocessing and usable web image/video jobs.
 
 The 0.6.0 family/generation additions are described in [FAMILY_ACCESS.md](FAMILY_ACCESS.md) and [GENERATION_CONTROLS.md](GENERATION_CONTROLS.md).
 

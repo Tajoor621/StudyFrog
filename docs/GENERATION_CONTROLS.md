@@ -18,9 +18,9 @@ Both apps submit image/photo jobs to the local engine. Android uses loopback/USB
 | Pose | Prepared OpenPose RGB map | Compatible pose ControlNet |
 | Reference | Reference photo | SD 1.x IP-Adapter safetensors and matching CLIP image encoder |
 
-Depth/pose modes consume prepared maps; they do not run automatic detectors on photos. One mode is supported per image job. Native-phone guidance and guidance on video/refinement jobs are not implemented. Inputs are resized/center-cropped to job aspect ratio. Strength ranges 0–1 and does not guarantee identity or pose fidelity.
+Prepared depth/pose modes consume maps. Version 0.7 adds separate `depth_photo` and `pose_photo` modes with local CPU estimators; see [Photo study workflow](PHOTO_STUDY_WORKFLOW.md). One mode is supported per image job. Native-phone guidance and guidance on video/refinement jobs are not implemented. Inputs are resized/center-cropped to job aspect ratio. Strength ranges 0–1 and does not guarantee identity or pose fidelity.
 
-Install engine/requirements-models.txt in your own environment. It pins Diffusers 0.32.2, Transformers 4.49.0, Torch 2.6.0, NumPy 1.26.4 and OpenCV headless 4.11.0.86 with existing dependencies. Retain compatible model cards/licenses. Set only the local modes you use:
+Install engine/requirements-models.txt in your own environment. It pins Diffusers 0.32.2, Transformers 4.49.0, Torch 2.6.0, Torchvision 0.21.0, SciPy 1.15.2, NumPy 1.26.4 and OpenCV headless 4.11.0.86 with existing dependencies. Retain compatible model cards/licenses. Set only the local modes you use:
 
     export STUDYFORGE_MODEL=/absolute/path/to/sd1-diffusers
     export STUDYFORGE_CONTROLNET_CANNY=/absolute/path/to/canny-controlnet
@@ -33,7 +33,7 @@ ControlNet folders need Diffusers config and safetensors. The reference folder n
 
 Model/encoder loads explicitly use local files only. Encoder auto-loading is disabled after the explicit local load. Missing weights fail clearly; no downloads or substitute mode occur. Changing mode/model path releases the cached pipeline before replacement. Existing safety-checker/guard behavior is retained. Hardware, storage and compatible weights must be supplied.
 
-GET /health reports configured guidance folders. Image jobs accept control=none/canny/depth/pose/reference and control_scale=0–1, with the existing image/prompt/token limits. Model paths come from the operator environment, never client requests.
+GET /health reports configured guidance folders. Image jobs accept control=none/canny/depth/pose/reference/depth_photo/pose_photo and control_scale=0–1, with the existing image/prompt/token limits. Model paths come from the operator environment, never client requests.
 
 ## Source and verification
 

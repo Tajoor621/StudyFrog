@@ -27,8 +27,7 @@ phone for that computer via your explicit job submission.
 Download a legally usable SD 1.x Diffusers-format model to your own computer.
 This source does not redistribute model weights. Inspect its license and
 hardware requirements. Supply safetensors weights, tokenizer, text encoder,
-VAE, scheduler, feature extractor and safety_checker. This adapter does not
-support SDXL/FLUX/ControlNet/OpenPose. It refuses models without a safety checker.
+VAE, scheduler, feature extractor and safety_checker. The base adapter targets SD 1.x; SDXL/FLUX are not supported. Optional SD 1.x ControlNet/OpenPose and IP-Adapter paths are described below. It refuses models without a safety checker.
 No `safety_checker=None` bypass is provided. Safety checking is imperfect;
 this is not a guarantee of child-safe content or medical accuracy.
 
@@ -153,4 +152,6 @@ VRAM guarantee. Model-lifecycle tests use stubs; actual CUDA/weights still need
 measurement. Failed CUDA cache cleanup does not terminate the job worker.
 
 
-Optional local Canny/depth/pose ControlNet and IP-Adapter image modes are documented in [GENERATION_CONTROLS.md](GENERATION_CONTROLS.md). They require separately prepared SD 1.x weights; depth/pose inputs are prepared maps, not automatic detector outputs.
+Optional local Canny/depth/pose ControlNet and IP-Adapter image modes are documented in [GENERATION_CONTROLS.md](GENERATION_CONTROLS.md). They require separately prepared SD 1.x weights; prepared depth/pose maps remain available alongside separate photo-estimator modes. See [photo guidance and reviewed OCR](PHOTO_STUDY_WORKFLOW.md) for local CPU models, Tesseract setup and review boundaries.
+
+The [web bridge](../web/local-engine/README.md) serves a fixed public-asset allowlist and forwards authenticated engine routes from a same-origin web client. It preserves native clients and needs the same computer-held STUDYFORGE_TOKEN. No browser Origin bypass is added to this engine.

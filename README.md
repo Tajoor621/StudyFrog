@@ -6,6 +6,8 @@
 
 ## Included functionality
 
+Version 0.7.0 adds [local photo depth/body-pose preparation and reviewed OCR](docs/PHOTO_STUDY_WORKFLOW.md), plus [web SD/ControlNet/LTX jobs](web/local-engine/README.md), original-file export and computer-job management. Native Android/iOS applications are preserved. Real-weight quality and physical-device validation remain outstanding.
+
 - Android/iOS parent PIN and study-only workspaces, persisted retry cooldown and adult self-declaration.
 - Saved style/detail/realism/scientific-intent prompt directions and preview.
 - Computer-local ControlNet Canny/depth/pose and IP-Adapter image guidance with explicit local weights.
@@ -100,7 +102,7 @@ app/device/crash information; review the in-app disclosure before enabling them.
 
 ## Implementation limits
 
-Version 0.6.0 implements these software paths; real model outputs and device
+Version 0.7.0 implements these software paths; real model outputs and device
 latency/thermals are unverified. CPU image generation offers 256px previews or
 512px outputs with conservative RAM guards. Fast mid-range-phone generation
 and native full-frame 8K denoising are not promised. Computer tiled refinement

@@ -14,7 +14,7 @@ The root `index.html` is an offline-first static PWA intended for GitHub Pages a
 
 ## Honest limits
 
-**No browser AI inference, image-to-video, backend service, user accounts, or cross-device sync is implemented.** Prompts are editable metadata, not generated images. LocalStorage is not a reliable long-term backup; export important PNGs. The science cards are introductory summaries, not reviewed medical diagrams. Offline caching does not include any model weights. Existing Android/iOS native capabilities remain separate.
+The static GitHub Pages editor has no browser AI inference or required backend. Through the optional [local bridge](local-engine/README.md), the web UI now connects your computer’s SD/ControlNet/LTX engine for image/video/refinement jobs and reviewed OCR. It also retains the Ollama text-to-image adapter. There are no user accounts or cross-device sync. Prompts alone do not generate images without a configured engine. LocalStorage is not a reliable long-term backup; export important PNGs. The science cards are introductory summaries, not reviewed medical diagrams. Offline caching does not include any model weights. Existing Android/iOS native capabilities remain separate.
 
 ## Manual verification checklist
 
