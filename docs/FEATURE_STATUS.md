@@ -27,3 +27,11 @@ Evidence: [VALIDATION.md](../VALIDATION.md). Implemented code, automated tests a
 See [FAMILY_ACCESS.md](FAMILY_ACCESS.md), [GENERATION_CONTROLS.md](GENERATION_CONTROLS.md), [EDITOR.md](EDITOR.md) and [MASTER_SPEC_AUDIT.md](MASTER_SPEC_AUDIT.md) for exact boundaries.
 
 Remaining work includes real SD/LTX/guidance evaluation on target hardware, physical encoders and low-memory/process-death/storage testing, independent science/family-control review, advanced graphics/iOS parity, cross-platform project exchange and owner-signed device releases. Passing builds do not establish the complete master specification or a “10/10” rating.
+
+## 0.8.0 portable layers
+
+Android/iOS import and export local layered raster copies with prompts/folders,
+layer ordering/settings/transforms and checksummed PNG assets. Export disclosures
+explain rasterized strokes/text/masks and bounded resolution; original native
+projects remain editable. Lossless native stroke/vector/mask-path interchange
+is still incomplete. See [Portable projects](PORTABLE_PROJECTS.md).

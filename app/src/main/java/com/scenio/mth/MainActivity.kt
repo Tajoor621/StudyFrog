@@ -175,6 +175,18 @@ class MainActivity : ComponentActivity() {
             }
         })
         root.addView(button("Export PNG") { exportPng() })
+        root.addView(button("Export portable layers · Android / iOS") {
+            if(canvas.image==null) say("Create an image first") else AlertDialog.Builder(this).setTitle("Export layered raster copy?")
+                .setMessage("Ink, text, shapes and enabled masks become pixels inside separate layers. Layer order, visibility, opacity, blend and transforms are preserved. Layer images are limited to 1024px and 8 million pixels total. Native projects keep their original editable ink; save one first.")
+                .setPositiveButton("Export copy") { _,_ ->
+                    val snapshot=canvas.snapshot();val meta=metadata()
+                    background { val file=File(cacheDir,"portable-${UUID.randomUUID()}.json");try { file.writeText(com.scenio.mth.editor.PortableProject.encode(snapshot,meta));ui { export(file,"application/json","StudyForge.sfgx.json") } } catch(e:Exception) { file.delete();throw e } }
+                }.setNegativeButton("Cancel",null).show()
+        })
+        root.addView(button("Import portable layers · Android / iOS") {
+            AlertDialog.Builder(this).setTitle("Open portable layered project?").setMessage("Save your current work first. Import opens a separate local project and replaces the current canvas. Portable files contain raster layers, not editable ink or text nodes.")
+                .setPositiveButton("Choose file") { _,_ -> startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type="application/json";addCategory(Intent.CATEGORY_OPENABLE) },16) }.setNegativeButton("Cancel",null).show()
+        })
         root.addView(button("Import project backup") { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type="application/zip";addCategory(Intent.CATEGORY_OPENABLE) },12) })
         root.addView(text("Optional local computer engine • USB connection • no cloud"))
         token=EditText(this).apply { hint="Engine token (kept in memory only)";inputType=129;setTextColor(Color.WHITE) };root.addView(token)
@@ -396,6 +408,13 @@ class MainActivity : ComponentActivity() {
         }
         val uri=data?.data ?: return
         when(requestCode) {
+            16 -> background {
+                val document=contentResolver.openInputStream(uri)?.use { com.scenio.mth.editor.PortableProject.decode(it) } ?: throw IOException("Cannot open portable project")
+                try {
+                    val id=projects.save(document.snapshot,document.metadata)
+                    ui { applyProject(com.scenio.mth.editor.LoadedProject(com.scenio.mth.editor.ProjectInfo(id,document.metadata.optString("title"),document.metadata),document.snapshot));say("Portable raster layers imported and saved locally") }
+                } catch(e:Exception) { document.snapshot.base?.recycle();document.snapshot.layers.forEach { it.raster?.recycle() };throw e }
+            }
             15 -> background { val bitmap=PhotoDecoder.read(contentResolver,uri,1024);ui { runCatching { canvas.addRaster(bitmap) }.onSuccess { say("Photo added as an editable layer") }.onFailure { bitmap.recycle();say(it.message ?: "Cannot add photo layer") } } }
             10 -> background { val bitmap=PhotoDecoder.read(contentResolver,uri);ui { canvas.image=bitmap;say("Photo imported with its original orientation and aspect ratio") } }
             11 -> { val file=pendingExport;pendingExport=null

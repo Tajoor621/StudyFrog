@@ -6,6 +6,8 @@
 
 ## Included functionality
 
+Version 0.8.0 adds [portable layered raster project exchange](docs/PORTABLE_PROJECTS.md) between Android and iOS. Native ink projects remain unchanged; stroke/text nodes and mask paths are rasterized only in the exported copy.
+
 Version 0.7.0 adds [local photo depth/body-pose preparation and reviewed OCR](docs/PHOTO_STUDY_WORKFLOW.md), plus [web SD/ControlNet/LTX jobs](web/local-engine/README.md), original-file export and computer-job management. Native Android/iOS applications are preserved. Real-weight quality and physical-device validation remain outstanding.
 
 - Android/iOS parent PIN and study-only workspaces, persisted retry cooldown and adult self-declaration.

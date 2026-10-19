@@ -1,0 +1,53 @@
+{
+  "format": "studyforge-layered-raster",
+  "version": 1,
+  "title": "Portable biology",
+  "prompt": "A labeled fern",
+  "negative": "blur",
+  "folder": "Biology",
+  "selected": 1,
+  "base": {
+    "width": 2,
+    "height": 2,
+    "sha256": "168b8b2e81aec05759d67532d962380f5df5006429479777dea01a0b7296e4bf",
+    "png": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFUlEQVR4nGP8////fwYGBgYmBigAAD34BADaOyqcAAAAAElFTkSuQmCC"
+  },
+  "layers": [
+    {
+      "name": "Hidden photo",
+      "visible": false,
+      "opacity": 0.4,
+      "blend": "screen",
+      "transform": {
+        "x": 0.2,
+        "y": -0.1,
+        "scale": 0.8,
+        "rotation": 90
+      },
+      "image": {
+        "width": 2,
+        "height": 2,
+        "sha256": "0b441cab796f7d42d535d28dcf1f22b3dccd01236d1ce4eaea961993989fe54a",
+        "png": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR4nGP8z8DQwMDAwMDEAAUAGCUBg0aIlScAAAAASUVORK5CYII="
+      }
+    },
+    {
+      "name": "Ink pixels",
+      "visible": true,
+      "opacity": 0.5,
+      "blend": "multiply",
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "scale": 1,
+        "rotation": 0
+      },
+      "image": {
+        "width": 2,
+        "height": 2,
+        "sha256": "44df8a96d3682c596fa3c5a16e708b0b15bf8eef9540413c75e6243e340ebde8",
+        "png": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR4nGNkYPj/n4GBgYGJAQoAHRkCAjRcHicAAAAASUVORK5CYII="
+      }
+    }
+  ]
+}

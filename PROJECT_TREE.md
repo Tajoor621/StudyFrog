@@ -1,4 +1,4 @@
-# Project files
+# Complete project tree
 
 ```text
 .github/dependabot.yml
@@ -14,12 +14,14 @@ README.md
 SHA256SUMS
 VALIDATION.md
 app/build.gradle.kts
+app/src/androidTest/assets/portable-project-v1.json
 app/src/androidTest/java/com/scenio/mth/features/AccessibilityTest.kt
 app/src/androidTest/java/com/scenio/mth/features/AdvancedEditorTest.kt
 app/src/androidTest/java/com/scenio/mth/features/FamilyPolicyTest.kt
 app/src/androidTest/java/com/scenio/mth/features/LayerDocumentTest.kt
 app/src/androidTest/java/com/scenio/mth/features/NativeBoundaryTest.kt
 app/src/androidTest/java/com/scenio/mth/features/OnboardingTest.kt
+app/src/androidTest/java/com/scenio/mth/features/PortableProjectTest.kt
 app/src/androidTest/java/com/scenio/mth/features/ProgressDatabaseTest.kt
 app/src/androidTest/java/com/scenio/mth/features/ProjectBackupTest.kt
 app/src/androidTest/java/com/scenio/mth/features/RealModelDeviceTest.kt
@@ -42,6 +44,7 @@ app/src/main/java/com/scenio/mth/editor/EditorSession.kt
 app/src/main/java/com/scenio/mth/editor/LayerRenderer.kt
 app/src/main/java/com/scenio/mth/editor/LegacyBlendRenderer.kt
 app/src/main/java/com/scenio/mth/editor/PhotoDecoder.kt
+app/src/main/java/com/scenio/mth/editor/PortableProject.kt
 app/src/main/java/com/scenio/mth/editor/ProjectStore.kt
 app/src/main/java/com/scenio/mth/editor/VectorExporter.kt
 app/src/main/java/com/scenio/mth/family/FamilyControlsActivity.kt
@@ -105,6 +108,7 @@ branding/studyfrog-banner.webp
 branding/studyfrog-icon-1024.png
 branding/studyfrog-original.png
 build.gradle.kts
+content/portable-project-v1.json
 content/study-catalog.json
 docs/ANDROID_BUILD.md
 docs/AUDIT.md
@@ -116,6 +120,7 @@ docs/GENERATION_CONTROLS.md
 docs/LOCAL_MODELS.md
 docs/MASTER_SPEC_AUDIT.md
 docs/PHOTO_STUDY_WORKFLOW.md
+docs/PORTABLE_PROJECTS.md
 docs/REMAINING_GAPS.md
 docs/SCIENCE_EXPLORER.md
 docs/SOURCES.md
@@ -173,6 +178,7 @@ ios/StudyForge/LayerDocument.swift
 ios/StudyForge/LayerStudioView.swift
 ios/StudyForge/NativeDiffusion.swift
 ios/StudyForge/PhotoDecoder.swift
+ios/StudyForge/PortableProject.swift
 ios/StudyForge/ProjectStore.swift
 ios/StudyForge/Resources/study-catalog.json
 ios/StudyForge/Resources/third-party-licenses.txt
@@ -182,7 +188,9 @@ ios/StudyForge/StudyExplorerView.swift
 ios/StudyForge/StudyForgeApp.swift
 ios/StudyForgeTests/FamilyAccessTests.swift
 ios/StudyForgeTests/LayerDocumentTests.swift
+ios/StudyForgeTests/PortableProjectTests.swift
 ios/StudyForgeTests/ProjectStoreTests.swift
+ios/StudyForgeTests/Resources/portable-project-v1.json
 ios/StudyForgeTests/StudyCatalogTests.swift
 ios/project.yml
 manifest.webmanifest
@@ -194,6 +202,7 @@ scripts/device-smoke.sh
 scripts/generate_branding.py
 scripts/manifest_attributes.py
 scripts/test_manifest_attributes.py
+scripts/test_portable_project.py
 scripts/test_study_catalog.py
 scripts/verify-release.sh
 scripts/verify_splits.py

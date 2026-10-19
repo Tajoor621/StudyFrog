@@ -16,7 +16,7 @@ import sf_engine
     } }
 }
 struct ExportDocument: FileDocument {
-    static var readableContentTypes: [UTType] { [.png,.movie] }
+    static var readableContentTypes: [UTType] { [.png,.movie,.json] }
     var data: Data
     init(data: Data) { self.data = data }
     init(configuration: ReadConfiguration) throws { data = configuration.file.regularFileContents ?? Data() }
@@ -126,6 +126,22 @@ struct DrawingCanvas: UIViewRepresentable {
             resolution = [256,512].contains(record.resolution ?? 256) ? (record.resolution ?? 256) : 256;message = "Editable project opened"
         } catch { message = error.localizedDescription }
     }
+    func importPortable(_ url: URL) {
+        guard !working,!FamilyAccess.shared.restricted else { return }
+        working = true
+        job = Task {
+            defer { working = false }
+            do {
+                let (document,record) = try await Task.detached {
+                    let document = try PortableProject.read(url)
+                    let record = try IOSProjectStore().save(title: document.title,prompt: document.prompt,negative: document.negative,image: document.base,drawings: document.layers.map(\.drawing),names: document.layers.map(\.name),folder: document.folder,layerAssets: document.layers)
+                    return (document,record)
+                }.value
+                try Task.checkCancellation();guard !FamilyAccess.shared.restricted else { return }
+                open(record);selected = document.selected;refresh();message = "Portable raster layers imported and saved locally"
+            } catch { message = error.localizedDescription }
+        }
+    }
     func install(_ url: URL) {
         working = true
         job = Task { do { let hash = try await Task.detached { try IOSModelStore.install(url) }.value;message = "Model imported · SHA-256 \(hash.prefix(16))" } catch { message = error.localizedDescription };working = false }
@@ -224,6 +240,10 @@ struct ForgeView: View {
     @State private var showModelPicker = false
     @State private var showExport = false
     @State private var exportData = Data()
+    @State private var exportType = UTType.png
+    @State private var portableExportConsent = false
+    @State private var portableImportConsent = false
+    @State private var portablePicker = false
     @State private var showSettings = false
     @EnvironmentObject private var family: FamilyAccess
     @State private var showFamilyControls = false
@@ -286,7 +306,9 @@ struct ForgeView: View {
                     Button("Explore science · linked levels and labeled diagrams") { showScience = true }.disabled(store.working)
                     PhotosPicker("Import photo",selection: $photo,matching: .images).disabled(store.working)
                     TextField("Folder for new saves · blank means Unfiled",text: $store.folder).textFieldStyle(.roundedBorder).accessibilityLabel("Project folder")
-                    HStack { Button("Save project") { store.save() };Button("Export PNG") { if let data = store.composite()?.pngData() { exportData = data;showExport = true } else { store.message = "Could not render PNG; check the layer settings" } } }.disabled(store.image == nil || store.working)
+                    HStack { Button("Save project") { store.save() };Button("Export PNG") { if let data = store.composite()?.pngData() { exportData = data;exportType = .png;showExport = true } else { store.message = "Could not render PNG; check the layer settings" } } }.disabled(store.image == nil || store.working)
+                    Button("Export portable layers · Android / iOS") { portableExportConsent = true }.disabled(store.image == nil || store.working)
+                    Button("Import portable layers · Android / iOS") { portableImportConsent = true }.disabled(store.working)
                     Button("Create 30-second reveal video") { store.video() }.disabled(store.image == nil || store.working)
                     DisclosureGroup("Local computer image generation") {
                         Toggle("Use current image for photo conversion",isOn: $computerUsesPhoto)
@@ -340,8 +362,27 @@ struct ForgeView: View {
             Button("Generate") { store.motion(host: computerHost,token: computerToken) }
             Button("Cancel",role: .cancel) {}
         } message: { Text("This sends your prompt and image over your local network to the engine configured in Settings. Use your own computer and a trusted network. It requires a local LTX model and CUDA GPU; no cloud or paid API is used.") }
+        .alert("Export layered raster copy?",isPresented: $portableExportConsent) {
+            Button("Export copy") {
+                guard let image = store.image else { return }
+                let layers = store.layers,selected = store.selected,prompt = store.prompt,negative = store.negative,folder = store.folder
+                store.working = true
+                Task {
+                    defer { store.working = false }
+                    do {
+                        let data = try await Task.detached { try PortableProject.encode(base: image,layers: layers,selected: selected,title: String(prompt.prefix(80)),prompt: prompt,negative: negative,folder: folder) }.value
+                        guard !family.restricted else { return };exportData = data;exportType = .json;showExport = true
+                    } catch { store.message = error.localizedDescription }
+                }
+            }
+            Button("Cancel",role: .cancel) {}
+        } message: { Text("Ink, text, shapes and enabled masks become pixels inside separate layers. Layer settings and transforms are preserved. Layer images are limited to 1024px and 8 million pixels total. Save a native project first to retain editable strokes and masks.") }
+        .alert("Open portable layered project?",isPresented: $portableImportConsent) {
+            Button("Choose file") { portablePicker = true };Button("Cancel",role: .cancel) {}
+        } message: { Text("Save current work first. Import opens a separate local project and replaces the canvas. Portable layers contain pixels, not editable ink or text nodes.") }
+        .fileImporter(isPresented: $portablePicker,allowedContentTypes: [.json]) { result in do { store.importPortable(try result.get()) } catch { store.message = error.localizedDescription } }
         .fileImporter(isPresented: $showModelPicker,allowedContentTypes: [.data]) { result in do { store.install(try result.get()) } catch { store.message = error.localizedDescription } }
-        .fileExporter(isPresented: $showExport,document: ExportDocument(data: exportData),contentType: .png,defaultFilename: "StudyForge") { result in if case .failure(let error) = result { store.message = error.localizedDescription } }
+        .fileExporter(isPresented: $showExport,document: ExportDocument(data: exportData),contentType: exportType,defaultFilename: exportType == .json ? "StudyForge.sfgx" : "StudyForge") { result in if case .failure(let error) = result { store.message = error.localizedDescription } }
         .sheet(isPresented: $showScience) { StudyExplorerView(hasExistingImage: store.image != nil) { image,prompt in store.prompt = prompt;if let image { store.image = image;store.resetLayers() };store.message = "Study view selected; model-generated refinements require review" } }
         .sheet(isPresented: $showFamilyControls) { FamilyControlsView() }
         .sheet(isPresented: $showSettings) { NavigationStack { Form {

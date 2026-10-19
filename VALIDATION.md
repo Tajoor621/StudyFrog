@@ -1,4 +1,14 @@
-# Validation — 2026-10-19 (Asia/Dubai), version 0.7.0
+# Validation — 0.8.0 portable project work
+
+Portable layered raster import/export implementation and native tests have been
+added. Local checks: ten script/content tests, repository structural audit and
+`git diff --check` pass. New Android/iOS native build and runtime results will be
+recorded after CI completes. The previous 96-test result below describes 0.7.0;
+it must not be treated as verification of the new native codecs or screens.
+
+## Previous verified release
+
+### Version 0.7.0 — 2026-10-19 (Asia/Dubai)
 
 Production application/engine/web source: `637c5fe24bafbc3654ca8b66cd0dda86724c7136`.
 Android UI-test/CI follow-up: `0cb8b9bf5928ec7439dd1fb236ed12be212cc50f`.
