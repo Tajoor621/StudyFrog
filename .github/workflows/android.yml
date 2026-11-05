@@ -169,6 +169,13 @@ jobs:
         sudo apt-get install -y ffmpeg tesseract-ocr tesseract-ocr-eng fonts-dejavu-core'
     - name: Install engine dependency
       run: python -m pip install -r engine/requirements-test.txt
+    - name: Obtain checksum-pinned open segmentation model for runtime smoke test
+      run: |
+        curl -fL --retry 3 https://media.githubusercontent.com/media/opencv/opencv_zoo/2027dd2f5a8a5746b5d4964900a0465afc6d3a53/models/human_segmentation_pphumanseg/human_segmentation_pphumanseg_2023mar.onnx -o "$RUNNER_TEMP/pphumanseg.onnx"
+        echo "552d8a984054e59b5d773d24b9b12022b22046ceb2bbc4c9aaeaceb36a9ddf24  $RUNNER_TEMP/pphumanseg.onnx" | sha256sum --check
+        echo "STUDYFORGE_SEGMENT_MODEL=$RUNNER_TEMP/pphumanseg.onnx" >> "$GITHUB_ENV"
+        echo "STUDYFORGE_SEGMENT_SHA256=552d8a984054e59b5d773d24b9b12022b22046ceb2bbc4c9aaeaceb36a9ddf24" >> "$GITHUB_ENV"
+        echo "STUDYFORGE_RUN_SEGMENT_SMOKE=1" >> "$GITHUB_ENV"
     - name: Run local engine tests
       working-directory: engine
       run: |

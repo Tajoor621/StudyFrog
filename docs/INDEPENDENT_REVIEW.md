@@ -42,7 +42,7 @@ parental-control testing experience, to test a clean app and an existing library
   back stack, settings and restored activities. Check that prompts, photos,
   project history, import/export, computer connection and general generation
   are unavailable in restricted mode.
-- Lock while generation, image import, video export or file pickers are active;
+- Lock while generation, image import, video remix upload/export or file pickers are active;
   inspect background results, notifications, stale callbacks, screenshots and
   reopening. Review what cannot be enforced against a rooted device, OS account
   owner, another browser or a separately running computer engine.

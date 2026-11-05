@@ -14,7 +14,14 @@
       "app/src/main/java/com/scenio/mth/features/FeaturesActivity.kt",
       "app/src/main/java/com/scenio/mth/MainActivity.kt",
       "app/src/main/java/com/scenio/mth/inference/LocalGenerationWorker.kt",
-      "ios/StudyForge/StudyForgeApp.swift"
+      "ios/StudyForge/StudyForgeApp.swift",
+      "ios/StudyForge/ComputerEngine.swift",
+      "ios/StudyForge/VideoRemixView.swift",
+      "web/local-engine/ui.js",
+      "web/local-engine/bridge.py",
+      "engine/server.py",
+      "engine/video_inputs.py",
+      "engine/video_remix.py"
     ]
   },
   "models": [],

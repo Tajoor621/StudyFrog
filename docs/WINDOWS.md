@@ -67,3 +67,7 @@ never share terminal screenshots containing that token.
 Narrator/keyboard/font/contrast checks and encoder/memory sessions. Windows CI
 runs the launcher preflight and local bridge/benchmark-tool tests, not trained
 weights, a physical Windows workstation, Narrator or native-shell performance.
+
+## Uploaded-video background replacement
+
+The companion also offers [local video remix](VIDEO_REMIX.md). Install `engine/requirements-remix.txt` and FFmpeg/ffprobe. Green screen needs no model; person removal uses explicitly installed, checksum-verified PPHumanSeg ONNX. The processing-machine ceiling defaults to laptop; set `STUDYFORGE_VIDEO_PROFILE=desktop` explicitly on suitable hardware. No GPU, paid API or native Windows shell is required.

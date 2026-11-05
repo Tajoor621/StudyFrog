@@ -1,6 +1,6 @@
-# Master specification coverage — 2026-10-19 (Asia/Dubai)
+# Master specification coverage — 2026-11-05 (Asia/Dubai)
 
-The requested product is **not fully implemented**. Study Frog 0.9.0 has working
+The requested product is **not fully implemented**. Study Frog 0.10.0 has working
 Android/iOS builds and a substantial offline foundation. A passing build is not
 proof of model quality, medical accuracy, device performance or complete scope.
 The tested source and exact results are recorded in [VALIDATION.md](../VALIDATION.md).
@@ -115,3 +115,7 @@ Version 0.8.0 exchange scope and limits: [Portable projects](PORTABLE_PROJECTS.m
 [independent-review tracking](INDEPENDENT_REVIEW.md) and a documented
 [Windows web-companion decision](WINDOWS.md). These are implementation/readiness
 improvements, not completed physical testing, peer review or model certification.
+
+## Uploaded-video remix addition
+
+0.10.0 adds [source-video background replacement](VIDEO_REMIX.md) with original people and audio and explicit output budgets. The shared computer engine serves web/Android/iOS clients. It does not establish standalone phone remix, novel face reenactment, voice cloning, arbitrary-duration ultra-realistic AI generation, or physical quality/performance certification.

@@ -19,6 +19,17 @@ panel.innerHTML=`<h2>Free local generation</h2>
 <label for="engineSeed">Seed</label><input id="engineSeed" type="number" min="0" max="2147483647" value="42">
 <label for="engineStrength">Photo transformation strength</label><input id="engineStrength" type="range" min="0.1" max="1" step="0.05" value="0.65">
 <div class="actions"><button id="engineGenerate">Generate with local computer</button><button id="engineCancel" disabled>Cancel job</button></div>
+<details><summary>Video remix · keep people and original sound</summary>
+<p>Import or generate the new background on the canvas first. Then upload a video to your own processing computer. People and faces keep their original motion; the first original audio track is retained as AAC. This changes the background, without voice cloning or face reenactment.</p>
+<label for="remixFile">Source MP4, MOV or WebM</label><input id="remixFile" type="file" accept="video/mp4,video/quicktime,video/webm">
+<label for="remixProfile">Output budget</label><select id="remixProfile"><option value="mobile">Mobile · 15s · up to 480p · 15fps · 64 MB input</option><option value="laptop">Laptop · 30s · up to 720p · 24fps · 128 MB input</option><option value="desktop">Desktop · 60s · up to 1080p · 30fps · 128 MB input</option></select>
+<label for="remixMode">Background removal</label><select id="remixMode"><option value="person">Person segmentation · local PPHumanSeg ONNX required</option><option value="green">Green screen · no model, removes green clothing too</option></select>
+<label for="remixStart">Source start, seconds</label><input id="remixStart" type="number" min="0" max="3600" step="0.5" value="0">
+<label for="remixSeconds">Clip duration, seconds</label><input id="remixSeconds" type="number" min="0.5" max="15" step="0.5" value="15">
+<label for="remixRights"><input id="remixRights" type="checkbox"> I have permission to edit the people, video and soundtrack.</label>
+<button id="remixGenerate">Replace video background with canvas</button>
+<p>Portrait framing is preserved and small videos are not upscaled. Segmentation can miss hair, hands or people; inspect the result. Processing is local to the chosen computer, including when controlled from a phone. No phone-only AI remix is claimed. Unused uploads expire after 30 minutes; used source copies are deleted when jobs finish or fail. Delete results in Manage computer jobs.</p>
+</details>
 <button id="engineJobs">Manage computer jobs</button><div id="engineJobList"></div>
 <p>Guidance and OCR need separately installed local models/tools. Pose is body-only; depth is relative, not a medical measurement. LTX output is scaled to 1080p; model quality and 8K refinement depend on your hardware.</p>
 <label for="ocrLanguage">Installed OCR languages</label><input id="ocrLanguage" value="eng" maxlength="11" placeholder="eng or eng+urd">
@@ -29,7 +40,7 @@ panel.innerHTML=`<h2>Free local generation</h2>
 <a id="engineDownload" hidden>Download original result</a><video id="engineVideo" controls hidden aria-label="Generated video preview"></video>`;
 document.querySelector('#studio .grid > .panel').append(panel);
 const el=id=>document.getElementById(id),status=text=>el('engineStatus').textContent=text;
-let busy=false,job=null,resultURL=null;
+let busy=false,job=null,resultURL=null,uploadAbort=null;
 function effectivePrompt(){
  const text=el('prompt').value.trim(),style=el('style').value;
  return style?`${text}\nVisual direction: ${style}.`:text;
@@ -40,7 +51,7 @@ function base(){
  if(['127.0.0.1','localhost'].includes(location.hostname)||location.protocol==='https:'&&location.hostname.endsWith('.ts.net'))return location.origin;
  throw Error('Open the local bridge URL on your computer, or your private HTTPS Tailscale Serve URL.');
 }
-function setBusy(value){busy=value;for(const id of ['engineGenerate','engineConnect','engineOCR','engineBackend'])el(id).disabled=value;el('engineCancel').disabled=!value||!job;}
+function setBusy(value){busy=value;for(const id of ['engineGenerate','remixGenerate','engineConnect','engineOCR','engineBackend'])el(id).disabled=value;el('engineCancel').disabled=!value||(!job&&!uploadAbort);}
 async function json(path,body,method=body?'POST':'GET'){
  const response=await fetch(base()+path,{method,headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,cache:'no-store'});
  const data=await response.json();if(!response.ok)throw Error(data.error||'Local request failed');return data;
@@ -68,6 +79,7 @@ el('engineConnect').onclick=async()=>{
  }catch(error){status(error.message);}finally{setBusy(false);}
 };
 el('engineCancel').onclick=async()=>{
+ if(uploadAbort){uploadAbort.abort();return;}
  if(!job)return;
  try{await json(`/engine/jobs/${job}/cancel`,{});status('Cancellation requested; waiting for the next safe processing step.');}
  catch(error){status(error.message);}
@@ -76,7 +88,7 @@ async function deliver(id,video){
  const response=await fetch(base()+`/engine/results/${id}`,{cache:'no-store'});
  if(!response.ok)throw Error('Result download failed');
  const length=Number(response.headers.get('Content-Length'));if(!Number.isFinite(length)||length<=0||length>256000000)throw Error('Result exceeds download limit');
- const blob=await response.blob();original(blob,video?'studyfrog-30s.mp4':'studyfrog-original.png');
+ const blob=await response.blob();original(blob,video?'studyfrog-video.mp4':'studyfrog-original.png');
  el('engineVideo').hidden=!video;
  if(video){el('engineVideo').src=resultURL;}
  else{const image=new Image();image.src=resultURL;await image.decode();window.dispatchEvent(new CustomEvent('studyforge-image',{detail:image}));}
@@ -109,7 +121,7 @@ el('engineGenerate').onclick=async()=>{
   job=queued.id;el('engineCancel').disabled=false;
   for(;;){
    const state=await json(`/engine/jobs/${job}`);
-   if(state.status==='done'){await deliver(job,['video','motion'].includes(kind));break;}
+   if(state.status==='done'){await deliver(job,['video','motion','remix'].includes(kind));break;}
    if(['failed','cancelled'].includes(state.status))throw Error(state.error||'Job cancelled');
    status(`Computer job: ${state.status}${state.progress!==undefined?' · '+state.progress+'%':''}. Keep this page open.`);
    await new Promise(resolve=>setTimeout(resolve,2000));
@@ -141,10 +153,52 @@ el('engineJobs').onclick=async()=>{
     try{await json(`/engine/jobs/${item.id}${active?'/cancel':''}`,active?{}:undefined,active?'POST':'DELETE');status(active?'Cancellation requested. Refresh jobs to check completion.':'Deleted computer job.');el('engineJobs').click();}catch(error){status(error.message);}
    };row.append(button);
    if(item.status==='done'){
-    const download=document.createElement('button');download.textContent='Open result';download.onclick=()=>deliver(item.id,['video','motion'].includes(item.kind)).catch(error=>status(error.message));row.append(download);
+    const download=document.createElement('button');download.textContent='Open result';download.onclick=()=>deliver(item.id,['video','motion','remix'].includes(item.kind)).catch(error=>status(error.message));row.append(download);
    }
    list.append(row);
   }
   if(!list.children.length)list.textContent='No computer jobs yet.';
  }catch(error){status(error.message);}
+};
+
+const remixCaps={mobile:{seconds:15,bytes:64000000},laptop:{seconds:30,bytes:128000000},desktop:{seconds:60,bytes:128000000}};
+el('remixProfile').onchange=()=>{
+ const cap=remixCaps[el('remixProfile').value];el('remixSeconds').max=cap.seconds;el('remixSeconds').value=Math.min(Number(el('remixSeconds').value)||cap.seconds,cap.seconds);
+};
+el('remixGenerate').onclick=async()=>{
+ if(busy)return;
+ let input=null;setBusy(true);
+ try{
+  if(el('engineBackend').value!=='sd')throw Error('Video remix uses the StudyForge local engine.');
+  const file=el('remixFile').files[0],profile=el('remixProfile').value,cap=remixCaps[profile];
+  if(!file||!file.size||file.size>cap.bytes)throw Error(`Choose a video within the ${cap.bytes/1000000} MB input limit.`);
+  if(!el('remixRights').checked)throw Error('Confirm permission to edit the video, people and soundtrack.');
+  const start=Number(el('remixStart').value),seconds=Number(el('remixSeconds').value);
+  if(!Number.isFinite(start)||start<0||start>3600||!Number.isFinite(seconds)||seconds<0.5||seconds>cap.seconds)throw Error('Check clip start and duration for this profile.');
+  const mode=el('remixMode').value,background=picture();
+  const health=await json('/engine/health'),available=health.video_remix;
+  if(!available?.ffmpeg||!available?.opencv)throw Error('Install engine/requirements-remix.txt, FFmpeg and ffprobe on the processing computer.');
+  if(Object.keys(remixCaps).indexOf(profile)>Object.keys(remixCaps).indexOf(available.ceiling))throw Error(`Processing computer ceiling is ${available.ceiling}. Choose a lower budget.`);
+  if(mode==='person'&&!available.person_model)throw Error('Configure the trusted local PPHumanSeg ONNX and its SHA-256 on your processing computer, or choose green screen.');
+  status('Uploading video to your own computer… Cancel can stop the transfer.');
+  uploadAbort=new AbortController();el('engineCancel').disabled=false;
+  const response=await fetch(base()+'/engine/video-inputs',{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:file,signal:uploadAbort.signal,cache:'no-store'});
+  const uploaded=await response.json();if(!response.ok)throw Error(uploaded.error||'Video upload failed');
+  if(!/^[0-9a-f]{32}$/.test(uploaded.id))throw Error('Invalid video input identifier');
+  input=uploaded.id;uploadAbort=null;
+  const queued=await json('/engine/jobs',{kind:'remix',prompt:'Replace background; retain source people and sound',image:background,video_input:input,profile,remix_mode:mode,start,seconds,rights_confirmed:true});
+  if(!/^[0-9a-f]{32}$/.test(queued.id))throw Error('Invalid remix job identifier');
+  job=queued.id;input=null;el('engineCancel').disabled=false;
+  for(;;){
+   const state=await json(`/engine/jobs/${job}`);
+   if(state.status==='done'){await deliver(job,true);status('Background-edited video ready. Original performance/audio retained; inspect person edges and sync before sharing.');break;}
+   if(['failed','cancelled'].includes(state.status))throw Error(state.error||'Remix cancelled');
+   status(`Video remix: ${state.status}${state.progress!==undefined?' · '+state.progress+'%':''}. Keep this page open.`);
+   await new Promise(resolve=>setTimeout(resolve,1500));
+  }
+ }catch(error){status(error.name==='AbortError'?'Video upload cancelled. Any interrupted upload is removed; an unclaimed completed transfer expires after 30 minutes.':error.message);}
+ finally{
+  uploadAbort=null;if(input)try{await json('/engine/video-inputs/'+input,undefined,'DELETE');}catch{}
+  job=null;setBusy(false);
+ }
 };

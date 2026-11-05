@@ -15,16 +15,18 @@ const server=spawn(process.env.PYTHON||'python3',[path.join(root,'web/local-engi
   browser=await chromium.launch({headless:true,...(process.env.STUDYFORGE_CHROME?{executablePath:process.env.STUDYFORGE_CHROME}:{})});
   const page=await browser.newPage({viewport:{width:412,height:915}}),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
-  let submitted,deleted=false;
+  let submitted,deleted=false,uploads=0,remixed=false;
   await page.route('**/engine/**',async route=>{
    const request=route.request(),pathname=new URL(request.url()).pathname;
-   if(pathname==='/engine/health')return route.fulfill({json:{model_configured:true,motion_configured:false,ocr_available:true,image_guidance:{depth_photo:true}}});
+   if(pathname==='/engine/health')return route.fulfill({json:{model_configured:true,motion_configured:false,ocr_available:true,image_guidance:{depth_photo:true},video_remix:{ffmpeg:true,opencv:true,person_model:true,ceiling:"laptop"}}});
+   if(pathname==='/engine/video-inputs'){uploads++;assert.equal(request.headers()['content-type'],'application/octet-stream');return route.fulfill({status:201,json:{id:'b'.repeat(32)}});}
    if(pathname==='/engine/ocr')return route.fulfill({json:{text:'CELL WALL\nDNA',review_required:true}});
-   if(pathname==='/engine/jobs'&&request.method()==='POST'){submitted=request.postDataJSON();return route.fulfill({status:202,json:{id:'a'.repeat(32),status:'queued'}});}
+   if(pathname==='/engine/jobs'&&request.method()==='POST'){submitted=request.postDataJSON();remixed=submitted.kind==='remix';return route.fulfill({status:202,json:{id:'a'.repeat(32),status:'queued'}});}
    if(pathname==='/engine/jobs')return route.fulfill({json:{jobs:deleted?[]:[{id:'a'.repeat(32),kind:'image',status:'done'}]}});
    if(request.method()==='DELETE'){deleted=true;return route.fulfill({json:{status:'deleted'}});}
    if(pathname.startsWith('/engine/jobs/'))return route.fulfill({json:{status:'done'}});
    if(pathname.startsWith('/engine/results/')){
+    if(remixed){const bytes=Buffer.from('explicit mock video result');return route.fulfill({contentType:'video/mp4',headers:{'Content-Length':String(bytes.length)},body:bytes});}
     const png=Buffer.from(await page.locator('#canvas').evaluate(canvas=>{const fixture=document.createElement('canvas');fixture.width=64;fixture.height=64;fixture.getContext('2d').fillStyle='#00ff00';fixture.getContext('2d').fillRect(0,0,64,64);return fixture.toDataURL('image/png').split(',')[1];}),'base64');
     return route.fulfill({contentType:'image/png',headers:{'Content-Length':String(png.length)},body:png});
    }
@@ -47,11 +49,21 @@ const server=spawn(process.env.PYTHON||'python3',[path.join(root,'web/local-engi
   await page.locator('#ocrUse').click();assert.match(await page.locator('#prompt').inputValue(),/CELL WALL\nDNA/);
   await page.locator('#ocrReview').fill('x'.repeat(2000));await page.locator('#ocrUse').click();await page.getByText(/Shorten the reviewed notes/).waitFor();
   await page.locator('#engineKind').selectOption('motion');await page.locator('#engineGenerate').click();await page.getByText(/Guidance applies to image generation/).waitFor();
+  await page.getByText('Video remix · keep people and original sound',{exact:true}).click();
+  await page.locator('#remixFile').setInputFiles({name:'source.mp4',mimeType:'video/mp4',buffer:Buffer.from('explicit upload fixture')});
+  await page.locator('#remixGenerate').click();await page.getByText('Confirm permission to edit the video, people and soundtrack.',{exact:true}).waitFor();assert.equal(uploads,0);
+  await page.locator('#remixRights').check();await page.locator('#remixProfile').selectOption('desktop');
+  await page.locator('#remixGenerate').click();await page.getByText(/Processing computer ceiling is laptop/).waitFor();assert.equal(uploads,0);
+  await page.locator('#remixProfile').selectOption('mobile');await page.locator('#remixSeconds').fill('16');
+  await page.locator('#remixGenerate').click();await page.getByText(/Check clip start and duration for this profile/).waitFor();assert.equal(uploads,0);
+  await page.locator('#remixSeconds').fill('5');await page.locator('#remixGenerate').click();await page.getByText(/Background-edited video ready/).waitFor();
+  assert.equal(uploads,1);assert.equal(submitted.kind,'remix');assert.equal(submitted.video_input,'b'.repeat(32));assert.equal(submitted.seconds,5);assert.equal(submitted.profile,'mobile');assert.equal(submitted.rights_confirmed,true);assert.ok(submitted.image.length>100);
+  assert.equal(await page.locator('#engineDownload').getAttribute('download'),'studyfrog-video.mp4');
   await page.locator('#engineJobs').click();await page.getByText(/image · done/).waitFor();
   page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Delete from computer',exact:true}).click();await page.getByText('No computer jobs yet.').waitFor();
   await page.locator('#engineBackend').selectOption('ollama');await page.locator('#negative').fill('blur');
   await page.locator('#engineGenerate').click();await page.getByText(/Ollama image bridge has no negative conditioning/).waitFor();
   assert.deepEqual(errors,[]);assert.ok(await page.locator('#canvas').isVisible());
-  console.log('Browser integration passed: connection, image guidance payload, original export, canvas undo, OCR review/bounds, video validation, job deletion; engine fixtures, no real inference.');
+  console.log('Browser integration passed: connection, image guidance payload, original export, canvas undo, OCR review/bounds, video validation, remix permission/profile limits and upload payload, job deletion; engine fixtures, no real inference.');
  }finally{if(browser)await browser.close();server.kill('SIGTERM');}
 })().catch(error=>{console.error(error);process.exitCode=1;});

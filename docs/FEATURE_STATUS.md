@@ -1,4 +1,4 @@
-# Feature status — 0.9.0
+# Feature status — 0.10.0
 
 Evidence: [VALIDATION.md](../VALIDATION.md). Implemented code, automated tests and real-model/device evaluation are distinct.
 
@@ -49,3 +49,7 @@ opt-in local Diffusers benchmark; there is no native Windows shell.
 Independent science/family review records remain empty. The owner-signed release
 job requires current version-bound physical evidence and source-bound human
 review records; ordinary development builds remain available.
+
+## 0.10.0 uploaded-video remix
+
+[Background replacement](VIDEO_REMIX.md) retains source people/performance/audio, with mobile/laptop/desktop server-enforced clip and resolution caps, bounded transient uploads and cancellation. Web and native Android/iOS clients control the same free local computer engine. Green screen needs no model; person removal needs explicit trusted PPHumanSeg ONNX weights. Phone-only AI remix, face/voice reenactment and physical performance certification are not included.

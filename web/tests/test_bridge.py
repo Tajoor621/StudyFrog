@@ -65,4 +65,31 @@ class BridgeTests(unittest.TestCase):
             status,_,_=self.request("/generate","POST",{"prompt":"plant","model":"local","width":width})
             self.assertEqual(status,400)
 
+
+class VideoUploadBridgeTests(unittest.TestCase):
+    def test_raw_upload_stream_is_bounded_authenticated_and_not_json_encoded(self):
+        received=[]
+        class Engine(BaseHTTPRequestHandler):
+            def log_message(self,*args): pass
+            def do_POST(self):
+                received.append((self.path,self.headers.get('Authorization'),self.headers.get('Content-Type'),self.rfile.read(int(self.headers['Content-Length']))))
+                data=json.dumps({'id':'b'*32}).encode();self.send_response(201);self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data)
+        engine=ThreadingHTTPServer(('127.0.0.1',0),Engine);worker=threading.Thread(target=engine.serve_forever,daemon=True);worker.start()
+        proxy=bridge.Server(('127.0.0.1',0),bridge.Handler);thread=threading.Thread(target=proxy.serve_forever,daemon=True);thread.start()
+        try:
+            with patch.object(bridge,'ENGINE',f'http://127.0.0.1:{engine.server_port}'),patch.dict(os.environ,{'STUDYFORGE_TOKEN':'private-token'}):
+                payload=b'raw-video-fixture'*10000
+                c=http.client.HTTPConnection('127.0.0.1',proxy.server_port,timeout=10)
+                c.request('POST','/engine/video-inputs',body=payload,headers={'Host':'127.0.0.1:8766','Origin':'http://127.0.0.1:8766','Content-Type':'application/octet-stream'})
+                response=c.getresponse();self.assertEqual(response.status,201);self.assertEqual(response.getheader('Cache-Control'),'no-store');response.read();c.close()
+                self.assertEqual(received,[('/video-inputs','Bearer private-token','application/octet-stream',payload)])
+                c=http.client.HTTPConnection('127.0.0.1',proxy.server_port,timeout=10)
+                c.request('POST','/engine/video-inputs',body=b'',headers={'Host':'127.0.0.1:8766','Content-Type':'application/octet-stream','Content-Length':'128000001'})
+                response=c.getresponse();self.assertEqual(response.status,400);response.read();c.close()
+                self.assertEqual(len(received),1)
+                self.assertEqual(bridge.route('DELETE','/engine/video-inputs/'+'b'*32),'/video-inputs/'+'b'*32)
+                self.assertIsNone(bridge.route('GET','/engine/video-inputs/'+'b'*32))
+        finally:
+            proxy.shutdown();proxy.server_close();thread.join();engine.shutdown();engine.server_close();worker.join()
+
 if __name__=="__main__": unittest.main()

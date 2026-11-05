@@ -34,6 +34,35 @@ final class LocalOnlyRedirectDelegate: NSObject,URLSessionTaskDelegate, @uncheck
         guard let id = data["id"] as? String, id.count == 32, id.allSatisfy({ $0.isHexDigit && !$0.isUppercase }) else { throw LocalFailure(message: "Invalid engine job identifier") }
         return id
     }
+    func submitRemix(source: URL,background: UIImage,profile: String,mode: String,start: Double,seconds: Double) async throws -> String {
+        let health = try await json(try request("/health"))
+        guard let available = health["video_remix"] as? [String:Any],available["ffmpeg"] as? Bool == true,available["opencv"] as? Bool == true else { throw LocalFailure(message: "Install FFmpeg, ffprobe and engine/requirements-remix.txt on your computer") }
+        if mode == "person",available["person_model"] as? Bool != true { throw LocalFailure(message: "Configure the trusted local PPHumanSeg ONNX and SHA-256, or choose green screen") }
+        let profiles = ["mobile","laptop","desktop"]
+        guard let selected = profiles.firstIndex(of: profile),let ceiling = profiles.firstIndex(of: available["ceiling"] as? String ?? "laptop"),selected <= ceiling else { throw LocalFailure(message: "The processing computer does not allow this profile") }
+        try Task.checkCancellation()
+        var upload = try request("/video-inputs",method: "POST")
+        upload.timeoutInterval = 120;upload.setValue("application/octet-stream",forHTTPHeaderField: "Content-Type")
+        let (data,response) = try await Self.session.upload(for: upload,fromFile: source)
+        guard data.count <= 65536,let response = response as? HTTPURLResponse,let result = try JSONSerialization.jsonObject(with: data) as? [String:Any] else { throw LocalFailure(message: "Invalid video upload response") }
+        guard (200..<300).contains(response.statusCode) else { throw LocalFailure(message: result["error"] as? String ?? "Video upload failed") }
+        guard let input = result["id"] as? String,input.range(of: "^[0-9a-f]{32}$",options: .regularExpression) != nil else { throw LocalFailure(message: "Invalid video input identifier") }
+        do {
+            try Task.checkCancellation()
+            let format = UIGraphicsImageRendererFormat();format.scale = 1
+            let scale = min(1,1920/max(background.size.width,background.size.height))
+            let size = CGSize(width: background.size.width*scale,height: background.size.height*scale)
+            let image = UIGraphicsImageRenderer(size: size,format: format).image { _ in background.draw(in: CGRect(origin: .zero,size: size)) }
+            guard let png = image.pngData() else { throw LocalFailure(message: "Background could not be encoded") }
+            let fields: [String:Any] = ["kind":"remix","prompt":"Replace background; retain source people and sound","image":png.base64EncodedString(),"video_input":input,"profile":profile,"remix_mode":mode,"start":start,"seconds":seconds,"rights_confirmed":true]
+            let queued = try await json(try request("/jobs",method: "POST",body: JSONSerialization.data(withJSONObject: fields)))
+            guard let id = queued["id"] as? String,id.range(of: "^[0-9a-f]{32}$",options: .regularExpression) != nil else { throw LocalFailure(message: "Invalid remix job identifier") }
+            return id
+        } catch {
+            _ = try? await json(try request("/video-inputs/\(input)",method: "DELETE"))
+            throw error
+        }
+    }
     func recognize(image: UIImage,language: String) async throws -> String {
         let format = UIGraphicsImageRendererFormat();format.scale = 1
         let scale = min(1,2400/max(image.size.width,image.size.height))

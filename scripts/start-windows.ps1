@@ -7,11 +7,12 @@ if (-not (Test-Path $python)) { throw 'Create .venv with Python 3.11+ and instal
 & $python -c 'import sys; assert sys.version_info >= (3,11); import PIL'
 if ($LASTEXITCODE -ne 0) { throw 'Python 3.11+ and the pinned Pillow dependency are required.' }
 if ($Mode -eq 'Check') {
-    foreach ($tool in @('ffmpeg', 'tesseract')) {
+    foreach ($tool in @('ffmpeg', 'ffprobe', 'tesseract')) {
         if (Get-Command $tool -ErrorAction SilentlyContinue) { Write-Host "$tool available" }
         else { Write-Host "$tool missing (only its video/OCR features are unavailable)" }
     }
     Write-Host 'Web editor is usable without a model. Image generation needs local SD 1.x weights; AI motion additionally needs local LTX weights/CUDA.'
+    Write-Host 'Video background remix: install engine/requirements-remix.txt; green screen needs no model, person mode needs local PPHumanSeg ONNX + SHA-256. See docs/VIDEO_REMIX.md.'
     Write-Host 'Use the same STUDYFORGE_TOKEN in the Engine and Web terminals. This script never sends it or installs software.'
     exit 0
 }

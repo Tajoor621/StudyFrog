@@ -42,7 +42,7 @@ def delete_job(job_id):
     with LOCK:
         file=path_for(job_id);job=json.loads(file.read_text())
         if job["status"] in ("queued","running","cancelling"): raise RuntimeError("Cancel the job before deleting it")
-        for suffix in (".json",".png",".mp4",".source.png",".tmp"):
+        for suffix in (".json",".png",".mp4",".source.png",".input",".tmp"):
             (ROOT/(job_id+suffix)).unlink(missing_ok=True)
         CANCELLED.discard(job_id)
 
@@ -64,7 +64,7 @@ def read(job_id):
 def validate(body):
     if not isinstance(body, dict): raise ValueError("Expected JSON object")
     kind = body.get("kind", "image")
-    if kind not in ("image", "diagram", "video", "motion", "refine"): raise ValueError("Unknown kind")
+    if kind not in ("image", "diagram", "video", "motion", "refine", "remix"): raise ValueError("Unknown kind")
     prompt = body.get("prompt", "")
     if not isinstance(prompt,str) or not 1 <= len(prompt.strip()) <= 2000: raise ValueError("Prompt length must be 1–2000")
     negative=body.get("negative", "")
@@ -72,6 +72,18 @@ def validate(body):
     # A guardrail, not a comprehensive moderation system or child-safe guarantee.
     if re.search(r"\b(porn|pornographic|sexually explicit|sexual intercourse)\b", prompt, re.I):
         raise ValueError("Explicit sexual generation is not supported")
+    if kind == "remix":
+        from video_remix import options, PROFILES
+        from video_inputs import path as input_path
+        settings=options(body)
+        upload_id=body.get("video_input")
+        source=input_path(ROOT,upload_id)
+        if not source.is_file(): raise ValueError("Video input expired or already used; upload again")
+        if source.stat().st_size>PROFILES[settings["profile"]]["upload_bytes"]: raise ValueError("Video input exceeds this profile's upload limit")
+        background=body.get("image")
+        if not isinstance(background,str) or len(background)>12_000_000: raise ValueError("Provide a background image up to 12 MB encoded")
+        decode_image(background)
+        return dict(kind=kind,prompt=prompt,negative=negative,image=background,video_input=upload_id,**settings)
     values={}
     for key,default,low,high in (("width",768,256,1024),("height",432,256,1024),("steps",20,10,40),("seed",42,0,2147483647)):
         value=body.get(key,default)
@@ -231,8 +243,16 @@ def process(job):
     output=None
     try:
         checkpoint(job)
-        output=ROOT/(job["id"]+(".mp4" if job["kind"] in ("video","motion") else ".png"))
-        if job["kind"]=="motion":
+        output=ROOT/(job["id"]+(".mp4" if job["kind"] in ("video","motion","remix") else ".png"))
+        if job["kind"]=="remix":
+            release_image_pipeline()
+            from video_remix import render as remix
+            def update_remix(value): job["progress"]=value;save(job)
+            # Revalidate limits at execution; queueing never grants a larger ceiling.
+            from video_remix import options
+            settings=options(job)
+            job["remix_report"]=remix(ROOT/(job["id"]+".input"),output,decode_image(job["image"]),settings,lambda: checkpoint(job),update_remix)
+        elif job["kind"]=="motion":
             release_image_pipeline()
             from motion_video import render
             def update(value): job["progress"]=value;save(job)
@@ -255,7 +275,8 @@ def process(job):
             path=path_for(job["id"]);temp=path.with_suffix(".tmp")
             temp.write_text(json.dumps(job));temp.replace(path)
             CANCELLED.discard(job["id"])
-        if job["kind"]=="motion": release_image_pipeline()
+        (ROOT/(job["id"]+".input")).unlink(missing_ok=True)
+        if job["kind"] in ("motion","remix"): release_image_pipeline()
 
 def work():
     while True:
@@ -278,6 +299,15 @@ class Handler(BaseHTTPRequestHandler):
             try: self.reply(200,cancel_job(self.path.split("/")[2]))
             except (ValueError,FileNotFoundError): self.reply(404,{"error":"Not found"})
             return
+        if self.path=="/video-inputs":
+            try:
+                if self.headers.get_content_type() not in ("video/mp4","video/quicktime","video/webm","application/octet-stream"): raise ValueError("Upload an MP4, MOV or WebM file")
+                from video_inputs import receive
+                self.connection.settimeout(120)
+                self.reply(201,receive(ROOT,self.rfile,int(self.headers.get("Content-Length","0"))))
+            except (ValueError,TypeError) as exc: self.reply(400,{"error":str(exc)[:200]})
+            except (OSError,RuntimeError,subprocess.TimeoutExpired) as exc: self.reply(503,{"error":str(exc)[:200]})
+            return
         if self.path not in ("/jobs","/ocr"): self.reply(404,{"error":"Not found"});return
         try:
             n=int(self.headers.get("Content-Length","0"))
@@ -292,11 +322,19 @@ class Handler(BaseHTTPRequestHandler):
                 return
             job=validate(body)
             job.update(id=uuid.uuid4().hex,status="queued",created=time.time())
-            save(job)
-            try: JOBS.put_nowait(job)
-            except queue.Full:
+            with LOCK:
+                if job["kind"]=="remix":
+                    from video_inputs import path as input_path
+                    source=input_path(ROOT,job.pop("video_input"))
+                    if not source.is_file(): raise ValueError("Video input already used; upload again")
+                    source.replace(ROOT/(job["id"]+".input"))
+            try:
+                save(job)
+                JOBS.put_nowait(job)
+            except (queue.Full,OSError):
                 path_for(job["id"]).unlink(missing_ok=True)
-                self.reply(429,{"error":"Queue full; try later"});return
+                (ROOT/(job["id"]+".input")).unlink(missing_ok=True)
+                self.reply(429,{"error":"Queue unavailable; try later"});return
             self.reply(202,{"id":job["id"],"status":"queued"})
         except (ValueError,TypeError,UnicodeDecodeError) as exc: self.reply(400,{"error":str(exc)[:200]})
     def do_GET(self):
@@ -311,14 +349,14 @@ class Handler(BaseHTTPRequestHandler):
                     except (OSError,ValueError): continue
                 self.reply(200,{"jobs":items});return
             if self.path=="/health":
-                self.reply(200,{"local_only":True,"model_configured":configured_model("STUDYFORGE_MODEL"),"video":"30-second reveal; optional LTX motion model", "motion_configured":configured_model("STUDYFORGE_VIDEO_MODEL"), "image_guidance":__import__("image_guidance").capabilities(), "ocr_available":bool(shutil.which("tesseract"))});return
+                self.reply(200,{"local_only":True,"model_configured":configured_model("STUDYFORGE_MODEL"),"video":"30-second reveal; optional LTX motion model", "motion_configured":configured_model("STUDYFORGE_VIDEO_MODEL"), "image_guidance":__import__("image_guidance").capabilities(), "ocr_available":bool(shutil.which("tesseract")), "video_remix":__import__("video_remix").capabilities()});return
             prefix,job_id=self.path.strip("/").split("/",1)
             if prefix not in ("jobs","results"): raise ValueError("Unknown route")
             job=read(job_id)
             if prefix=="jobs": self.reply(200,{k:v for k,v in job.items() if k!="image"});return
             if job["status"]!="done": self.reply(409,{"error":"Result not ready"});return
-            result=ROOT/(job_id+(".mp4" if job["kind"] in ("video","motion") else ".png"))
-            self.send_response(200);self.send_header("Content-Type","video/mp4" if job["kind"] in ("video","motion") else "image/png");self.send_header("Content-Length",str(result.stat().st_size));self.send_header("Cache-Control","no-store");self.end_headers()
+            result=ROOT/(job_id+(".mp4" if job["kind"] in ("video","motion","remix") else ".png"))
+            self.send_response(200);self.send_header("Content-Type","video/mp4" if job["kind"] in ("video","motion","remix") else "image/png");self.send_header("Content-Length",str(result.stat().st_size));self.send_header("Cache-Control","no-store");self.end_headers()
             with result.open("rb") as source: shutil.copyfileobj(source,self.wfile)
         except (ValueError,FileNotFoundError): self.reply(404,{"error":"Not found"})
 
@@ -326,6 +364,10 @@ class Handler(BaseHTTPRequestHandler):
         if not self.authorized(): return
         try:
             prefix,job_id=self.path.strip("/").split("/",1)
+            if prefix=="video-inputs":
+                from video_inputs import path as input_path
+                with LOCK: input_path(ROOT,job_id).unlink(missing_ok=True)
+                self.reply(200,{"id":job_id,"status":"deleted"});return
             if prefix!="jobs": raise ValueError("Unknown route")
             delete_job(job_id);self.reply(200,{"id":job_id,"status":"deleted"})
         except (ValueError,FileNotFoundError): self.reply(404,{"error":"Not found"})
@@ -343,6 +385,11 @@ def main():
         except (ValueError,KeyError,OSError): continue
         if job.get("status") in ("queued","running","cancelling"):
             job.update(status="failed",error="Engine restarted; resubmit this job");job.pop("image",None);save(job)
+    from video_inputs import cleanup
+    cleanup(ROOT)
+    for file in ROOT.glob("*.input"): file.unlink(missing_ok=True)
+    for directory in ROOT.glob("remix-*"):
+        if directory.is_dir(): shutil.rmtree(directory)
     threading.Thread(target=work,daemon=True).start()
     bind=os.environ.get("STUDYFORGE_BIND","127.0.0.1")
     address=ipaddress.ip_address(bind)

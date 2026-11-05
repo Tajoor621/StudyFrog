@@ -1,4 +1,4 @@
-const CACHE='study-frog-web-v2';
+const CACHE='study-frog-web-v3';
 const FILES=['./','./index.html','./web/styles.css','./web/app.js','./web/local-engine/ui.js','./manifest.webmanifest','./branding/studyfrog-icon-1024.png'];
 const STATIC=new Set(FILES.map(path=>new URL(path,self.location.href).href));
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting())));

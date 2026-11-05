@@ -31,6 +31,8 @@ def allowed(peer,host,origin):
     return peer in ("127.0.0.1","::1") and host in authorities and (not origin or origin in origins and urlsplit(origin).netloc==host)
 
 def route(method,path):
+    if path=="/engine/video-inputs" and method=="POST": return "/video-inputs"
+    if re.fullmatch(r"/engine/video-inputs/[0-9a-f]{32}",path) and method=="DELETE": return path.removeprefix("/engine")
     if path=="/engine/health" and method=="GET": return "/health"
     if path=="/engine/ocr" and method=="POST": return "/ocr"
     if path=="/engine/jobs" and method in ("POST","GET"): return "/jobs"
@@ -39,6 +41,14 @@ def route(method,path):
         return path.removeprefix("/engine")
     if re.fullmatch(r"/engine/jobs/[0-9a-f]{32}/cancel",path) and method=="POST": return path.removeprefix("/engine")
     return None
+
+class LimitedBody:
+    def __init__(self, stream, remaining): self.stream=stream;self.remaining=remaining
+    def read(self, size=65536):
+        if not self.remaining: return b""
+        data=self.stream.read(min(size,self.remaining))
+        if not data: raise ValueError("Incomplete video upload")
+        self.remaining-=len(data);return data
 
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self,*args,**kwargs): super().__init__(*args,directory=str(ROOT),**kwargs)
@@ -67,9 +77,18 @@ class Handler(SimpleHTTPRequestHandler):
         if not token: return self.reply(503,{"error":"Set STUDYFORGE_TOKEN to the same token as your local SD engine, then restart the bridge"})
         started=False
         try:
-            body=self.body(13_000_000)[0] if method=="POST" else None
-            request=Request(ENGINE+path,data=body,method=method,headers={"Authorization":"Bearer "+token,"Content-Type":"application/json"})
-            with OPENER.open(request,timeout=35) as response:
+            headers={"Authorization":"Bearer "+token,"Content-Type":"application/json"}
+            if path=="/video-inputs" and method=="POST":
+                length=int(self.headers.get("Content-Length","0"))
+                if not 0<length<=128_000_000: raise ValueError("Video upload limit is 128 MB")
+                content=self.headers.get_content_type()
+                if content not in ("video/mp4","video/quicktime","video/webm","application/octet-stream"): raise ValueError("Use MP4, MOV or WebM video")
+                self.connection.settimeout(120)
+                body=LimitedBody(self.rfile,length)
+                headers.update({"Content-Type":content,"Content-Length":str(length)})
+            else: body=self.body(13_000_000)[0] if method=="POST" else None
+            request=Request(ENGINE+path,data=body,method=method,headers=headers)
+            with OPENER.open(request,timeout=120 if path=="/video-inputs" else 35) as response:
                 size=int(response.headers.get("Content-Length","0"));maximum=256_000_000 if path.startswith("/results/") else 1_000_000
                 if not 0<size<=maximum: raise ValueError("Invalid engine response size")
                 started=True

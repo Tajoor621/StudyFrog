@@ -69,6 +69,7 @@ class MainActivity : ComponentActivity() {
     private val worker = Executors.newSingleThreadExecutor()
     private val prefs by lazy { getSharedPreferences("forge",MODE_PRIVATE) }
     private var latestJob: String? = null
+    private var remixTransferCancel:java.util.concurrent.atomic.AtomicBoolean?=null
     private var busy = false
     private var modelImportCancel:java.util.concurrent.atomic.AtomicBoolean?=null
     private var modelImportDialog:AlertDialog?=null
@@ -203,6 +204,11 @@ class MainActivity : ComponentActivity() {
         })
         root.addView(button("Generate with local model") { submit("image") })
         root.addView(button("Generate 30-second AI motion video (local computer)") { submit("motion") })
+        root.addView(button("Replace uploaded video background · keep faces and sound") {
+            if(canvas.image==null) say("Import or generate the new background on the canvas first")
+            else startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type="video/*";addCategory(Intent.CATEGORY_OPENABLE) },17)
+        })
+        root.addView(button("Cancel video upload") { remixTransferCancel?.set(true);say("Video upload cancellation requested") })
         root.addView(button("30-second 1080p reveal video") { submit("video") })
         root.addView(button("Refine to 4K / 8K on local computer") { AlertDialog.Builder(this).setTitle("Tiled model refinement · may take a long time").setItems(arrayOf("4K · 3840×2160","8K · 7680×4320")) { _,choice -> if(choice==0) submit("refine",3840,2160) else submit("refine",7680,4320) }.show() })
         root.addView(button("Export last unmodified generation at full resolution") {
@@ -413,6 +419,7 @@ class MainActivity : ComponentActivity() {
         }
         val uri=data?.data ?: return
         when(requestCode) {
+            17 -> videoRemixDialog(uri)
             16 -> background {
                 val document=contentResolver.openInputStream(uri)?.use { com.scenio.mth.editor.PortableProject.decode(it) } ?: throw IOException("Cannot open portable project")
                 try {
@@ -581,6 +588,72 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    private fun videoRemixDialog(uri:android.net.Uri) {
+        if(busy) { say("Please finish the current operation");return }
+        val content=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL;setPadding(24,12,24,12) }
+        val profiles=choices(listOf("Mobile · 15s / 480p / 15fps / 64 MB","Laptop · 30s / 720p / 24fps / 128 MB","Desktop · 60s / 1080p / 30fps / 128 MB"))
+        val removal=choices(listOf("Person · trusted local PPHumanSeg ONNX","Green screen · no model"))
+        val start=EditText(this).apply { hint="Source start in seconds";setText("0");inputType=8194;contentDescription="Video clip start in seconds" }
+        val seconds=EditText(this).apply { hint="Clip duration in seconds";setText("15");inputType=8194;contentDescription="Video clip duration in seconds" }
+        content.addView(TextView(this).apply { text="The current canvas becomes the background. Original people, faces and first audio track stay in the video. Your own computer processes it over the existing USB engine connection. Profile limits are caps, not measured speed guarantees; portrait framing is kept. Use SDR MP4, MOV or WebM." })
+        profiles.contentDescription="Video output device budget";removal.contentDescription="Video background removal mode"
+        content.addView(profiles);content.addView(removal);content.addView(start);content.addView(seconds)
+        val rights=CheckBox(this).apply { text="I have permission to edit the video, people and soundtrack" };content.addView(rights)
+        val dialog=AlertDialog.Builder(this).setTitle("Local video background remix").setView(ScrollView(this).apply { addView(content) }).setPositiveButton("Send to my computer",null).setNegativeButton("Cancel",null).create()
+        dialog.setOnShowListener { dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val index=profiles.selectedItemPosition;val cap=listOf(15.0,30.0,60.0)[index]
+            val from=start.text.toString().toDoubleOrNull();val duration=seconds.text.toString().toDoubleOrNull()
+            if(!rights.isChecked || from==null || !from.isFinite() || from<0 || from>3600 || duration==null || !duration.isFinite() || duration<0.5 || duration>cap) { say("Confirm permission and use a valid start and duration within this profile");return@setOnClickListener }
+            val auth=token.text.toString();if(auth.isBlank()) { say("Enter your local engine token first");return@setOnClickListener }
+            val snapshot=canvas.snapshot();if(snapshot.base==null) { say("Prepare a background on the canvas first");return@setOnClickListener }
+            val profile=listOf("mobile","laptop","desktop")[index];val removalMode=if(removal.selectedItemPosition==0) "person" else "green"
+            val cancellation=java.util.concurrent.atomic.AtomicBoolean(false);remixTransferCancel=cancellation;dialog.dismiss()
+            background {
+                val file=File(cacheDir,"video-input-${UUID.randomUUID()}.bin")
+                var inputId:String?=null
+                try {
+                    fun checkTransfer() { checkCreativeAccess();check(!cancellation.get() && !Thread.currentThread().isInterrupted) { "Video transfer cancelled" } }
+                    val health=JSONObject(String(api("/health",auth))).getJSONObject("video_remix")
+                    require(health.optBoolean("ffmpeg") && health.optBoolean("opencv")) { "Install FFmpeg, ffprobe and engine/requirements-remix.txt on your computer" }
+                    if(removalMode=="person") require(health.optBoolean("person_model")) { "Configure the trusted PPHumanSeg ONNX and SHA-256 on your computer, or choose green screen" }
+                    require(listOf("mobile","laptop","desktop").indexOf(profile)<=listOf("mobile","laptop","desktop").indexOf(health.optString("ceiling","laptop"))) { "Processing computer ceiling is ${health.optString("ceiling")}; choose a lower profile" }
+                    val limit=if(profile=="mobile") 64_000_000L else 128_000_000L
+                    var size=0L
+                    file.outputStream().use { out -> contentResolver.openInputStream(uri)?.use { source ->
+                        val buffer=ByteArray(65536)
+                        while(true) { checkTransfer();val n=source.read(buffer);if(n<0) break;size+=n;require(size<=limit) { "Video exceeds this profile's input limit" };out.write(buffer,0,n) }
+                    } ?: throw IOException("Cannot read selected video") }
+                    require(size>0) { "Video is empty" };checkTransfer()
+                    val c=URL("http://127.0.0.1:8765/video-inputs").openConnection() as HttpURLConnection
+                    val uploaded=try {
+                        c.instanceFollowRedirects=false;c.connectTimeout=10000;c.readTimeout=120000;c.requestMethod="POST";c.doOutput=true;c.setFixedLengthStreamingMode(size)
+                        c.setRequestProperty("Authorization","Bearer $auth");c.setRequestProperty("Content-Type","application/octet-stream")
+                        var sent=0L
+                        c.outputStream.use { out -> file.inputStream().use { source ->
+                            val buffer=ByteArray(65536)
+                            while(true) { checkTransfer();val n=source.read(buffer);if(n<0) break;out.write(buffer,0,n);sent+=n
+                                if(sent%1_048_576<65536) ui { say("Uploading video to your computer · ${sent*100/size}%") }
+                            }
+                        } }
+                        require(c.responseCode in 200..299) { c.errorStream?.bufferedReader()?.use { it.readText().take(300) } ?: "Video upload failed" }
+                        JSONObject(c.inputStream.use { input ->
+                            val out=java.io.ByteArrayOutputStream();val bytes=ByteArray(8192)
+                            while(true) { val n=input.read(bytes);if(n<0) break;require(out.size()+n<=65536) { "Unexpected video upload response" };out.write(bytes,0,n) }
+                            out.toString("UTF-8")
+                        })
+                    } finally { c.disconnect() }
+                    inputId=uploaded.getString("id");require(inputId!!.matches(Regex("[0-9a-f]{32}"))) { "Invalid input identifier" };checkTransfer()
+                    val body=JSONObject().put("kind","remix").put("prompt","Replace background; retain source people and sound").put("image",encodeCanvas(snapshot,1920)).put("video_input",inputId)
+                        .put("profile",profile).put("remix_mode",removalMode).put("start",from).put("seconds",duration).put("rights_confirmed",true)
+                    val result=JSONObject(String(api("/jobs",auth,body)));val id=result.getString("id")
+                    require(id.matches(Regex("[0-9a-f]{32}"))) { "Invalid job identifier" };inputId=null
+                    ui { latestJob=id;prefs.edit().putString("latestJob",id).apply();say("Video remix queued on your computer. Check the engine job for progress and download. Review edges and audio sync before sharing.") }
+                } finally {
+                    file.delete();inputId?.let { runCatching { api("/video-inputs/$it",auth,method="DELETE") } };remixTransferCancel=null
+                }
+            }
+        } };dialog.show()
+    }
     private fun submit(kind:String,width:Int=768,height:Int=432) {
         if(com.scenio.mth.family.FamilyPolicy.restricted(this)) return
         val auth=token.text.toString();if(auth.isBlank()) { say("Start the local engine and enter its token first");return }
@@ -607,7 +680,7 @@ class MainActivity : ComponentActivity() {
         background {
             val job=JSONObject(String(api("/jobs/$id",auth)))
             if(job.getString("status")=="done") {
-                val video=job.getString("kind") in listOf("video","motion")
+                val video=job.getString("kind") in listOf("video","motion","remix")
                 val file=if(video) File(cacheDir,"result-$id.mp4") else File(filesDir,"generated/result-$id.png").apply { parentFile?.mkdirs() }
                 download("/results/$id",auth,file)
                 if(video) ui { progress("generation:$id",2,2);export(file,"video/mp4","studyforge-30s.mp4") }
@@ -651,5 +724,5 @@ class MainActivity : ComponentActivity() {
         if(::canvas.isInitialized && dirty && canvas.image!=null) { projects.autosave(canvas.snapshot(),metadata());dirty=false }
         super.onStop()
     }
-    override fun onDestroy() { modelImportCancel?.set(true);modelImportDialog?.dismiss();localDialog?.dismiss();worker.shutdownNow();super.onDestroy() }
+    override fun onDestroy() { remixTransferCancel?.set(true);modelImportCancel?.set(true);modelImportDialog?.dismiss();localDialog?.dismiss();worker.shutdownNow();super.onDestroy() }
 }

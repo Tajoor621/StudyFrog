@@ -4,3 +4,7 @@ The included gradle-wrapper.jar and standard gradlew.bat are from the Gradle
 The POSIX gradlew here is a minimal original launcher.
 Android, Kotlin, Python packages, FFmpeg and optional model weights retain
 their respective licenses. No AI model weights are redistributed.
+
+Optional video person segmentation uses separately obtained OpenCV Zoo PPHumanSeg
+FP32 ONNX weights (PaddlePaddle Authors, Apache-2.0); weights are not bundled.
+Source and license: https://github.com/opencv/opencv_zoo/tree/2027dd2f5a8a5746b5d4964900a0465afc6d3a53/models/human_segmentation_pphumanseg

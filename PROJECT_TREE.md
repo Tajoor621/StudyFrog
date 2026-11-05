@@ -131,6 +131,7 @@ docs/PORTABLE_PROJECTS.md
 docs/REMAINING_GAPS.md
 docs/SCIENCE_EXPLORER.md
 docs/SOURCES.md
+docs/VIDEO_REMIX.md
 docs/WINDOWS.md
 docs/XXHDPI.md
 docs/android-features/IMPLEMENTATION.md
@@ -141,6 +142,7 @@ engine/image_guidance.py
 engine/motion_video.py
 engine/photo_guidance.py
 engine/requirements-models.txt
+engine/requirements-remix.txt
 engine/requirements-test.txt
 engine/requirements.txt
 engine/server.py
@@ -152,6 +154,9 @@ engine/test_model_lifecycle.py
 engine/test_motion_video.py
 engine/test_photo_guidance.py
 engine/test_study_ocr.py
+engine/test_video_remix.py
+engine/video_inputs.py
+engine/video_remix.py
 gradle.properties
 gradle/wrapper/gradle-wrapper.jar
 gradle/wrapper/gradle-wrapper.properties
@@ -197,6 +202,7 @@ ios/StudyForge/RevealEncoder.swift
 ios/StudyForge/StudyCatalog.swift
 ios/StudyForge/StudyExplorerView.swift
 ios/StudyForge/StudyForgeApp.swift
+ios/StudyForge/VideoRemixView.swift
 ios/StudyForgeTests/FamilyAccessTests.swift
 ios/StudyForgeTests/LayerDocumentTests.swift
 ios/StudyForgeTests/ModelImportTests.swift
@@ -205,6 +211,7 @@ ios/StudyForgeTests/PortableProjectTests.swift
 ios/StudyForgeTests/ProjectStoreTests.swift
 ios/StudyForgeTests/Resources/portable-project-v1.json
 ios/StudyForgeTests/StudyCatalogTests.swift
+ios/StudyForgeTests/VideoRemixSourceTests.swift
 ios/project.yml
 manifest.webmanifest
 scripts/audit_repository.py

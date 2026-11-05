@@ -6,6 +6,8 @@
 
 ## Included functionality
 
+Version 0.10.0 adds [uploaded-video background remix](docs/VIDEO_REMIX.md) across web, Android and iOS clients: keep the source people/faces, performance and original first audio track while replacing the scene with your canvas. Free local CPU processing supports explicit Mobile/Laptop/Desktop budgets, model-free green screen or a separately configured open PPHumanSeg ONNX. Processing uses your own computer; standalone phone AI remix and voice/face reenactment are not implemented.
+
 Version 0.9.0 adds [opt-in physical-device/model validation tools](docs/DEVICE_VALIDATION.md), safer first-run/model imports with progress/cancellation/checksums, [independent-review evidence gates](docs/INDEPENDENT_REVIEW.md), and a [Windows web-companion decision and launcher](docs/WINDOWS.md). Actual hardware measurements and independent reviews remain pending; simulator/fixture tests do not establish them.
 
 Version 0.8.0 adds [portable layered raster project exchange](docs/PORTABLE_PROJECTS.md) between Android and iOS. Native ink projects remain unchanged; stroke/text nodes and mask paths are rasterized only in the exported copy.
@@ -106,7 +108,7 @@ app/device/crash information; review the in-app disclosure before enabling them.
 
 ## Implementation limits
 
-Version 0.9.0 implements these software paths; real model outputs and device
+Version 0.10.0 implements these software paths; real model outputs and device
 latency/thermals are unverified. CPU image generation offers 256px previews or
 512px outputs with conservative RAM guards. Fast mid-range-phone generation
 and native full-frame 8K denoising are not promised. Computer tiled refinement

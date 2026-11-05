@@ -249,6 +249,40 @@ struct DrawingCanvas: UIViewRepresentable {
             } catch { message = error.localizedDescription }
         }
     }
+    func remix(source: URL,host: String,token: String,profile: String,mode: String,start: Double,seconds: Double) {
+        guard !FamilyAccess.shared.restricted,!working,let background = composite() else { return }
+        let scoped = source.startAccessingSecurityScopedResource()
+        let local = FileManager.default.temporaryDirectory.appendingPathComponent("remix-\(UUID().uuidString).input")
+        let engine = ComputerEngine(host: host,token: token)
+        working = true;percent = 0;indeterminateProgress = true;message = "Preparing and sending video to your own computer…"
+        UIApplication.shared.isIdleTimerDisabled = true
+        job = Task {
+            defer {
+                try? FileManager.default.removeItem(at: local)
+                if scoped { source.stopAccessingSecurityScopedResource() }
+                working = false;indeterminateProgress = false;computerJob = nil;UIApplication.shared.isIdleTimerDisabled = false
+            }
+            do {
+                let limit = profile == "mobile" ? 64_000_000 : 128_000_000
+                let copy = Task.detached(priority: .utility) { try VideoRemixSource.copy(source,to: local,limit: limit) }
+                try await withTaskCancellationHandler(operation: { try await copy.value },onCancel: { copy.cancel() })
+                try Task.checkCancellation()
+                let id = try await engine.submitRemix(source: local,background: background,profile: profile,mode: mode,start: start,seconds: seconds)
+                computerJob = (engine,id);indeterminateProgress = false
+                while true {
+                    try Task.checkCancellation();let state = try await engine.status(id)
+                    percent = state["progress"] as? Int ?? 0
+                    if state["status"] as? String == "done" { videoURL = try await engine.result(id);message = "Background-edited video ready. Check person edges and original audio sync before sharing.";break }
+                    if ["failed","cancelled"].contains(state["status"] as? String ?? "") { throw LocalFailure(message: state["error"] as? String ?? "Remix cancelled") }
+                    message = "Video remix on your computer · \(percent)%"
+                    try await Task.sleep(nanoseconds: 2_000_000_000)
+                }
+            } catch {
+                if let (client,id) = computerJob { try? await client.cancel(id) }
+                message = error.localizedDescription
+            }
+        }
+    }
     func cancel() { importTask?.cancel();sf_cancel();videoTask?.cancel();if let (engine,id) = computerJob { Task { try? await engine.cancel(id) } };job?.cancel();message = "Cancellation requested" }
 }
 struct ForgeView: View {
@@ -352,6 +386,7 @@ struct ForgeView: View {
                         Text("Free Tesseract reads text on your own computer. Correct scientific terms and labels before using the result.").font(.footnote)
                     }
                     Button("Generate AI motion video on local computer") { motionConsent = true }.disabled(store.image == nil || store.working)
+                    VideoRemixView(store: store,host: computerHost,token: computerToken)
                     if let video = store.videoURL { ShareLink("Share video",item: video) }
                     if store.working { if store.indeterminateProgress { ProgressView() } else { ProgressView(value: Double(store.percent),total: 100) };Button("Cancel") { store.cancel() } }
                     Text(store.message).font(.footnote).accessibilityAddTraits(.updatesFrequently)
