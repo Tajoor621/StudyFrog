@@ -83,6 +83,10 @@ jobs:
         sudo udevadm trigger --name-match=kvm
     - name: Install native build toolchain
       run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
+    - name: Prepare explicit synthetic phone-video fixtures and trusted model
+      run: |
+        command -v ffmpeg || (sudo apt-get update && sudo apt-get install -y ffmpeg)
+        bash scripts/prepare-phone-fixtures.sh app/src/androidTest/assets
     - name: Run Room, WorkManager, Compose and editable-backup tests
       uses: reactivecircus/android-emulator-runner@v2
       with:

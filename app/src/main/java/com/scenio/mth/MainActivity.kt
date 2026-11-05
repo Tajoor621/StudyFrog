@@ -204,6 +204,14 @@ class MainActivity : ComponentActivity() {
         })
         root.addView(button("Generate with local model") { submit("image") })
         root.addView(button("Generate 30-second AI motion video (local computer)") { submit("motion") })
+        root.addView(button("Import phone person-removal ONNX · 6.16 MB") {
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type="*/*";addCategory(Intent.CATEGORY_OPENABLE) },18)
+        })
+        root.addView(button("Replace video background on this phone · offline") {
+            if(canvas.image==null) say("Prepare the new background on the canvas first")
+            else startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type="video/*";addCategory(Intent.CATEGORY_OPENABLE) },19)
+        })
+        root.addView(button("Cancel phone remix / video upload") { remixTransferCancel?.set(true);say("Cancellation requested") })
         root.addView(button("Replace uploaded video background · keep faces and sound") {
             if(canvas.image==null) say("Import or generate the new background on the canvas first")
             else startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type="video/*";addCategory(Intent.CATEGORY_OPENABLE) },17)
@@ -419,6 +427,11 @@ class MainActivity : ComponentActivity() {
         }
         val uri=data?.data ?: return
         when(requestCode) {
+            18 -> background {
+                contentResolver.openInputStream(uri)?.use { input -> com.scenio.mth.video.PersonModel.install(this,input) { checkCreativeAccess();check(!Thread.currentThread().isInterrupted) } } ?: throw IOException("Cannot read ONNX file")
+                ui { say("Phone person-removal model verified and installed locally. It is separate from your SD GGUF model.") }
+            }
+            19 -> phoneVideoDialog(uri)
             17 -> videoRemixDialog(uri)
             16 -> background {
                 val document=contentResolver.openInputStream(uri)?.use { com.scenio.mth.editor.PortableProject.decode(it) } ?: throw IOException("Cannot open portable project")
@@ -587,6 +600,42 @@ class MainActivity : ComponentActivity() {
                 } };dialog.show()
             }
         }
+    }
+    private fun phoneVideoDialog(uri:android.net.Uri) {
+        if(localActive) { say("Finish on-device image generation before starting phone video remix");return }
+        if(busy) { say("Please finish the current operation");return }
+        val content=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL;setPadding(24,12,24,12) }
+        val removal=choices(listOf("Person · imported PPHumanSeg ONNX","Green screen · no model")).apply { contentDescription="On-device background removal mode" }
+        val start=EditText(this).apply { setText("0");hint="Clip start in seconds";contentDescription="Phone clip start in seconds";inputType=8194 }
+        val seconds=EditText(this).apply { setText("15");hint="Duration · 0.5 to 15 seconds";contentDescription="Phone clip duration in seconds";inputType=8194 }
+        val rights=CheckBox(this).apply { text="I have permission to edit the video, people and soundtrack" }
+        content.addView(TextView(this).apply { text="Everything stays on this phone. Current canvas becomes the background. Up to 15 seconds, 480p/15fps; 64 MB, SDR source up to 1080p. Original AAC sound is preserved; other audio formats need the computer engine. Keep the app open. Slower devices may need a shorter clip." })
+        content.addView(removal);content.addView(start);content.addView(seconds);content.addView(rights)
+        val dialog=AlertDialog.Builder(this).setTitle("Offline phone video remix").setView(ScrollView(this).apply { addView(content) }).setPositiveButton("Render on phone",null).setNegativeButton("Cancel",null).create()
+        dialog.setOnShowListener { dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val from=start.text.toString().toDoubleOrNull();val duration=seconds.text.toString().toDoubleOrNull()
+            if(!rights.isChecked || from==null || !from.isFinite() || from !in 0.0..3600.0 || duration==null || !duration.isFinite() || duration !in 0.5..15.0) { say("Confirm permission and valid clip times (0.5–15 seconds)");return@setOnClickListener }
+            val snapshot=canvas.snapshot();val base=snapshot.base
+            if(base==null || base.width.toLong()*base.height>8_000_000) { say("Use a background of at most eight million pixels for phone remix");return@setOnClickListener }
+            val person=removal.selectedItemPosition==0
+            val cancellation=java.util.concurrent.atomic.AtomicBoolean(false);remixTransferCancel=cancellation
+            dialog.dismiss();say("Preparing offline phone remix…")
+            background {
+                val source=File(cacheDir,"phone-source-${UUID.randomUUID()}.mp4");val output=File(cacheDir,"phone-remix-${UUID.randomUUID()}.mp4")
+                var picture:Bitmap?=null;var complete=false
+                try {
+                    fun guard() { checkCreativeAccess();check(!cancellation.get() && !Thread.currentThread().isInterrupted) { "Phone remix cancelled" } }
+                    var size=0L
+                    source.outputStream().use { out -> contentResolver.openInputStream(uri)?.use { input ->
+                        val buffer=ByteArray(65536)
+                        while(true) { guard();val n=input.read(buffer);if(n<0) break;size+=n;require(size<=64_000_000) { "Phone source limit is 64 MB" };out.write(buffer,0,n) }
+                    } ?: throw IOException("Cannot read selected video") }
+                    guard();picture=ForgeCanvas.render(snapshot)
+                    com.scenio.mth.video.LocalVideoRemix.render(this,source,picture!!,output,person,from,duration,::guard) { value -> ui { say("Offline phone video remix · $value%") } }
+                    guard();complete=true;ui { export(output,"video/mp4","studyfrog-phone-remix.mp4") }
+                } finally { source.delete();picture?.recycle();if(!complete) output.delete();remixTransferCancel=null }
+            }
+        } };dialog.show()
     }
     private fun videoRemixDialog(uri:android.net.Uri) {
         if(busy) { say("Please finish the current operation");return }

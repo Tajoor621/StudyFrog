@@ -8,3 +8,7 @@ their respective licenses. No AI model weights are redistributed.
 Optional video person segmentation uses separately obtained OpenCV Zoo PPHumanSeg
 FP32 ONNX weights (PaddlePaddle Authors, Apache-2.0); weights are not bundled.
 Source and license: https://github.com/opencv/opencv_zoo/tree/2027dd2f5a8a5746b5d4964900a0465afc6d3a53/models/human_segmentation_pphumanseg
+
+Native phone person segmentation additionally uses ONNX Runtime 1.20.0 (MIT),
+https://github.com/microsoft/onnxruntime and its Swift Package Manager bindings.
+No person-segmentation weights are bundled in the production app.

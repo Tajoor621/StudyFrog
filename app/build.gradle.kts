@@ -33,8 +33,8 @@ android {
         applicationId = "com.scenio.mth"
         minSdk = 24
         targetSdk = 35
-        versionCode = 11
-        versionName = "0.10.0"
+        versionCode = 12
+        versionName = "0.11.0"
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
         externalNativeBuild { cmake {
             cppFlags += "-std=c++17"
@@ -72,6 +72,7 @@ android {
     }
     buildTypes {
         getByName("release") {
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"),"proguard-rules.pro")
             if (signingReady) signingConfig = signingConfigs.getByName("studyforgeRelease")
         }
     }
@@ -82,6 +83,7 @@ room { schemaDirectory("$projectDir/schemas") }
 tasks.withType<Test>().configureEach { useJUnitPlatform() }
 
 dependencies {
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
     val composeBom = platform("androidx.compose:compose-bom:2025.02.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)

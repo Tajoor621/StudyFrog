@@ -6,6 +6,8 @@
 
 ## Included functionality
 
+Version 0.11.0 adds native Android/iOS offline phone video remix: explicit verified person-model import, CPU person/green-screen removal, bounded frame streaming, original AAC audio, cancellation and memory/thermal guards. Native qualification CI is in progress; physical speed/edge quality and independent reviews remain pending. See [phone remix setup](docs/PHONE_VIDEO_REMIX.md).
+
 Version 0.10.0 adds [uploaded-video background remix](docs/VIDEO_REMIX.md) across web, Android and iOS clients: keep the source people/faces, performance and original first audio track while replacing the scene with your canvas. Free local CPU processing supports explicit Mobile/Laptop/Desktop budgets, model-free green screen or a separately configured open PPHumanSeg ONNX. Processing uses your own computer; standalone phone AI remix and voice/face reenactment are not implemented.
 
 Version 0.9.0 adds [opt-in physical-device/model validation tools](docs/DEVICE_VALIDATION.md), safer first-run/model imports with progress/cancellation/checksums, [independent-review evidence gates](docs/INDEPENDENT_REVIEW.md), and a [Windows web-companion decision and launcher](docs/WINDOWS.md). Actual hardware measurements and independent reviews remain pending; simulator/fixture tests do not establish them.

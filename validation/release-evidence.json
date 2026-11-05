@@ -21,7 +21,13 @@
       "web/local-engine/bridge.py",
       "engine/server.py",
       "engine/video_inputs.py",
-      "engine/video_remix.py"
+      "engine/video_remix.py",
+      "app/src/main/java/com/scenio/mth/video/PersonModel.kt",
+      "app/src/main/java/com/scenio/mth/video/BitmapVideoEncoder.kt",
+      "app/src/main/java/com/scenio/mth/video/LocalVideoRemix.kt",
+      "ios/StudyForge/PhonePersonModel.swift",
+      "ios/StudyForge/PhoneVideoRemix.swift",
+      "ios/StudyForge/PhoneVideoRemixView.swift"
     ]
   },
   "models": [],

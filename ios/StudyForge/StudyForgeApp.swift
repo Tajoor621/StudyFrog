@@ -283,6 +283,34 @@ struct DrawingCanvas: UIViewRepresentable {
             }
         }
     }
+    func phoneRemix(source: URL,person: Bool,start: Double,seconds: Double) {
+        guard !FamilyAccess.shared.restricted,!working,let background = composite() else { return }
+        let scoped = source.startAccessingSecurityScopedResource()
+        let input = FileManager.default.temporaryDirectory.appendingPathComponent("phone-source-\(UUID().uuidString).mp4")
+        let output = FileManager.default.temporaryDirectory.appendingPathComponent("phone-remix-\(UUID().uuidString).mp4")
+        let control = PhoneRenderControl()
+        working = true;percent = 0;message = "Rendering on this phone; no computer or network is used"
+        UIApplication.shared.isIdleTimerDisabled = true
+        job = Task {
+            defer {
+                try? FileManager.default.removeItem(at: input)
+                if scoped { source.stopAccessingSecurityScopedResource() }
+                working = false;UIApplication.shared.isIdleTimerDisabled = false
+            }
+            let render = Task.detached(priority: .userInitiated) {
+                try VideoRemixSource.copy(source,to: input,limit: 64_000_000)
+                try PhoneVideoRemix.render(source: input,background: background,output: output,personMode: person,start: start,seconds: seconds,control: control) { value in
+                    Task { @MainActor in if !FamilyAccess.shared.restricted { self.percent = value } }
+                }
+            }
+            do {
+                try await withTaskCancellationHandler(operation: { try await render.value },onCancel: { control.stop("Phone remix cancelled");render.cancel() })
+                try Task.checkCancellation()
+                guard !FamilyAccess.shared.restricted else { throw LocalFailure(message: "Workspace locked") }
+                videoURL = output;message = "Offline phone remix ready. Check people edges and original audio sync before sharing."
+            } catch { try? FileManager.default.removeItem(at: output);message = error.localizedDescription }
+        }
+    }
     func cancel() { importTask?.cancel();sf_cancel();videoTask?.cancel();if let (engine,id) = computerJob { Task { try? await engine.cancel(id) } };job?.cancel();message = "Cancellation requested" }
 }
 struct ForgeView: View {
@@ -386,6 +414,7 @@ struct ForgeView: View {
                         Text("Free Tesseract reads text on your own computer. Correct scientific terms and labels before using the result.").font(.footnote)
                     }
                     Button("Generate AI motion video on local computer") { motionConsent = true }.disabled(store.image == nil || store.working)
+                    PhoneVideoRemixView(store: store)
                     VideoRemixView(store: store,host: computerHost,token: computerToken)
                     if let video = store.videoURL { ShareLink("Share video",item: video) }
                     if store.working { if store.indeterminateProgress { ProgressView() } else { ProgressView(value: Double(store.percent),total: 100) };Button("Cancel") { store.cancel() } }

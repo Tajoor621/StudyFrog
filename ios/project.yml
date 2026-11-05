@@ -9,13 +9,17 @@ settings:
     DEVELOPMENT_TEAM: ''
     CODE_SIGNING_ALLOWED: NO
     GENERATE_INFOPLIST_FILE: YES
-    CURRENT_PROJECT_VERSION: 11
-    MARKETING_VERSION: 0.10.0
+    CURRENT_PROJECT_VERSION: 12
+    MARKETING_VERSION: 0.11.0
     INFOPLIST_KEY_CFBundleDisplayName: Study Frog
     INFOPLIST_KEY_UILaunchScreen_Generation: YES
     INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
     ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     ENABLE_USER_SCRIPT_SANDBOXING: YES
+packages:
+  OnnxRuntime:
+    url: https://github.com/microsoft/onnxruntime-swift-package-manager
+    exactVersion: 1.20.0
 targets:
   StudyForge:
     type: application
@@ -38,6 +42,8 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
     dependencies:
+      - package: OnnxRuntime
+        product: onnxruntime
       - framework: NativeBuild/sf_engine.framework
         embed: true
   StudyForgeTests:
@@ -45,6 +51,9 @@ targets:
     platform: iOS
     sources:
       - StudyForgeTests
+      - path: NativeFixtures
+        buildPhase: resources
+        type: group
     dependencies:
       - target: StudyForge
 schemes:

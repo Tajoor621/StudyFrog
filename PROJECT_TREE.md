@@ -15,6 +15,7 @@ README.md
 SHA256SUMS
 VALIDATION.md
 app/build.gradle.kts
+app/proguard-rules.pro
 app/src/androidTest/assets/portable-project-v1.json
 app/src/androidTest/java/com/scenio/mth/features/AccessibilityTest.kt
 app/src/androidTest/java/com/scenio/mth/features/AdvancedEditorTest.kt
@@ -24,6 +25,7 @@ app/src/androidTest/java/com/scenio/mth/features/LayerDocumentTest.kt
 app/src/androidTest/java/com/scenio/mth/features/ModelImportTest.kt
 app/src/androidTest/java/com/scenio/mth/features/NativeBoundaryTest.kt
 app/src/androidTest/java/com/scenio/mth/features/OnboardingTest.kt
+app/src/androidTest/java/com/scenio/mth/features/PhoneVideoRemixTest.kt
 app/src/androidTest/java/com/scenio/mth/features/PortableProjectTest.kt
 app/src/androidTest/java/com/scenio/mth/features/ProgressDatabaseTest.kt
 app/src/androidTest/java/com/scenio/mth/features/ProjectBackupTest.kt
@@ -75,6 +77,9 @@ app/src/main/java/com/scenio/mth/inference/ModelStore.kt
 app/src/main/java/com/scenio/mth/inference/NativeEngine.kt
 app/src/main/java/com/scenio/mth/science/StudyCatalog.kt
 app/src/main/java/com/scenio/mth/science/StudyExplorerActivity.kt
+app/src/main/java/com/scenio/mth/video/BitmapVideoEncoder.kt
+app/src/main/java/com/scenio/mth/video/LocalVideoRemix.kt
+app/src/main/java/com/scenio/mth/video/PersonModel.kt
 app/src/main/res/drawable-nodpi/sf_brand_avatar.png
 app/src/main/res/drawable-nodpi/sf_brand_banner.webp
 app/src/main/res/drawable-xxhdpi/ic_xxhdpi.png
@@ -126,6 +131,7 @@ docs/GENERATION_CONTROLS.md
 docs/INDEPENDENT_REVIEW.md
 docs/LOCAL_MODELS.md
 docs/MASTER_SPEC_AUDIT.md
+docs/PHONE_VIDEO_REMIX.md
 docs/PHOTO_STUDY_WORKFLOW.md
 docs/PORTABLE_PROJECTS.md
 docs/REMAINING_GAPS.md
@@ -193,6 +199,9 @@ ios/StudyForge/GenerationProfile.swift
 ios/StudyForge/LayerDocument.swift
 ios/StudyForge/LayerStudioView.swift
 ios/StudyForge/NativeDiffusion.swift
+ios/StudyForge/PhonePersonModel.swift
+ios/StudyForge/PhoneVideoRemix.swift
+ios/StudyForge/PhoneVideoRemixView.swift
 ios/StudyForge/PhotoDecoder.swift
 ios/StudyForge/PortableProject.swift
 ios/StudyForge/ProjectStore.swift
@@ -206,6 +215,7 @@ ios/StudyForge/VideoRemixView.swift
 ios/StudyForgeTests/FamilyAccessTests.swift
 ios/StudyForgeTests/LayerDocumentTests.swift
 ios/StudyForgeTests/ModelImportTests.swift
+ios/StudyForgeTests/PhoneVideoRemixTests.swift
 ios/StudyForgeTests/PhysicalDeviceTests.swift
 ios/StudyForgeTests/PortableProjectTests.swift
 ios/StudyForgeTests/ProjectStoreTests.swift
@@ -219,9 +229,11 @@ scripts/build-apks.sh
 scripts/build-ios-native.sh
 scripts/check-windows.ps1
 scripts/check_repository.py
+scripts/create_phone_video_fixtures.py
 scripts/device-smoke.sh
 scripts/generate_branding.py
 scripts/manifest_attributes.py
+scripts/prepare-phone-fixtures.sh
 scripts/release_readiness.py
 scripts/start-windows.ps1
 scripts/test_manifest_attributes.py
