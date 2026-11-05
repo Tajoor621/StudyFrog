@@ -94,6 +94,7 @@ class MainActivity : ComponentActivity() {
         latestJob=prefs.getString("latestJob",null)
         projectFolder=session.folder
         generationProfile=if(session.snapshot!=null || session.prompt.isNotEmpty()) session.profile else runCatching { com.scenio.mth.generation.ProfileCodec.decode(JSONObject(prefs.getString("generation-profile","{}")!!)) }.getOrDefault(com.scenio.mth.generation.GenerationProfile())
+        runCatching { com.scenio.mth.video.PhoneRenderRecords.shared(this).recover() }
         pendingExport=savedInstanceState?.getString("pendingExport")?.let { path ->
             File(path).takeIf { it.isFile && it.canonicalFile.parentFile==cacheDir.canonicalFile }
         }
@@ -210,6 +211,25 @@ class MainActivity : ComponentActivity() {
         root.addView(button("Replace video background on this phone · offline") {
             if(canvas.image==null) say("Prepare the new background on the canvas first")
             else startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { type="video/*";addCategory(Intent.CATEGORY_OPENABLE) },19)
+        })
+        root.addView(button("Recover / export last completed phone video") {
+            background {
+                val stored=com.scenio.mth.video.PhoneRenderRecords.shared(this).latest()
+                if(stored==null) ui { say("No completed saved phone video. Check the latest-attempt report for an interrupted or failed run.") }
+                else { val copy=File(cacheDir,"phone-export-${UUID.randomUUID()}.mp4");stored.copyTo(copy,overwrite=true);ui { export(copy,"video/mp4","studyfrog-phone-remix.mp4") } }
+            }
+        })
+        root.addView(button("Export latest phone-render attempt report") {
+            background {
+                val records=com.scenio.mth.video.PhoneRenderRecords.shared(this);records.recover()
+                val report=records.reportFile
+                if(!report.isFile) ui { say("Render a phone video first to record timing and memory snapshots") }
+                else { val copy=File(cacheDir,"phone-report-${UUID.randomUUID()}.json");report.copyTo(copy,overwrite=true);ui { export(copy,"application/json","studyfrog-phone-render-report.json") } }
+            }
+        })
+        root.addView(button("Clear saved phone video and render reports") {
+            AlertDialog.Builder(this).setTitle("Clear phone-video history?").setMessage("Deletes the retained phone result and diagnostic reports in this app. Your original video, model and already exported copies remain. Only the latest completed phone result is retained after a successful replacement.")
+                .setPositiveButton("Clear history") { _,_ -> background { com.scenio.mth.video.PhoneRenderRecords.shared(this).clear();ui { say("Saved phone video and reports cleared") } } }.setNegativeButton("Cancel",null).show()
         })
         root.addView(button("Cancel phone remix / video upload") { remixTransferCancel?.set(true);say("Cancellation requested") })
         root.addView(button("Replace uploaded video background · keep faces and sound") {
@@ -621,7 +641,9 @@ class MainActivity : ComponentActivity() {
             val cancellation=java.util.concurrent.atomic.AtomicBoolean(false);remixTransferCancel=cancellation
             dialog.dismiss();say("Preparing offline phone remix…")
             background {
-                val source=File(cacheDir,"phone-source-${UUID.randomUUID()}.mp4");val output=File(cacheDir,"phone-remix-${UUID.randomUUID()}.mp4")
+                val records=com.scenio.mth.video.PhoneRenderRecords.shared(this)
+                val run=try { records.begin(if(person) "person" else "green",from,duration) } catch(error:Throwable) { remixTransferCancel=null;throw error }
+                val source=run.source;val output=run.output
                 var picture:Bitmap?=null;var complete=false
                 try {
                     fun guard() { checkCreativeAccess();check(!cancellation.get() && !Thread.currentThread().isInterrupted) { "Phone remix cancelled" } }
@@ -632,8 +654,13 @@ class MainActivity : ComponentActivity() {
                     } ?: throw IOException("Cannot read selected video") }
                     guard();picture=ForgeCanvas.render(snapshot)
                     com.scenio.mth.video.LocalVideoRemix.render(this,source,picture!!,output,person,from,duration,::guard) { value -> ui { say("Offline phone video remix · $value%") } }
-                    guard();complete=true;ui { export(output,"video/mp4","studyfrog-phone-remix.mp4") }
-                } finally { source.delete();picture?.recycle();if(!complete) output.delete();remixTransferCancel=null }
+                    guard();records.complete(run);complete=true
+                    val copy=File(cacheDir,"phone-export-${UUID.randomUUID()}.mp4");output.copyTo(copy,overwrite=true)
+                    ui { export(copy,"video/mp4","studyfrog-phone-remix.mp4") }
+                } catch(error:Throwable) {
+                    if(!complete) runCatching { records.fail(run,cancellation.get() || Thread.currentThread().isInterrupted,error.javaClass.simpleName) }
+                    throw error
+                } finally { source.delete();picture?.recycle();remixTransferCancel=null }
             }
         } };dialog.show()
     }

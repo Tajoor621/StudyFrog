@@ -6,6 +6,8 @@
 
 ## Included functionality
 
+Version 0.11.1 adds a private phone-render journal, recoverable latest completed video, exportable per-attempt timing/memory/thermal reports, interrupted-job cleanup and explicit history clearing. A failed job keeps the previous successful result. The physical Android workflow can select phone-remix smoke tests without an SD GGUF. Native qualification CI is in progress; physical/human reviews remain pending.
+
 Version 0.11.0 adds native Android/iOS offline phone video remix: explicit verified person-model import, CPU person/green-screen removal, bounded frame streaming, original AAC audio, cancellation and memory/thermal guards. Native builds and synthetic real-ONNX/codec tests pass; physical speed/edge quality and independent reviews remain pending. See [phone remix setup](docs/PHONE_VIDEO_REMIX.md).
 
 Version 0.10.0 adds [uploaded-video background remix](docs/VIDEO_REMIX.md) across web, Android and iOS clients: keep the source people/faces, performance and original first audio track while replacing the scene with your canvas. Free local CPU processing supports explicit Mobile/Laptop/Desktop budgets, model-free green screen or a separately configured open PPHumanSeg ONNX. That computer-remix path uses your own computer. Version 0.11.0 adds the separate native offline-phone path; voice/face reenactment is not implemented.

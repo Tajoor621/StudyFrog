@@ -2,16 +2,21 @@ name: StudyForge physical Android validation
 on:
   workflow_dispatch:
     inputs:
+      scope:
+        description: Image benchmark, phone-remix smoke, or both
+        type: choice
+        options: ['image', 'phone-remix', 'both']
+        default: image
       modelSha256:
         description: Actual imported SD 1.x GGUF SHA-256 (64 lowercase hex)
         type: string
-        required: true
+        required: false
       benchmarkSize:
         type: choice
         options: ['256', '512']
         default: '256'
       stress:
-        description: Also run repeated 30s encoder and bounded layer stress
+        description: Image/both scopes only - repeated 30s encoder and bounded layer stress
         type: boolean
         default: false
       uploadEvidence:
@@ -30,21 +35,31 @@ jobs:
       EXPECTED_MODEL_SHA256: ${{ inputs.modelSha256 }}
       BENCHMARK_SIZE: ${{ inputs.benchmarkSize }}
       RUN_STRESS: ${{ inputs.stress }}
+      VALIDATION_SCOPE: ${{ inputs.scope }}
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Require one dedicated physical test phone and a valid digest
         run: |
-          python3 -c 'import os,re,subprocess; assert re.fullmatch("[0-9a-f]{64}",os.environ["EXPECTED_MODEL_SHA256"]); rows=[r for r in subprocess.check_output(["adb","devices"],text=True).splitlines()[1:] if r.strip()]; assert len(rows)==1 and rows[0].split()[1]=="device", "Connect exactly one authorized dedicated test phone"'
+          python3 -c 'import os,re,subprocess; assert os.environ["VALIDATION_SCOPE"] in ("image","phone-remix","both"); assert os.environ["VALIDATION_SCOPE"]=="phone-remix" or re.fullmatch("[0-9a-f]{64}",os.environ["EXPECTED_MODEL_SHA256"]); rows=[r for r in subprocess.check_output(["adb","devices"],text=True).splitlines()[1:] if r.strip()]; assert len(rows)==1 and rows[0].split()[1]=="device", "Connect exactly one authorized dedicated test phone"'
           adb get-state
           adb shell getprop ro.kernel.qemu | python3 -c 'import sys; assert sys.stdin.read().strip() != "1", "Use a physical phone, not an emulator"'
+      - name: Prepare phone-remix fixtures only when explicitly selected
+        if: inputs.scope == 'phone-remix' || inputs.scope == 'both'
+        run: |
+          command -v ffmpeg
+          command -v ffprobe
+          bash scripts/prepare-phone-fixtures.sh app/src/androidTest/assets
       - name: Build and install without uninstalling or erasing user data
         run: |
           ./gradlew --no-daemon assembleDebug -PfirebaseEnabled=false
           adb install -r app/build/outputs/apk/debug/app-debug.apk
-          adb shell run-as com.scenio.mth test -f no_backup/models/image.gguf
-      - name: Run fingerprint-bound measurements and optional stress
+          if [ "$VALIDATION_SCOPE" != phone-remix ]; then
+            adb shell run-as com.scenio.mth test -f no_backup/models/image.gguf
+          fi
+      - name: Run fingerprint-bound image measurements and optional stress
+        if: inputs.scope != 'phone-remix'
         run: |
           ./gradlew --no-daemon connectedDebugAndroidTest -PfirebaseEnabled=false \
             -Pandroid.testInstrumentationRunnerArguments.class=com.scenio.mth.features.RealModelDeviceTest,com.scenio.mth.features.DeviceStressTest \
@@ -53,8 +68,15 @@ jobs:
             -Pandroid.testInstrumentationRunnerArguments.expectedModelSha256="$EXPECTED_MODEL_SHA256" \
             -Pandroid.testInstrumentationRunnerArguments.benchmarkSize="$BENCHMARK_SIZE" \
             -Pandroid.testInstrumentationRunnerArguments.runDeviceStress="$RUN_STRESS"
+          mkdir -p device-evidence/image-junit
+          cp -R app/build/outputs/androidTest-results/. device-evidence/image-junit/
+      - name: Run native phone-remix and journal smoke tests on the physical phone
+        if: inputs.scope == 'phone-remix' || inputs.scope == 'both'
+        run: |
+          ./gradlew --no-daemon connectedDebugAndroidTest -PfirebaseEnabled=false \
+            -Pandroid.testInstrumentationRunnerArguments.class=com.scenio.mth.features.PhoneVideoRemixTest,com.scenio.mth.features.PhoneRenderRecordsTest
       - name: Collect diagnostic JSON even when a measurement fails
-        if: always()
+        if: always() && inputs.scope != 'phone-remix'
         run: |
           mkdir -p device-evidence
           adb exec-out run-as com.scenio.mth cat files/device-test/report.json > device-evidence/report.json || rm -f device-evidence/report.json

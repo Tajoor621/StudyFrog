@@ -27,7 +27,9 @@
       "app/src/main/java/com/scenio/mth/video/LocalVideoRemix.kt",
       "ios/StudyForge/PhonePersonModel.swift",
       "ios/StudyForge/PhoneVideoRemix.swift",
-      "ios/StudyForge/PhoneVideoRemixView.swift"
+      "ios/StudyForge/PhoneVideoRemixView.swift",
+      "app/src/main/java/com/scenio/mth/video/PhoneRenderRecords.kt",
+      "ios/StudyForge/PhoneRenderRecords.swift"
     ]
   },
   "models": [],

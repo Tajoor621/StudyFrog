@@ -61,8 +61,8 @@ final class PhoneVideoRemixTests: XCTestCase {
         let portrait = try XCTUnwrap(AVURLAsset(url: output).tracks(withMediaType: .video).first)
         XCTAssertEqual(portrait.naturalSize,CGSize(width: 96,height: 160))
         try FileManager.default.removeItem(at: output)
-        let control = PhoneRenderControl();control.stop("cancelled")
-        XCTAssertThrowsError(try PhoneVideoRemix.render(source: source,background: background,output: output,personMode: false,start: 0,seconds: 1,control: control,progress: { _ in }))
+        let control = PhoneRenderControl()
+        XCTAssertThrowsError(try PhoneVideoRemix.render(source: source,background: background,output: output,personMode: false,start: 0,seconds: 1,control: control,progress: { value in if value>=20 { control.stop("cancelled") } }))
         XCTAssertFalse(FileManager.default.fileExists(atPath: output.path))
     }
 }

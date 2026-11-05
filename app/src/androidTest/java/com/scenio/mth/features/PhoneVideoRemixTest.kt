@@ -63,7 +63,8 @@ class PhoneVideoRemixTest {
             val portrait=MediaMetadataRetriever()
             try { portrait.setDataSource(output.path);assertEquals("96",portrait.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH));assertEquals("160",portrait.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)) }
             finally { portrait.release() }
-            assertThrows(IllegalStateException::class.java) { LocalVideoRemix.render(context,source,bg,output,false,0.0,1.0,{ error("cancelled") },{}) }
+            var checkpoints=0
+            assertThrows(IllegalStateException::class.java) { LocalVideoRemix.render(context,source,bg,output.apply { delete() },false,0.0,1.0,{ if(++checkpoints>=12) error("cancelled") },{}) }
             assertFalse(output.exists())
         } finally { source.delete();output.delete();bg.recycle() }
     }

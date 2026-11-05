@@ -25,6 +25,7 @@ app/src/androidTest/java/com/scenio/mth/features/LayerDocumentTest.kt
 app/src/androidTest/java/com/scenio/mth/features/ModelImportTest.kt
 app/src/androidTest/java/com/scenio/mth/features/NativeBoundaryTest.kt
 app/src/androidTest/java/com/scenio/mth/features/OnboardingTest.kt
+app/src/androidTest/java/com/scenio/mth/features/PhoneRenderRecordsTest.kt
 app/src/androidTest/java/com/scenio/mth/features/PhoneVideoRemixTest.kt
 app/src/androidTest/java/com/scenio/mth/features/PortableProjectTest.kt
 app/src/androidTest/java/com/scenio/mth/features/ProgressDatabaseTest.kt
@@ -80,6 +81,7 @@ app/src/main/java/com/scenio/mth/science/StudyExplorerActivity.kt
 app/src/main/java/com/scenio/mth/video/BitmapVideoEncoder.kt
 app/src/main/java/com/scenio/mth/video/LocalVideoRemix.kt
 app/src/main/java/com/scenio/mth/video/PersonModel.kt
+app/src/main/java/com/scenio/mth/video/PhoneRenderRecords.kt
 app/src/main/res/drawable-nodpi/sf_brand_avatar.png
 app/src/main/res/drawable-nodpi/sf_brand_banner.webp
 app/src/main/res/drawable-xxhdpi/ic_xxhdpi.png
@@ -200,6 +202,7 @@ ios/StudyForge/LayerDocument.swift
 ios/StudyForge/LayerStudioView.swift
 ios/StudyForge/NativeDiffusion.swift
 ios/StudyForge/PhonePersonModel.swift
+ios/StudyForge/PhoneRenderRecords.swift
 ios/StudyForge/PhoneVideoRemix.swift
 ios/StudyForge/PhoneVideoRemixView.swift
 ios/StudyForge/PhotoDecoder.swift
@@ -215,6 +218,7 @@ ios/StudyForge/VideoRemixView.swift
 ios/StudyForgeTests/FamilyAccessTests.swift
 ios/StudyForgeTests/LayerDocumentTests.swift
 ios/StudyForgeTests/ModelImportTests.swift
+ios/StudyForgeTests/PhoneRenderRecordsTests.swift
 ios/StudyForgeTests/PhoneVideoRemixTests.swift
 ios/StudyForgeTests/PhysicalDeviceTests.swift
 ios/StudyForgeTests/PortableProjectTests.swift

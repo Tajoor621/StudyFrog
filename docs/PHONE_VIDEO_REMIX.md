@@ -1,4 +1,4 @@
-# Offline phone video remix — 0.11.0
+# Offline phone video remix — 0.11.1
 
 Android and iOS now include an on-device path: preserve the source performance
 and first AAC audio track while replacing its background with the current
@@ -83,3 +83,42 @@ cancel/lock/background interruption and partial caches are private. Test TalkBac
 VoiceOver, large fonts and accessible picker/cancel controls. Use the existing
 [device-session/evidence procedure](DEVICE_VALIDATION.md) to attach actual results;
 simulator fixtures cannot fill that physical session or independent approval.
+
+## Recovery and local render reports
+
+New journaled jobs retain one completed phone video in private, backup-excluded
+app storage. Use **Recover / export last completed phone video** on Android or
+**Recover last completed phone video** on iOS after reopening. Export important
+clips before rendering a replacement: only the latest successful phone result
+is retained. A failed or canceled replacement keeps the previous completed
+result. Original input files and copies already exported through Files remain
+unchanged. **Clear saved phone video and render reports** explicitly removes
+this app's retained phone result and diagnostics; it keeps the imported model.
+
+On the next creative-workspace start, an unfinished journal becomes
+`interrupted`, its private source/partial output is removed and the previous
+completed result is kept. Active in-process work is not misclassified as an
+interruption. A completed-result receipt can restore completion if the process
+ends between receipt and report replacement. This is journal recovery, not
+resume-from-frame rendering, power-loss certification or recovery of unjournaled
+0.11.0 temporary files. Damaged receipts fail closed; use the explicit history
+clear control to reset only this feature's private directory.
+
+Use **Export latest phone-render attempt report** on Android or **Prepare
+latest-attempt report for export** on iOS. The JSON identifies build/run/mode,
+requested clip budget, actual output metadata, elapsed time including source
+copy/segmentation/encode/mux, and before/after process memory/thermal snapshots.
+It includes no source filename, prompt, face pixels or audio. Snapshots are not
+peak-memory measurements. Failed/canceled/interrupted status is retained; an
+interrupted job has no invented elapsed time. Requested model hash is labeled
+as requested. `quality_assessed` and `physical_execution_verified` stay false;
+reports do not supply independent review or generative-model qualification.
+No report is sent automatically. Sharing/export is an explicit user action.
+
+The manually dispatched physical Android workflow now offers `image`,
+`phone-remix` and `both`. Phone-remix-only does not require an SD model/digest;
+it downloads the known test-only segmentation weight and synthetic fixtures
+on the dedicated self-hosted runner, not inside the production app. That runner
+needs Android/JDK/Gradle tooling, Python, FFmpeg/ffprobe and exactly one authorised
+physical test phone. No uninstall/data erasure or automatic evidence upload is
+performed. Physical runs were not dispatched from this session.

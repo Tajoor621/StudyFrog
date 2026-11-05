@@ -73,7 +73,10 @@ struct DrawingCanvas: UIViewRepresentable {
     @Published var modelStatus = IOSModelStore.status()
     @Published var indeterminateProgress = false
     var computerJob: (ComputerEngine,String)?
-    func refresh() { do { records = try IOSProjectStore().list() } catch { message = error.localizedDescription } }
+    func refresh() {
+        do { records = try IOSProjectStore().list();try PhoneRenderRecords.shared.recover();if videoURL == nil { videoURL = try PhoneRenderRecords.shared.latest() } }
+        catch { message = error.localizedDescription }
+    }
     func resetLayers() { selected = 0;layers = [IOSInkLayer()];history.removeAll();future.removeAll() }
     private func trimHistory() {
         while history.count > 32 || history.reduce(0,{ $0+$1.pointCount }) > 250_000 { history.removeFirst() }
@@ -285,9 +288,11 @@ struct DrawingCanvas: UIViewRepresentable {
     }
     func phoneRemix(source: URL,person: Bool,start: Double,seconds: Double) {
         guard !FamilyAccess.shared.restricted,!working,let background = composite() else { return }
+        let run: PhoneRenderRecords.Run
+        do { run = try PhoneRenderRecords.shared.begin(mode: person ? "person" : "green",start: start,seconds: seconds) }
+        catch { message = error.localizedDescription;return }
         let scoped = source.startAccessingSecurityScopedResource()
-        let input = FileManager.default.temporaryDirectory.appendingPathComponent("phone-source-\(UUID().uuidString).mp4")
-        let output = FileManager.default.temporaryDirectory.appendingPathComponent("phone-remix-\(UUID().uuidString).mp4")
+        let input = run.source,output = run.output
         let control = PhoneRenderControl()
         working = true;percent = 0;message = "Rendering on this phone; no computer or network is used"
         UIApplication.shared.isIdleTimerDisabled = true
@@ -307,8 +312,12 @@ struct DrawingCanvas: UIViewRepresentable {
                 try await withTaskCancellationHandler(operation: { try await render.value },onCancel: { control.stop("Phone remix cancelled");render.cancel() })
                 try Task.checkCancellation()
                 guard !FamilyAccess.shared.restricted else { throw LocalFailure(message: "Workspace locked") }
-                videoURL = output;message = "Offline phone remix ready. Check people edges and original audio sync before sharing."
-            } catch { try? FileManager.default.removeItem(at: output);message = error.localizedDescription }
+                try PhoneRenderRecords.shared.complete(run)
+                videoURL = output;message = "Offline phone remix saved. It can be recovered after restart; export important clips before replacing the retained result."
+            } catch {
+                try? PhoneRenderRecords.shared.fail(run,cancelled: Task.isCancelled || error is CancellationError,errorType: String(describing: type(of: error)))
+                message = error.localizedDescription
+            }
         }
     }
     func cancel() { importTask?.cancel();sf_cancel();videoTask?.cancel();if let (engine,id) = computerJob { Task { try? await engine.cancel(id) } };job?.cancel();message = "Cancellation requested" }
@@ -416,7 +425,7 @@ struct ForgeView: View {
                     Button("Generate AI motion video on local computer") { motionConsent = true }.disabled(store.image == nil || store.working)
                     PhoneVideoRemixView(store: store)
                     VideoRemixView(store: store,host: computerHost,token: computerToken)
-                    if let video = store.videoURL { ShareLink("Share video",item: video) }
+                    if let video = store.videoURL { ShareLink("Share video",item: video).disabled(store.working) }
                     if store.working { if store.indeterminateProgress { ProgressView() } else { ProgressView(value: Double(store.percent),total: 100) };Button("Cancel") { store.cancel() } }
                     Text(store.message).font(.footnote).accessibilityAddTraits(.updatesFrequently)
                     Text("On-device CPU inference uses a memory-saving 256px preview and needs a compatible GGUF and a sufficiently capable device. Keep the app open. Realistic AI motion video requires the optional local computer engine.").font(.footnote).foregroundStyle(.secondary)

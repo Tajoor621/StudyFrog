@@ -161,3 +161,7 @@ Sources: [Android performance testing](https://developer.android.com/training/te
 Accessibility references: [WCAG text contrast](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html),
 [Android touch targets](https://developer.android.com/guide/topics/ui/accessibility/views/apps-views),
 [Apple button hit regions](https://developer.apple.com/design/human-interface-guidelines/buttons).
+
+## Phone-remix-only physical smoke
+
+The manual physical Android workflow accepts `scope=phone-remix`; leave the SD GGUF digest empty for that scope. The dedicated self-hosted runner needs FFmpeg/ffprobe/Python and the existing Android toolchain. It runs synthetic native remix/journal tests on the attached phone, without installing an SD model or erasing app data. For representative personal media, render through the native UI and explicitly export the latest-attempt report; these JSON diagnostics do not independently attest physical execution or substitute for the manual session and qualified reviews.

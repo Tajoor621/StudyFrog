@@ -1,4 +1,4 @@
-# Feature status — 0.11.0
+# Feature status — 0.11.1
 
 Evidence: [VALIDATION.md](../VALIDATION.md). Implemented code, automated tests and real-model/device evaluation are distinct.
 
@@ -57,3 +57,7 @@ review records; ordinary development builds remain available.
 ## 0.11.0 native phone remix
 
 [Offline Android/iOS video remix](PHONE_VIDEO_REMIX.md) adds checksum-pinned ONNX model import, CPU person masks, model-free green-screen removal, native H.264 output and copied first AAC track. The mobile cap is 15 seconds/480p/15fps with 64 MB/1080p SDR input. Source copies/partial output are removed on failure/cancel. Low-memory/thermal/deadline guards and native CI fixtures are included. Physical performance/real-human edges and independent review remain pending.
+
+## 0.11.1 result recovery and diagnostics
+
+Phone jobs now retain one successful result in private storage, recover interrupted journals, export latest-attempt timing/process-memory/thermal JSON and offer explicit history deletion. Failure preserves the previous completed result. Native tests distinguish active work from a simulated process restart and reject path-escaping receipts. Physical/cross-device quality and independent review still require actual evidence.
