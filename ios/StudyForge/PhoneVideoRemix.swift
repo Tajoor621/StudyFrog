@@ -131,8 +131,9 @@ struct PhoneVideoRemix {
         }
         guard let export = AVAssetExportSession(asset: composition,presetName: AVAssetExportPresetPassthrough) else { throw LocalFailure(message: "Cannot prepare MP4 export") }
         export.outputURL = output;export.outputFileType = .mp4;export.shouldOptimizeForNetworkUse = true
-        export.exportAsynchronously {}
-        while export.status == .waiting || export.status == .exporting {
+        let exported = DispatchSemaphore(value: 0)
+        export.exportAsynchronously { exported.signal() }
+        while exported.wait(timeout: .now()+0.1) != .success {
             do { try control.check();guard Date()<deadline else { throw LocalFailure(message: "MP4 export timed out") } }
             catch { export.cancelExport();throw error }
             Thread.sleep(forTimeInterval: 0.01)

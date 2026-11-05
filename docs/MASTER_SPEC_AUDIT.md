@@ -1,6 +1,6 @@
 # Master specification coverage — 2026-11-05 (Asia/Dubai)
 
-The requested product is **not fully implemented**. Study Frog 0.10.0 has working
+The requested product is **not fully implemented**. Study Frog 0.11.0 has working
 Android/iOS builds and a substantial offline foundation. A passing build is not
 proof of model quality, medical accuracy, device performance or complete scope.
 The tested source and exact results are recorded in [VALIDATION.md](../VALIDATION.md).
@@ -119,3 +119,7 @@ improvements, not completed physical testing, peer review or model certification
 ## Uploaded-video remix addition
 
 0.10.0 adds [source-video background replacement](VIDEO_REMIX.md) with original people and audio and explicit output budgets. The shared computer engine serves web/Android/iOS clients. It does not establish standalone phone remix, novel face reenactment, voice cloning, arbitrary-duration ultra-realistic AI generation, or physical quality/performance certification.
+
+## Offline phone video remix addition
+
+0.11.0 supplies a [native phone pipeline](PHONE_VIDEO_REMIX.md) using the same free PPHumanSeg ONNX, H.264 hardware/OS encoding and source AAC audio, without network calls. It is bounded to 15 seconds/480p/15fps, source up to 1080p/64 MB, and does not establish arbitrary formats, realtime speed, broad model/medical quality, physical encoders, 16 KB-page hardware support or owner-signed distribution.

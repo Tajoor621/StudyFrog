@@ -23,10 +23,10 @@ There is no paid service, account, API or per-video charge.
    download result**. Cancel uploads or jobs with their controls. Download/share
    the MP4. Manage computer jobs to delete retained results and prompt history.
 
-All three clients use the same computer engine. Android uses the existing USB
+The computer-remix controls on all three clients use the same computer engine. Native Android/iOS 0.11.0 additionally offer [offline phone remix](PHONE_VIDEO_REMIX.md). Android uses the existing USB
 `adb reverse tcp:8765 tcp:8765` connection; iOS uses its configured trusted
 `.local` host; mobile browsers use the existing private HTTPS bridge setup.
-This release does **not** run person segmentation/AI remix entirely on a phone.
+The web computer-remix panel does not process person video on the phone; use the native offline-phone controls for that.
 A mobile budget also works when a phone controls a larger computer. Static
 GitHub Pages cannot accept/process video itself; open the local/private bridge.
 Existing still-reveal and LTX motion modes retain their separately documented

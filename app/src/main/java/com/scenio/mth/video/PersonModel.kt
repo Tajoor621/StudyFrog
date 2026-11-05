@@ -54,7 +54,7 @@ class PersonMask(file:File):AutoCloseable {
             session.run(mapOf(session.inputNames.single() to tensor)).use { result ->
                 val output=result[0] as? OnnxTensor ?: error("Invalid segmentation output")
                 require((output.info as TensorInfo).shape.contentEquals(longArrayOf(1,2,192,192))) { "Incompatible segmentation output" }
-                val scores=FloatArray(plane*2);output.floatBuffer.get().get(scores)
+                val scores=FloatArray(plane*2);output.floatBuffer.get(scores)
                 require(scores.all { it.isFinite() }) { "Invalid mask values" }
                 return FloatArray(plane) { if(scores[it+plane]>scores[it]) 1f else 0f }
             }

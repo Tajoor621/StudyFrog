@@ -1,4 +1,4 @@
-# Feature status — 0.10.0
+# Feature status — 0.11.0
 
 Evidence: [VALIDATION.md](../VALIDATION.md). Implemented code, automated tests and real-model/device evaluation are distinct.
 
@@ -53,3 +53,7 @@ review records; ordinary development builds remain available.
 ## 0.10.0 uploaded-video remix
 
 [Background replacement](VIDEO_REMIX.md) retains source people/performance/audio, with mobile/laptop/desktop server-enforced clip and resolution caps, bounded transient uploads and cancellation. Web and native Android/iOS clients control the same free local computer engine. Green screen needs no model; person removal needs explicit trusted PPHumanSeg ONNX weights. Phone-only AI remix, face/voice reenactment and physical performance certification are not included.
+
+## 0.11.0 native phone remix
+
+[Offline Android/iOS video remix](PHONE_VIDEO_REMIX.md) adds checksum-pinned ONNX model import, CPU person masks, model-free green-screen removal, native H.264 output and copied first AAC track. The mobile cap is 15 seconds/480p/15fps with 64 MB/1080p SDR input. Source copies/partial output are removed on failure/cancel. Low-memory/thermal/deadline guards and native CI fixtures are included. Physical performance/real-human edges and independent review remain pending.

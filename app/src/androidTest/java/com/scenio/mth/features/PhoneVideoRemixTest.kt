@@ -58,6 +58,11 @@ class PhoneVideoRemixTest {
             } finally { reader.release() }
             LocalVideoRemix.render(context,source,bg,output.apply { delete() },false,0.5,0.5,{}, {})
             assertTrue(output.length()>1000)
+            assets.open("phone-portrait.mp4").use { input -> source.outputStream().use { input.copyTo(it) } }
+            LocalVideoRemix.render(context,source,bg,output.apply { delete() },false,0.0,1.0,{}, {})
+            val portrait=MediaMetadataRetriever()
+            try { portrait.setDataSource(output.path);assertEquals("96",portrait.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH));assertEquals("160",portrait.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)) }
+            finally { portrait.release() }
             assertThrows(IllegalStateException::class.java) { LocalVideoRemix.render(context,source,bg,output,false,0.0,1.0,{ error("cancelled") },{}) }
             assertFalse(output.exists())
         } finally { source.delete();output.delete();bg.recycle() }
