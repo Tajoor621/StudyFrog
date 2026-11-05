@@ -1,6 +1,6 @@
 import base64
 import hashlib
-import http.client
+from http.client import HTTPConnection
 import io
 import json
 import os
@@ -20,8 +20,9 @@ TOOLS=bool(shutil.which('ffmpeg') and shutil.which('ffprobe'))
 def clip(path,audio=True):
     command=['ffmpeg','-v','error','-y','-f','lavfi','-i','color=c=green:s=160x96:r=24:d=1.5']
     if audio: command+=['-f','lavfi','-i','sine=frequency=440:sample_rate=48000:duration=1.5']
-    command+=['-vf','drawbox=x=60:y=20:w=40:h=56:color=red:t=fill','-c:v','libx264','-threads','1','-pix_fmt','yuv420p']
-    if audio: command+=['-c:a','aac','-shortest']
+    if audio: command+=['-map','1:a:0','-map','0:v:0']
+    command+=['-vf',"drawbox=x=60:y=20:w=40:h=56:color=red:t=fill,drawbox=x=8:y=8:w=24:h=16:color=yellow:t=fill:enable='gte(t,0.5)'",'-c:v','libx264','-threads','1','-pix_fmt','yuv420p']
+    if audio: command+=['-af',"volume='if(gte(t,0.5),1,0)':eval=frame",'-c:a','aac','-shortest']
     subprocess.run(command+[str(path)],check=True,capture_output=True,timeout=30)
 
 class RemixTests(unittest.TestCase):
@@ -40,6 +41,7 @@ class RemixTests(unittest.TestCase):
     def test_portrait_and_small_sources_keep_framing_without_upscale(self):
         self.assertEqual(remix.dimensions(dict(width=1080,height=1920),'mobile'),(480,852))
         self.assertEqual(remix.dimensions(dict(width=160,height=96),'desktop'),(160,96))
+        with self.assertRaises(ValueError): remix.dimensions(dict(width=16,height=4096),'mobile')
     def test_person_mask_preserves_foreground_pixels(self):
         import numpy as np
         rgb=np.full((32,32,3),(200,30,20),dtype=np.uint8);bg=np.full_like(rgb,(0,0,255))
@@ -67,6 +69,7 @@ class RemixTests(unittest.TestCase):
     def test_real_encode_replaces_background_and_retains_soundtrack(self):
         import numpy as np
         source=self.root/'source.mp4';output=self.root/'output.mp4';clip(source)
+        self.assertEqual(remix.probe(source)['stream_index'],1)
         report=remix.render(source,output,Image.new('RGB',(160,96),'blue'),self.settings(),lambda:None,lambda _:None)
         self.assertEqual((report['width'],report['height'],report['fps']),(160,96,15))
         self.assertTrue(report['source_audio']);self.assertFalse(report['faces_resynthesized'])
@@ -80,6 +83,14 @@ class RemixTests(unittest.TestCase):
         samples=np.frombuffer(sound,dtype=np.float32)
         peak=np.argmax(np.abs(np.fft.rfft(samples)))*48000/len(samples)
         self.assertAlmostEqual(peak,440,delta=3)
+        # Yellow visual marker and tone start together at 0.5s in the source.
+        frames=subprocess.check_output(['ffmpeg','-v','error','-i',str(output),'-an','-f','rawvideo','-pix_fmt','rgb24','pipe:1'])
+        movie=np.frombuffer(frames,dtype=np.uint8).reshape(-1,96,160,3)
+        marker=movie[:,15,20,:]
+        video_onset=np.flatnonzero((marker[:,0]>180)&(marker[:,1]>180)&(marker[:,2]<100))[0]/15
+        windows=samples[:len(samples)//480*480].reshape(-1,480)
+        audio_onset=np.flatnonzero(np.sqrt(np.mean(windows**2,axis=1))>.02)[0]/100
+        self.assertLess(abs(video_onset-audio_onset),.12)
         self.assertLess(abs(float(streams[0]['duration'])-float(streams[1]['duration'])),.1)
     @unittest.skipUnless(TOOLS,'FFmpeg unavailable')
     def test_silent_trim_and_cancel_remove_partial_outputs(self):
@@ -99,7 +110,7 @@ class RemixTests(unittest.TestCase):
             http=server.Server(('127.0.0.1',0),server.Handler);thread=threading.Thread(target=http.serve_forever,daemon=True);thread.start()
             try:
                 def request(path,body=None,method='POST',auth=True):
-                    c=__import__('http.client',fromlist=['HTTPConnection']).HTTPConnection('127.0.0.1',http.server_port,timeout=10)
+                    c=HTTPConnection('127.0.0.1',http.server_port,timeout=10)
                     headers={'Content-Type':'application/octet-stream' if path=='/video-inputs' else 'application/json'}
                     if auth: headers['Authorization']='Bearer '+server.TOKEN
                     c.request(method,path,body=body,headers=headers);r=c.getresponse();status=r.status;data=json.loads(r.read());c.close();return status,data
@@ -135,6 +146,9 @@ class RemixTests(unittest.TestCase):
     def test_invalid_or_incomplete_upload_never_survives(self):
         with self.assertRaises(ValueError): video_inputs.receive(self.root,io.BytesIO(b'x'),10)
         self.assertFalse(list(self.root.glob('*.upload*')))
+        stale=video_inputs.path(self.root,'e'*32);stale.write_bytes(b'old');os.utime(stale,(0,0))
+        with self.assertRaisesRegex(ValueError,'expired'): video_inputs.available(self.root,'e'*32)
+        self.assertFalse(stale.exists())
         for name in ('../etc','x'*32,None):
             with self.assertRaises(ValueError): video_inputs.path(self.root,name)
 

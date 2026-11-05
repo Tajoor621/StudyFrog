@@ -45,7 +45,7 @@ even for H.264. Small inputs are not upscaled. Output is normalized to the
 profile's frame rate, which can duplicate/drop source frames; it does not
 synthesize extra motion. Clip ends are rounded to encoded frame boundaries.
 Input decode is limited to 4K/8.8 million pixels, known duration up to one hour,
-with selectable start 0–3600 seconds. HDR input is rejected; export SDR first.
+with selectable start 0–3600 seconds. Extremely narrow aspect ratios and non-square pixels are rejected. HDR input is rejected; export SDR first.
 The export cap is 256 MB, processing deadline 30 minutes, with at least 512 MB
 free disk required before processing. One worker streams frames rather than
 loading a complete clip into memory. Two waiting jobs are allowed.

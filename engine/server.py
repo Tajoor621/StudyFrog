@@ -74,12 +74,11 @@ def validate(body):
         raise ValueError("Explicit sexual generation is not supported")
     if kind == "remix":
         from video_remix import options, PROFILES
-        from video_inputs import path as input_path
+        from video_inputs import available
         settings=options(body)
         upload_id=body.get("video_input")
-        source=input_path(ROOT,upload_id)
-        if not source.is_file(): raise ValueError("Video input expired or already used; upload again")
-        if source.stat().st_size>PROFILES[settings["profile"]]["upload_bytes"]: raise ValueError("Video input exceeds this profile's upload limit")
+        source,size=available(ROOT,upload_id)
+        if size>PROFILES[settings["profile"]]["upload_bytes"]: raise ValueError("Video input exceeds this profile's upload limit")
         background=body.get("image")
         if not isinstance(background,str) or len(background)>12_000_000: raise ValueError("Provide a background image up to 12 MB encoded")
         decode_image(background)

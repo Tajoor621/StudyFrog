@@ -15,6 +15,17 @@ def path(root, identifier):
     if not isinstance(identifier,str) or not ID.fullmatch(identifier): raise ValueError('Invalid video input identifier')
     return Path(root)/(identifier+'.upload')
 
+def available(root, identifier):
+    source=path(root,identifier)
+    try:
+        stat=source.stat()
+        if time.time()-stat.st_mtime>=1800:
+            source.unlink(missing_ok=True)
+            raise ValueError('Video input expired; upload again')
+    except FileNotFoundError as exc:
+        raise ValueError('Video input expired or already used; upload again') from exc
+    return source,stat.st_size
+
 def cleanup(root):
     now=time.time()
     for item in Path(root).glob('*.upload*'):

@@ -64,14 +64,16 @@ def probe(path):
     if video.get('color_transfer') in ('smpte2084', 'arib-std-b67'): raise ValueError('Export HDR video as SDR before importing')
     rotation = next((float(s.get('rotation', 0)) for s in video.get('side_data_list', []) if 'rotation' in s), 0)
     if abs(rotation) % 180 == 90: w,h = h,w
-    return dict(width=w, height=h, duration=duration, audio=any(s.get('codec_type')=='audio' for s in data['streams']))
+    return dict(width=w, height=h, stream_index=int(video['index']), duration=duration, audio=any(s.get('codec_type')=='audio' for s in data['streams']))
 
 def dimensions(source, profile):
     cap = PROFILES[profile]
     # Rotate the target box for portrait sources; preserve framing and never upscale.
     bw,bh = (cap['height'],cap['width']) if source['height']>source['width'] else (cap['width'],cap['height'])
     scale = min(1, bw/source['width'], bh/source['height'])
-    return max(16,int(source['width']*scale)//2*2), max(16,int(source['height']*scale)//2*2)
+    w,h=int(source['width']*scale)//2*2,int(source['height']*scale)//2*2
+    if min(w,h)<16: raise ValueError('Source aspect ratio is too narrow for this output budget')
+    return w,h
 
 class PersonMask:
     def __init__(self):
@@ -159,7 +161,7 @@ def render(source, output, background, settings, checkpoint, progress, masker=No
     try:
         with tempfile.TemporaryDirectory(dir=output.parent,prefix='remix-') as temp, tempfile.TemporaryFile() as errors:
             silent=Path(temp)/'silent.mp4'
-            decode=['ffmpeg','-v','error','-nostdin','-threads','1','-protocol_whitelist','file,pipe','-ss',str(start),'-i',str(source),'-map','0:v:0','-t',str(seconds),'-an','-sn','-dn','-vf',f'scale={w}:{h},fps={fps}','-f','rawvideo','-pix_fmt','rgb24','pipe:1']
+            decode=['ffmpeg','-v','error','-nostdin','-threads','1','-protocol_whitelist','file,pipe','-ss',str(start),'-i',str(source),'-map',f"0:{info['stream_index']}",'-t',str(seconds),'-an','-sn','-dn','-vf',f'scale={w}:{h},fps={fps}','-f','rawvideo','-pix_fmt','rgb24','pipe:1']
             encode=['ffmpeg','-v','error','-nostdin','-y','-f','rawvideo','-pix_fmt','rgb24','-s',f'{w}x{h}','-r',str(fps),'-i','pipe:0','-an','-c:v','libx264','-threads','2','-preset','veryfast','-crf','20','-maxrate','12M','-bufsize','24M','-pix_fmt','yuv420p',str(silent)]
             decoder=watch.add(subprocess.Popen(decode,stdout=subprocess.PIPE,stderr=errors))
             encoder=watch.add(subprocess.Popen(encode,stdin=subprocess.PIPE,stdout=subprocess.DEVNULL,stderr=errors))
