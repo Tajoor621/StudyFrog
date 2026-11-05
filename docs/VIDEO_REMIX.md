@@ -60,7 +60,7 @@ prove adequate hardware. No automatic form-factor or GPU-speed claim is made.
 
 ## Free local setup
 
-Use the existing Python 3.11+ virtual environment and install the optional
+Use a Python 3.11 or 3.12 virtual environment and install the optional
 pinned CPU dependencies:
 
 ```bash
