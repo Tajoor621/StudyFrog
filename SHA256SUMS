@@ -31,7 +31,7 @@ c3e6a84cf5e9a4fa95c34fdf2ebf348eda6e10f56c415a2056309d0ef35c3b69  app/src/androi
 9bc209fc7ac57adfa8368078ee5300bc50e47189da36a87e42fe369b272583da  app/src/androidTest/java/com/scenio/mth/features/SetupScreenTest.kt
 bbdb529f9c9c08680ed96d0f683ab9f76a25d9ce364526386e23d0901aec51be  app/src/androidTest/java/com/scenio/mth/features/StudioStateTest.kt
 c9c15fa8314078245be693889a9c402fd8918e13a9c38de0c34b88550355a69e  app/src/androidTest/java/com/scenio/mth/features/StudyCatalogTest.kt
-013c41d52b339fd49d6905d780cde768cdc4ea7ca0fdc279f381dd9b760f6191  app/src/androidTest/java/com/scenio/mth/features/StudyExplorerTest.kt
+00523eaa898c1adde0082a7fec26b7b184fbc3fbe9006dbdf69f42945a8984a6  app/src/androidTest/java/com/scenio/mth/features/StudyExplorerTest.kt
 7846bbec0754cdf0f0911a4c8a18fc7bb75eeae9c4982694d56a205d33461751  app/src/androidTest/java/com/scenio/mth/features/VectorExportTest.kt
 aec4852aea4f1b21ee97d81c96ee65dfd08f700c1d03dfdeb0fc1fd695f6bdc5  app/src/main/AndroidManifest.xml
 9499f55da478201d8e2ee2655d73d136d6d5b2d9bbf7a43e2dccb1653480a5cd  app/src/main/assets/study-catalog.json
