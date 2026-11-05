@@ -38,7 +38,7 @@ jobs:
         STUDYFORGE_STORE_PASSWORD: android
         STUDYFORGE_KEY_PASSWORD: android
       run: bash scripts/build-apks.sh
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: studyforge-packaging-test
         retention-days: 7
@@ -50,7 +50,7 @@ jobs:
 
           app/schemas/'
         if-no-files-found: error
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       if: always()
       with:
         name: validation-reports
@@ -91,7 +91,7 @@ jobs:
         profile: pixel_6
         disable-animations: true
         script: ./gradlew --no-daemon connectedDebugAndroidTest -PfirebaseEnabled=false
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       if: always()
       with:
         name: device-test-reports
@@ -139,7 +139,7 @@ jobs:
     - name: Build signed APK and AAB
       run: ./gradlew --no-daemon lintRelease testReleaseUnitTest assembleRelease bundleRelease -PrequireReleaseSigning=true
         -PfirebaseEnabled="$FIREBASE_ENABLED"
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: studyforge-signed-release
         retention-days: 7
