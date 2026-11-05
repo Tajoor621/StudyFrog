@@ -69,7 +69,7 @@ class MainActivity : ComponentActivity() {
     private val worker = Executors.newSingleThreadExecutor()
     private val prefs by lazy { getSharedPreferences("forge",MODE_PRIVATE) }
     private var latestJob: String? = null
-    private var remixTransferCancel:java.util.concurrent.atomic.AtomicBoolean?=null
+    @Volatile private var remixTransferCancel:java.util.concurrent.atomic.AtomicBoolean?=null
     private var busy = false
     private var modelImportCancel:java.util.concurrent.atomic.AtomicBoolean?=null
     private var modelImportDialog:AlertDialog?=null
@@ -683,7 +683,7 @@ class MainActivity : ComponentActivity() {
                 val video=job.getString("kind") in listOf("video","motion","remix")
                 val file=if(video) File(cacheDir,"result-$id.mp4") else File(filesDir,"generated/result-$id.png").apply { parentFile?.mkdirs() }
                 download("/results/$id",auth,file)
-                if(video) ui { progress("generation:$id",2,2);export(file,"video/mp4","studyforge-30s.mp4") }
+                if(video) ui { progress("generation:$id",2,2);export(file,"video/mp4",if(job.getString("kind")=="remix") "studyfrog-remix.mp4" else "studyforge-30s.mp4") }
                 else {
                     val bitmap=PhotoDecoder.read(contentResolver,android.net.Uri.fromFile(file))
                     prefs.edit().putString("original-result",file.name).apply()
