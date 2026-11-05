@@ -52,7 +52,7 @@ review records; ordinary development builds remain available.
 
 ## 0.10.0 uploaded-video remix
 
-[Background replacement](VIDEO_REMIX.md) retains source people/performance/audio, with mobile/laptop/desktop server-enforced clip and resolution caps, bounded transient uploads and cancellation. Web and native Android/iOS clients control the same free local computer engine. Green screen needs no model; person removal needs explicit trusted PPHumanSeg ONNX weights. Phone-only AI remix, face/voice reenactment and physical performance certification are not included.
+[Background replacement](VIDEO_REMIX.md) retains source people/performance/audio, with mobile/laptop/desktop server-enforced clip and resolution caps, bounded transient uploads and cancellation. Web and native Android/iOS clients control the same free local computer engine. Green screen needs no model; person removal needs explicit trusted PPHumanSeg ONNX weights. Phone-only remix was not included in 0.10.0; the 0.11.0 native addition is described below. Face/voice reenactment and physical performance certification remain outside this feature.
 
 ## 0.11.0 native phone remix
 

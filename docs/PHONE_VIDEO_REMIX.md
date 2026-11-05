@@ -71,3 +71,15 @@ bash scripts/prepare-phone-fixtures.sh ios/NativeFixtures
 
 Fixtures are ignored by Git and are not production app model assets. See the
 [current verification record](../VALIDATION.md) for actual completed evidence.
+
+## Physical qualification still required
+
+On each target phone, import the verified model and a personally authorised
+15-second SDR/AAC clip, enable airplane mode, render Person and Green-screen
+outputs twice, and check sound onset/lip sync, portrait rotation, hair/hands,
+occlusion and background framing. Record device/OS/build, elapsed time, memory,
+heat/battery state, output dimensions and failures. Confirm source files survive
+cancel/lock/background interruption and partial caches are private. Test TalkBack/
+VoiceOver, large fonts and accessible picker/cancel controls. Use the existing
+[device-session/evidence procedure](DEVICE_VALIDATION.md) to attach actual results;
+simulator fixtures cannot fill that physical session or independent approval.

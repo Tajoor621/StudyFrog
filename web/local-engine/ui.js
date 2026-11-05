@@ -28,7 +28,7 @@ panel.innerHTML=`<h2>Free local generation</h2>
 <label for="remixSeconds">Clip duration, seconds</label><input id="remixSeconds" type="number" min="0.5" max="15" step="0.5" value="15">
 <label for="remixRights"><input id="remixRights" type="checkbox"> I have permission to edit the people, video and soundtrack.</label>
 <button id="remixGenerate">Replace video background with canvas</button>
-<p>Portrait framing is preserved and small videos are not upscaled. Segmentation can miss hair, hands or people; inspect the result. Processing is local to the chosen computer, including when controlled from a phone. No phone-only AI remix is claimed. Unused uploads expire after 30 minutes; used source copies are deleted when jobs finish or fail. Delete results in Manage computer jobs.</p>
+<p>Portrait framing is preserved and small videos are not upscaled. Segmentation can miss hair, hands or people; inspect the result. Processing is local to the chosen computer, including when controlled from a phone. For rendering without a computer, use Offline phone video remix in the native Android/iOS app. Unused uploads expire after 30 minutes; used source copies are deleted when jobs finish or fail. Delete results in Manage computer jobs.</p>
 </details>
 <button id="engineJobs">Manage computer jobs</button><div id="engineJobList"></div>
 <p>Guidance and OCR need separately installed local models/tools. Pose is body-only; depth is relative, not a medical measurement. LTX output is scaled to 1080p; model quality and 8K refinement depend on your hardware.</p>
