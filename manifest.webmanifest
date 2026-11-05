@@ -1,1 +1,23 @@
-{"name":"Study Frog","short_name":"Study Frog","description":"Offline-first creative study workspace","start_url":"./","scope":"./","display":"standalone","background_color":"#0c1327","theme_color":"#111c36","icons":[{"src":"./branding/studyfrog-icon-1024.png","sizes":"1024x1024","type":"image/png","purpose":"any maskable"}]}
+{
+  "id": "./",
+  "name": "Study Frog",
+  "short_name": "Study Frog",
+  "description": "Offline-first creative study workspace for diagrams, local projects, and referenced science schematics.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0c1327",
+  "theme_color": "#111c36",
+  "lang": "en",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {"src": "./branding/studyfrog-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "./branding/studyfrog-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+  ],
+  "shortcuts": [
+    {"name": "Studio", "short_name": "Studio", "url": "./#studio"},
+    {"name": "Projects", "short_name": "Projects", "url": "./#projects"},
+    {"name": "Science Explorer", "short_name": "Science", "url": "./#science"},
+    {"name": "Help", "short_name": "Help", "url": "./#help"}
+  ]
+}

@@ -190,8 +190,10 @@ jobs:
         python -m unittest -v
         python -m unittest discover -s ../web/tests -v
         node --check ../web/app.js
+        node --check ../web/science.mjs
         node --check ../web/local-engine/ui.js
         node ../web/tests/service-worker.test.cjs
+        node ../web/tests/science.test.cjs
     - name: Browser integration with local engine fixtures
       run: |
         npm install --no-save --prefix "$RUNNER_TEMP/studyfrog-web-tests" playwright@1.58.2

@@ -1,5 +1,7 @@
 # Complete project tree
 
+Tracked layout of the Study Frog repository. The web edition is served from the repository root.
+
 ```text
 .github/dependabot.yml
 .github/workflows/android-device.yml
@@ -8,6 +10,7 @@
 .github/workflows/physical-device.yml
 .github/workflows/windows.yml
 .gitignore
+.nojekyll
 LICENSE
 NOTICE
 PROJECT_TREE.md
@@ -117,8 +120,11 @@ app/src/test/java/com/scenio/mth/generation/GenerationProfileTest.kt
 app/src/test/java/com/scenio/mth/inference/GenerationAwaitTest.kt
 branding/README.md
 branding/studyfrog-banner.webp
+branding/studyfrog-icon-192.png
+branding/studyfrog-icon-512.png
 branding/studyfrog-icon-1024.png
 branding/studyfrog-original.png
+branding/studyfrog-social.jpg
 build.gradle.kts
 content/portable-project-v1.json
 content/study-catalog.json
@@ -228,6 +234,7 @@ ios/StudyForgeTests/StudyCatalogTests.swift
 ios/StudyForgeTests/VideoRemixSourceTests.swift
 ios/project.yml
 manifest.webmanifest
+robots.txt
 scripts/audit_repository.py
 scripts/build-apks.sh
 scripts/build-ios-native.sh
@@ -252,6 +259,7 @@ shared/THIRD_PARTY_NOTICES.txt
 shared/runtime.cmake
 shared/sf_engine.cpp
 shared/sf_engine.h
+sitemap.xml
 sw.js
 validation/device-session.schema.json
 validation/release-evidence.json
@@ -261,8 +269,10 @@ web/local-engine/ANDROID_SECURE_CONNECTION.md
 web/local-engine/README.md
 web/local-engine/bridge.py
 web/local-engine/ui.js
+web/science.mjs
 web/styles.css
 web/tests/browser.cjs
+web/tests/science.test.cjs
 web/tests/service-worker.test.cjs
 web/tests/test_bridge.py
 ```

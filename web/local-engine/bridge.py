@@ -15,7 +15,7 @@ import re
 ROOT=Path(__file__).resolve().parents[2]
 OLLAMA="http://127.0.0.1:11434"
 ENGINE="http://127.0.0.1:8765"
-STATIC={"/index.html","/manifest.webmanifest","/sw.js","/web/app.js","/web/styles.css","/web/local-engine/ui.js","/branding/studyfrog-icon-1024.png"}
+STATIC={"/index.html","/manifest.webmanifest","/sw.js","/web/app.js","/web/science.mjs","/web/styles.css","/web/local-engine/ui.js","/content/study-catalog.json","/branding/studyfrog-icon-192.png","/branding/studyfrog-icon-512.png"}
 PUBLIC_HOST=os.environ.get("STUDYFORGE_PUBLIC_HOST","").lower()
 if PUBLIC_HOST and not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.[a-z0-9-]+\.ts\.net",PUBLIC_HOST):
     raise ValueError("STUDYFORGE_PUBLIC_HOST must be your exact private Tailscale Serve hostname")

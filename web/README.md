@@ -1,28 +1,36 @@
 # Study Frog web edition
 
-The root `index.html` is an offline-first static PWA intended for GitHub Pages at `/StudyFrog/`. It adds a functional canvas-based creative studio, local project persistence, a basic science topic browser and an in-app Help section. It preserves the existing Android and iOS source trees.
+The root `index.html` is an offline-first static app for GitHub Pages at `/StudyFrog/`. It is a canvas studio, a local project library, the bundled Science Explorer, and an in-app tool guide. Android and iOS source trees stay in place.
+
+Live site: <https://tajoor621.github.io/StudyFrog/>.
 
 ## Functional scope
 
-- Import PNG/JPEG/WebP up to 12 MB; aspect-fit on a 960×540 canvas.
-- Add centered text labels, undo up to 20 prior canvas states, clear, and export a genuine PNG.
-- Store up to 12 project snapshots locally (browser storage quotas apply), reopen or delete.
-- Edit/save prompt, negative prompt and visual-direction metadata.
-- Choose an introductory science topic to prefill the prompt editor.
-- Installable PWA metadata and service-worker cache for the static interface.
-- Contextual in-app Help for every available web tool.
+- Import PNG, JPEG, or WebP up to 12 MB. The photo is aspect-fit on a 960×540 canvas.
+- Add a centered label, or place it at the last canvas click. Undo keeps up to 20 canvas states. Clear and export a genuine PNG.
+- Draw pen, line, rectangle, and ellipse marks, or paint white with the eraser. An alignment grid can be shown and is not part of the export.
+- Store up to 12 project snapshots in this browser. Search, rename, duplicate, reopen, or delete them. Download or import a JSON backup of those PNG snapshots.
+- Edit and save the prompt, negative prompt, and visual direction with the project.
+- Open the offline study catalog: ten linked body-organization and mitosis schematics, descriptions, OpenStax links, prompt handoff, and placement on the canvas. If that file cannot be read, five short topic summaries remain.
+- Choose system, light, or dark appearance. The choice is stored locally.
+- Installable PWA metadata and a service-worker cache for the static interface, catalog, and icons.
+- A tool guide for the controls on this page.
+- Optional local SD, ControlNet, LTX, Ollama image, video-remix, and reviewed OCR jobs through the [local bridge](local-engine/README.md).
 
 ## Honest limits
 
-The static GitHub Pages editor has no browser AI inference or required backend. Through the optional [local bridge](local-engine/README.md), the web UI now connects your computer’s SD/ControlNet/LTX engine for image/video/refinement jobs and reviewed OCR. It also retains the Ollama text-to-image adapter. There are no user accounts or cross-device sync. Prompts alone do not generate images without a configured engine. LocalStorage is not a reliable long-term backup; export important PNGs. The science cards are introductory summaries, not reviewed medical diagrams. Offline caching does not include any model weights. Existing Android/iOS native capabilities remain separate.
+The static GitHub Pages editor has no browser AI inference and no required backend. Prompts do not generate images unless a configured engine on your computer accepts the job. The bridge serves only the public web files. There are no accounts and no cross-device sync.
+
+Local storage is not a reliable long-term backup. Export important PNGs. The science diagrams are original simplified teaching drawings, not reviewed medical images and not to scale. Offline caching does not include model weights, prompts sent to the computer, or generated media. Android and iOS capabilities remain separate. See [local model instructions](../docs/LOCAL_MODELS.md) and [Science Explorer](../docs/SCIENCE_EXPLORER.md).
 
 ## Manual verification checklist
 
-1. Open the GitHub Pages URL and confirm Studio, Projects, Science and Help navigation.
-2. Import a valid image, add a label, undo, and export PNG.
-3. Save a project, reload the browser, open the saved project, then delete it.
-4. Send a Science topic to Studio and confirm prompt transfer.
-5. Check offline reload after the first successful load, and install when supported.
-6. Confirm the original Android/iOS CI still passes; no native source was modified.
+1. Open the GitHub Pages URL and move among Studio, Projects, Science, and Help with the keyboard and the pointer.
+2. Import a valid image, add a label, draw a mark, undo, and export a PNG.
+3. Save a project, reload, search, rename, open, and delete it. Download a backup and import it.
+4. Open a science view, read its description, send it to Studio, and place the schematic on the canvas.
+5. Reload offline after the first successful load, and install the app when the browser offers it.
+6. Switch the theme and confirm text and controls remain readable.
+7. Confirm Android and iOS behavior you rely on still matches the native docs. This web pass does not replace device tests.
 
-These are **manual test instructions**, not a claim that browser/device testing has been executed. Native AI generation requires a supported locally imported model and the native app or configured computer-local engine; see [local model instructions](../docs/LOCAL_MODELS.md).
+These are manual checks, not a claim that every browser has been exercised. Automated coverage is `web/tests/science.test.cjs`, `web/tests/service-worker.test.cjs`, `web/tests/test_bridge.py`, and `web/tests/browser.cjs` against engine fixtures. Fixture tests do not measure model quality.

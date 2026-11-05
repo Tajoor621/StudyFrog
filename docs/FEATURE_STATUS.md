@@ -16,7 +16,7 @@ Evidence: [VALIDATION.md](../VALIDATION.md). Implemented code, automated tests a
 | Video | Phone still-reveal implementations and optional computer LTX adapter, five chained segments/720 frames/24fps/30sec; physical encoders and actual models untested |
 | Motion detail | LTX denoises at 768×448 before scaling to 1080p; no native 1080p-detail or ultra-realism guarantee |
 | Photo notes | Local Tesseract OCR, editable review and explicit bounded prompt handoff on Android/iOS/web; no factual validation or automatic label placement |
-| Web | Local SD/ControlNet/LTX jobs, original-file export, cancellation/history/deletion, OCR, secure same-origin bridge and static-only offline caching; browser engine tests use fixtures |
+| Web | Local SD/ControlNet/LTX jobs, original-file export, cancellation/history/deletion, OCR, secure same-origin bridge, static-only offline caching, canvas marks, local project backup, and the bundled science-catalog diagrams; browser engine tests use fixtures. GitHub Pages does not run an image model |
 | Science/medical | Ten original referenced conceptual diagrams and body-to-cell/mitosis paths; broad reviewed atlas, validated CT/MRI overlays and factual verification and model-consistent semantic zoom missing |
 | Family access | Parent PIN, persisted 15-minute cooldown after five failures, restricted bundled-study workspace and adult self-declaration on both platforms; no unrestricted Adult Mode or independent child-safety/bypass certification |
 | Foundations | Room/DataStore, onboarding, Material 3, reminders, default-off optional Firebase, accessibility semantics, tests and signing config; configured Firebase/physical accessibility evaluation pending |
