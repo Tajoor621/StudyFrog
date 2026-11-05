@@ -74,6 +74,8 @@ class PhoneVideoRemixTest {
         val bg=Bitmap.createBitmap(160,96,Bitmap.Config.ARGB_8888).apply { eraseColor(Color.BLUE) }
         try {
             assets.open("phone-person.onnx").use { PersonModel.install(isolated,it) }
+            assertThrows(IllegalArgumentException::class.java) { PersonModel.install(isolated,java.io.ByteArrayInputStream(byteArrayOf(1,2,3))) }
+            assertTrue(PersonModel.verified(PersonModel.file(isolated)))
             assets.open("phone-silent.mp4").use { input -> source.outputStream().use { input.copyTo(it) } }
             LocalVideoRemix.render(isolated,source,bg,output,true,0.0,1.0,{}, {})
             val extractor=MediaExtractor()

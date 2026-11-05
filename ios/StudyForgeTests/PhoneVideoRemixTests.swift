@@ -11,6 +11,13 @@ final class PhoneVideoRemixTests: XCTestCase {
     func testActualOrtModelAndMaskContract() throws {
         let model = try fixture("phone-person","onnx")
         XCTAssertTrue(try PhonePersonModel.verified(model))
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root,withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let target = root.appendingPathComponent("installed.onnx"),invalid = root.appendingPathComponent("invalid.onnx")
+        try FileManager.default.copyItem(at: model,to: target);try Data([1,2,3]).write(to: invalid)
+        XCTAssertThrowsError(try PhonePersonModel.install(invalid,to: target))
+        XCTAssertTrue(try PhonePersonModel.verified(target))
         let format = UIGraphicsImageRendererFormat();format.scale = 1
         let image = UIGraphicsImageRenderer(size: CGSize(width: 160,height: 96),format: format).image { ctx in UIColor.red.setFill();ctx.fill(CGRect(x: 0,y: 0,width: 160,height: 96)) }
         let mask = try PhonePersonMask(model: model).mask(try XCTUnwrap(image.cgImage))
