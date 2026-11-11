@@ -18,11 +18,12 @@ const key = 'studyfrog.projects.v1';
 const themeKey = 'studyfrog.appearance.v1';
 const scienceKey = 'studyfrog.science.v1';
 const styles = ['', 'Scientific diagram', 'Realistic', 'Sketch', 'Minimal'];
-const views = ['studio', 'projects', 'science', 'help'];
+const views = ['studio', 'projects', 'science', 'learning', 'help'];
 const titles = {
   studio: 'Study Frog — offline creative study workspace',
   projects: 'Saved projects — Study Frog',
   science: 'Science Explorer — Study Frog',
+  learning: 'Media Learning | Study Frog',
   help: 'Help and tool guide — Study Frog'
 };
 const status = text => { $('status').textContent = text; };

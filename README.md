@@ -19,6 +19,8 @@ The site is a static, installable workspace. After the first successful load it 
 - Switch among system, light, and dark appearance.
 - Use optional local generation only through the [computer bridge](web/local-engine/README.md). That path is separate from the static site.
 
+[Media Learning](docs/MEDIA_LEARNING.md) optionally converts photos and lectures into searchable local study notes, citations, and review questions. It runs through the computer bridge without a paid API or mandatory model.
+
 Scope and limits: [web edition notes](web/README.md).
 
 ## Included functionality

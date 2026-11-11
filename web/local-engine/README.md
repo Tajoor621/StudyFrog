@@ -39,6 +39,10 @@ OCR uses installed Tesseract languages. Read a canvas photo, correct its text in
 prompt. It does not fact-check science, automatically place labels or silently
 truncate long notes.
 
+## Media Learning
+
+To enable local image OCR and lecture indexing, follow the [Media Learning setup](../../docs/MEDIA_LEARNING.md). The study library shares this bridge but does not require the SD engine or its token.
+
 ## Ollama option
 
 Install [Ollama](https://ollama.com/) and a compatible image model yourself. Start

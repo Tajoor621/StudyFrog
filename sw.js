@@ -1,5 +1,5 @@
-const CACHE='study-frog-web-v5';
-const FILES=['./','./index.html','./web/styles.css','./web/app.js','./web/science.mjs','./web/local-engine/ui.js','./manifest.webmanifest','./content/study-catalog.json','./branding/studyfrog-icon-192.png','./branding/studyfrog-icon-512.png'];
+const CACHE='study-frog-web-v6';
+const FILES=['./','./index.html','./web/styles.css','./web/app.js','./web/science.mjs','./web/local-engine/ui.js','./web/local-engine/learning.js','./manifest.webmanifest','./content/study-catalog.json','./branding/studyfrog-icon-192.png','./branding/studyfrog-icon-512.png'];
 const STATIC=new Set(FILES.map(path=>new URL(path,self.location.href).href));
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('study-frog-web-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));

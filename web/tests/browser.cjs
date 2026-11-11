@@ -2,9 +2,12 @@
 const assert=require('node:assert/strict');
 const {spawn}=require('node:child_process');
 const path=require('node:path');
+const fs=require('node:fs');
+const os=require('node:os');
 const {chromium}=require(process.env.STUDYFORGE_PLAYWRIGHT||'playwright');
 const root=path.resolve(__dirname,'../..');
-const server=spawn(process.env.PYTHON||'python3',[path.join(root,'web/local-engine/bridge.py')],{cwd:root,env:{...process.env,STUDYFORGE_PUBLIC_HOST:''},stdio:'ignore'});
+const learningData=fs.mkdtempSync(path.join(os.tmpdir(),'studyfrog-learning-browser-'));
+const server=spawn(process.env.PYTHON||'python3',[path.join(root,'web/local-engine/bridge.py')],{cwd:root,env:{...process.env,STUDYFORGE_PUBLIC_HOST:'',STUDYFORGE_MEDIA_LEARNING:'1',STUDYFORGE_DATA:learningData,STUDYFORGE_STUDY_MODEL:'',STUDYFORGE_VISION_MODEL:'',STUDYFORGE_FALCON_MODEL_DIR:''},stdio:'ignore'});
 (async()=>{
  let browser;
  try{
@@ -102,11 +105,37 @@ const server=spawn(process.env.PYTHON||'python3',[path.join(root,'web/local-engi
   page.once('dialog',dialog=>dialog.accept());
   await page.getByRole('button',{name:'Delete Leaf diagram',exact:true}).click();
   await page.getByText('No saved projects yet.',{exact:true}).waitFor();
+  await page.goto('http://127.0.0.1:8766/#learning');
+  await page.getByRole('heading',{name:'Media Learning'}).waitFor();
+  await page.locator('#learningTools').waitFor();
+  const studyPng=await page.evaluate(()=>{
+    const image=document.createElement('canvas');
+    image.width=900; image.height=240;
+    const ctx=image.getContext('2d');
+    ctx.fillStyle='white'; ctx.fillRect(0,0,900,240);
+    ctx.fillStyle='black'; ctx.font='54px sans-serif'; ctx.fillText('Kinetic energy and motion',32,110);
+    return image.toDataURL('image/png').split(',')[1];
+  });
+  await page.locator('#learningFile').setInputFiles({name:'Physics.png',mimeType:'image/png',buffer:Buffer.from(studyPng,'base64')});
+  await page.getByRole('button',{name:'Import and index'}).click();
+  await page.locator('#learningSourceInfo').filter({hasText:/ready/}).waitFor();
+  await page.locator('#learningQuestion').fill('kinetic');
+  await page.getByRole('button',{name:'Search and answer'}).click();
+  await page.getByRole('img',{name:'Original study image preview'}).waitFor();
+  await page.getByText('View extracted text',{exact:true}).click();
+  await page.getByText(/Kinetic energy and motion/).waitFor();
+  await page.getByRole('button',{name:'Make review questions'}).click();
+  await page.getByText(/Explain the main idea/).waitFor();
+  const [notes]=await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Export Markdown'}).click()]);
+  assert.equal(notes.suggestedFilename(),'studyfrog-image-extract.md');
+  page.once('dialog',dialog=>dialog.accept());
+  await page.getByRole('button',{name:'Remove source'}).click();
+  await page.getByText('Source removed.',{exact:true}).waitFor();
   assert.equal(await page.locator('a.skip').count(),1);
   await page.locator('#mainNav button[data-view="help"]').click();
   await page.getByRole('heading',{name:'Help and tool guide'}).waitFor();
   await page.locator('#mainNav button[data-view="studio"]').click();
   assert.deepEqual(errors,[]);assert.ok(await page.locator('#canvas').isVisible());
-  console.log('Browser integration passed: connection, image guidance payload, original export, canvas undo, OCR review/bounds, video validation, remix permission/profile limits and upload payload, job deletion, science catalog handoff, diagram undo, marks, theme, project search/rename/backup/delete; engine fixtures, no real inference.');
- }finally{if(browser)await browser.close();server.kill('SIGTERM');}
+  console.log('Browser integration passed: connection, image guidance payload, original export, canvas undo, OCR review/bounds, video validation, remix permission/profile limits and upload payload, job deletion, science catalog handoff, diagram undo, marks, theme, project search/rename/backup/delete; real local OCR study import/search/review/export/delete; no LLM weights.');
+ }finally{if(browser)await browser.close();server.kill('SIGTERM');fs.rmSync(learningData,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

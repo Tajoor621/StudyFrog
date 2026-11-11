@@ -8,7 +8,7 @@ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../../sw.js'),'utf8'),co
 (async()=>{
  let activation;handlers.activate({waitUntil:promise=>activation=promise});await activation;
  assert.deepEqual(deleted,['study-frog-web-v1']);
- for(const route of ['/StudyFrog/engine/jobs','/StudyFrog/engine/results/abc','/engine/health','/engine/ocr','/StudyFrog/private.png']){
+ for(const route of ['/StudyFrog/engine/jobs','/StudyFrog/engine/results/abc','/engine/health','/engine/ocr','/learning/sources','/learning/sources/abc/notes','/learning/sources/abc/asset/image.jpg','/StudyFrog/private.png']){
   handlers.fetch({request:{url:'https://example.com'+route,method:'GET'},respondWith:()=>assert.fail('Private data must bypass service worker'),waitUntil:()=>assert.fail('Private data must not be cached')});
  }
  let response,cacheWrite;

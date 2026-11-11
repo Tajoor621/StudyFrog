@@ -3,6 +3,7 @@ import importlib.util
 import json
 import os
 import threading
+import tempfile
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -60,6 +61,19 @@ class BridgeTests(unittest.TestCase):
                 self.assertEqual(calls,[("/ocr","Bearer test-token",{"image":"test"})])
                 self.assertEqual(self.request("/engine/health")[0],502)
         finally: engine.shutdown();engine.server_close();thread.join()
+    def test_learning_is_opt_in_and_rejects_cross_origin_or_unmarked_writes(self):
+        self.assertEqual(self.request("/learning/sources")[0],503)
+        with tempfile.TemporaryDirectory() as data, patch.dict(os.environ,{
+                "STUDYFORGE_MEDIA_LEARNING":"1","STUDYFORGE_DATA":data
+        }), patch.object(bridge,"LEARNING",None):
+            bridge.start_learning()
+            status,headers,body=self.request("/learning/sources")
+            self.assertEqual((status,json.loads(body)),(200,{"sources":[]}))
+            self.assertEqual(headers["Cache-Control"],"no-store")
+            self.assertEqual(self.request("/learning/sources",origin="https://evil.example")[0],403)
+            self.assertEqual(self.request("/learning/ask","POST",{"question":"lecture"})[0],403)
+            self.assertEqual(self.request("/learning/sources/"+"a"*32+"/asset/../original")[0],404)
+
     def test_ollama_rejects_bool_and_fractional_settings_before_request(self):
         for width in (True,512.2,"512"):
             status,_,_=self.request("/generate","POST",{"prompt":"plant","model":"local","width":width})

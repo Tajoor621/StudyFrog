@@ -120,9 +120,9 @@ app/src/test/java/com/scenio/mth/generation/GenerationProfileTest.kt
 app/src/test/java/com/scenio/mth/inference/GenerationAwaitTest.kt
 branding/README.md
 branding/studyfrog-banner.webp
+branding/studyfrog-icon-1024.png
 branding/studyfrog-icon-192.png
 branding/studyfrog-icon-512.png
-branding/studyfrog-icon-1024.png
 branding/studyfrog-original.png
 branding/studyfrog-social.jpg
 build.gradle.kts
@@ -139,6 +139,7 @@ docs/GENERATION_CONTROLS.md
 docs/INDEPENDENT_REVIEW.md
 docs/LOCAL_MODELS.md
 docs/MASTER_SPEC_AUDIT.md
+docs/MEDIA_LEARNING.md
 docs/PHONE_VIDEO_REMIX.md
 docs/PHOTO_STUDY_WORKFLOW.md
 docs/PORTABLE_PROJECTS.md
@@ -153,8 +154,11 @@ docs/android-features/MERGE.md
 docs/android-features/SOURCES.md
 engine/benchmark.py
 engine/image_guidance.py
+engine/image_ingest.py
+engine/media_learning.py
 engine/motion_video.py
 engine/photo_guidance.py
+engine/requirements-learning.txt
 engine/requirements-models.txt
 engine/requirements-remix.txt
 engine/requirements-test.txt
@@ -164,11 +168,13 @@ engine/study_ocr.py
 engine/test_benchmark.py
 engine/test_engine.py
 engine/test_image_guidance.py
+engine/test_media_learning.py
 engine/test_model_lifecycle.py
 engine/test_motion_video.py
 engine/test_photo_guidance.py
 engine/test_study_ocr.py
 engine/test_video_remix.py
+engine/video_index.py
 engine/video_inputs.py
 engine/video_remix.py
 gradle.properties
@@ -268,6 +274,7 @@ web/app.js
 web/local-engine/ANDROID_SECURE_CONNECTION.md
 web/local-engine/README.md
 web/local-engine/bridge.py
+web/local-engine/learning.js
 web/local-engine/ui.js
 web/science.mjs
 web/styles.css

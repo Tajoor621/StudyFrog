@@ -19,6 +19,8 @@ Live site: <https://tajoor621.github.io/StudyFrog/>.
 
 ## Honest limits
 
+[Media Learning](../docs/MEDIA_LEARNING.md) is an optional computer-bridge workspace for OCR, indexed lecture notes, citations, and review questions. It does not run on GitHub Pages.
+
 The static GitHub Pages editor has no browser AI inference and no required backend. Prompts do not generate images unless a configured engine on your computer accepts the job. The bridge serves only the public web files. There are no accounts and no cross-device sync.
 
 Local storage is not a reliable long-term backup. Export important PNGs. The science diagrams are original simplified teaching drawings, not reviewed medical images and not to scale. Offline caching does not include model weights, prompts sent to the computer, or generated media. Android and iOS capabilities remain separate. See [local model instructions](../docs/LOCAL_MODELS.md) and [Science Explorer](../docs/SCIENCE_EXPLORER.md).

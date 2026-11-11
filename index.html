@@ -64,6 +64,7 @@
     <button type="button" data-view="studio" aria-current="page">Studio</button>
     <button type="button" data-view="projects">Projects</button>
     <button type="button" data-view="science">Science</button>
+    <button type="button" data-view="learning">Media Learning</button>
     <button type="button" data-view="help">Help</button>
   </nav>
   <main id="content" tabindex="-1">
@@ -157,6 +158,46 @@
         <div id="scienceDetail" class="panel" hidden></div>
       </div>
     </section>
+    <section id="learning" class="view" hidden>
+      <h1 tabindex="-1">Media Learning</h1>
+      <p class="lede">Read an image or index a lecture once. Search its text, make review questions, and export notes from your own computer.</p>
+      <p id="learningUnavailable">Start the optional local bridge with Media Learning enabled. This tool does not upload from the public website.</p>
+      <p id="learningStatus" role="status" aria-live="polite"></p>
+      <div id="learningTools" class="panel" hidden>
+        <form id="learningImport">
+          <label for="learningFile">Study image or lecture video</label>
+          <input id="learningFile" type="file" accept=".png,.jpg,.jpeg,.webp,.heic,.heif,.mp4,.mov,.webm" required>
+          <p>Files go only to this computer. Image originals and thumbnails are saved until you remove the source. Videos retain text and sampled frames only.</p>
+          <button type="submit">Import and index</button>
+        </form>
+        <label for="learningSource">Source</label>
+        <select id="learningSource"><option value="">All sources</option></select>
+        <p id="learningSourceInfo"></p>
+        <div class="actions">
+          <button id="learningRefresh" type="button">Refresh sources</button>
+          <button id="learningNotes" type="button" disabled>Export Markdown</button>
+          <button id="learningDelete" type="button" disabled>Remove source</button>
+        </div>
+        <form id="learningAsk">
+          <label for="learningQuestion">Question or keywords</label>
+          <input id="learningQuestion" maxlength="500" placeholder="What is written on the whiteboard at 12:34?">
+          <label><input id="learningVision" type="checkbox"> Allow local vision for visual questions</label>
+          <div class="actions">
+            <button type="submit">Search and answer</button>
+            <button id="learningQuiz" type="button">Make review questions</button>
+          </div>
+        </form>
+        <details>
+          <summary>Save a visual description for a video frame</summary>
+          <form id="learningEnrich">
+            <label for="learningTimestamp">Video time in seconds</label>
+            <input id="learningTimestamp" type="number" min="0" max="3600" step="0.1" required>
+            <button id="learningCaption" type="submit" disabled>Describe nearest frame locally</button>
+          </form>
+        </details>
+        <div id="learningResult"></div>
+      </div>
+    </section>
     <section id="help" class="view" hidden>
       <h1 tabindex="-1">Help and tool guide</h1>
       <p class="lede">What each control in this web edition does, and what it does not do.</p>
@@ -171,5 +212,6 @@
   </footer>
   <script type="module" src="./web/app.js"></script>
   <script type="module" src="./web/local-engine/ui.js"></script>
+  <script type="module" src="./web/local-engine/learning.js"></script>
 </body>
 </html>

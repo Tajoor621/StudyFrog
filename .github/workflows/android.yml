@@ -192,6 +192,7 @@ jobs:
         node --check ../web/app.js
         node --check ../web/science.mjs
         node --check ../web/local-engine/ui.js
+        node --check ../web/local-engine/learning.js
         node ../web/tests/service-worker.test.cjs
         node ../web/tests/science.test.cjs
     - name: Browser integration with local engine fixtures
