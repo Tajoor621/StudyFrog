@@ -1,3 +1,4 @@
+import { isLocalStudioRequest } from "../../../lib/services/local-request";
 import { createVideoWaterfall, VideoGenerationError } from "../../../lib/services/video-waterfall";
 
 import { publishCreation } from "../../../lib/services/video-community";
@@ -40,10 +41,7 @@ async function readBody(request: Request): Promise<Record<string, unknown>> {
 export async function POST(request: Request) {
   // Safe standalone default. On a hosted dashboard, replace this local gate with
   // the app's real session/permission check plus its canonical same-origin check.
-  const site = new URL(request.url);
-  const clientOrigin = request.headers.get("origin");
-  if (!["localhost", "127.0.0.1", "[::1]"].includes(site.hostname) ||
-      clientOrigin !== site.origin || request.headers.get("x-studyforge-video") !== "1") {
+  if (!isLocalStudioRequest(request, "x-studyforge-video")) {
     return reply({ error: "Video Studio requires a same-origin request on the local dashboard." }, 403);
   }
   if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") {

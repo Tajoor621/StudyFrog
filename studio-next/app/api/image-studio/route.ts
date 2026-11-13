@@ -1,3 +1,4 @@
+import { isLocalStudioRequest } from "../../../lib/services/local-request";
 import { createImageGenerator, ImageGenerationError } from "../../../lib/services/image-generation";
 
 export const runtime = "nodejs";
@@ -26,9 +27,7 @@ async function parse(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const site = new URL(request.url);
-  if (!["localhost", "127.0.0.1", "[::1]"].includes(site.hostname) ||
-      request.headers.get("origin") !== site.origin || request.headers.get("x-studyforge-image") !== "1") {
+  if (!isLocalStudioRequest(request, "x-studyforge-image")) {
     return reply("Image Studio requires a same-origin request on the local dashboard.", 403);
   }
   if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") {

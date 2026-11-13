@@ -285,6 +285,7 @@ studio-next/app/layout.tsx
 studio-next/app/page.tsx
 studio-next/lib/services/community-links.ts
 studio-next/lib/services/image-generation.ts
+studio-next/lib/services/local-request.ts
 studio-next/lib/services/video-community.ts
 studio-next/lib/services/video-extension-plan.ts
 studio-next/lib/services/video-extension.ts

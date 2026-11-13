@@ -5,7 +5,7 @@ import { createImageGenerator, ImageGenerationError } from "../lib/services/imag
 
 registerHooks({
   resolve(specifier, context, next) {
-    return next(specifier.endsWith("/services/image-generation") ? specifier + ".ts" : specifier, context);
+    return next(/\/services\/(?:image-generation|local-request)$/.test(specifier) ? specifier + ".ts" : specifier, context);
   },
 });
 const { POST } = await import("../app/api/image-studio/route.ts");

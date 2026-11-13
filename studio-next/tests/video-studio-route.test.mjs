@@ -5,7 +5,7 @@ import test from "node:test";
 // Node's direct TypeScript runner needs the extension that Next resolves itself.
 registerHooks({
   resolve(specifier, context, next) {
-    return next(/\/services\/(?:video-waterfall|video-community)$/.test(specifier) ? specifier + ".ts" : specifier, context);
+    return next(/\/services\/(?:video-waterfall|video-community|local-request)$/.test(specifier) ? specifier + ".ts" : specifier, context);
   },
 });
 const { POST } = await import("../app/api/video-studio/route.ts");
@@ -40,7 +40,9 @@ test("route calls the waterfall and returns a non-cacheable development result",
   process.env.VIDEO_ENABLE_MOCK = "1";
   delete process.env.VIDEO_FREE_PROXY_ORIGIN;
   delete process.env.VIDEO_LOCAL_ORIGIN;
-  const response = await POST(request({ prompt: "A frog jumps", aspectRatio: "1:1" }));
+  const response = await POST(request({ prompt: "A frog jumps", aspectRatio: "1:1" }, {
+    source: "http://127.0.0.1:3000", headers: { Host: "127.0.0.1:3000" },
+  }));
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("cache-control"), "no-store");
   assert.deepEqual(await response.json(), { videoUrl: "/fixtures/video-waterfall.mp4", provider: "colab-mock" });
