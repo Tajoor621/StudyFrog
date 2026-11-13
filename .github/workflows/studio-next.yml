@@ -1,0 +1,36 @@
+name: Study Frog Creative Studio
+on:
+  push:
+    branches: [main]
+    paths: ['studio-next/**', '.github/workflows/studio-next.yml']
+  pull_request:
+    paths: ['studio-next/**', '.github/workflows/studio-next.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  studio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: studio-next
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: studio-next/package-lock.json
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+      - name: Verify the dashboard in Chrome
+        run: |
+          npm install --no-save --prefix "$RUNNER_TEMP/studyfrog-studio-browser" playwright@1.58.2
+          export STUDYFORGE_PLAYWRIGHT="$RUNNER_TEMP/studyfrog-studio-browser/node_modules/playwright"
+          export STUDYFORGE_CHROME="$(command -v google-chrome)"
+          node tests/browser.cjs

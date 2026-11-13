@@ -23,9 +23,13 @@ The site is a static, installable workspace. After the first successful load it 
 
 Scope and limits: [web edition notes](web/README.md).
 
+## Creative Studio
+
+The optional [Creative Studio](studio-next/README.md) lives in `studio-next/`. It includes local FLUX image creation, image-to-video handoff, a configurable video provider waterfall, browser clip stitching, and optional Supabase Community sharing. The Android, iOS, static web and Python workflows keep their existing entry points.
+
 ## Included functionality
 
-Version 0.11.1 adds a private phone-render journal, a recoverable latest completed video, exportable per-attempt timing, memory, and thermal reports, interrupted-job cleanup, and explicit history clearing. A failed job keeps the previous successful result. The physical Android workflow can select phone-remix smoke tests without an SD GGUF file. Native qualification CI is in progress. Physical and human reviews remain pending.
+Version 0.11.1 adds a private phone-render journal, a recoverable latest completed video, exportable per-attempt timing, memory, and thermal reports, interrupted-job cleanup, and explicit history clearing. A failed job keeps the previous successful result. The physical Android workflow can select phone-remix smoke tests without an SD GGUF file. Android build, packaging and engine CI passed; native emulator qualification is tracked separately. Physical and human reviews remain pending.
 
 Version 0.11.0 adds native Android and iOS offline phone video remix: explicit verified person-model import, CPU person or green-screen removal, bounded frame streaming, original AAC audio, cancellation, and memory and thermal guards. Native builds and synthetic real-ONNX and codec tests pass. Physical speed, edge quality, and independent reviews remain pending. See [phone remix setup](docs/PHONE_VIDEO_REMIX.md).
 
